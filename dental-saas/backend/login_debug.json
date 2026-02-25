@@ -1,0 +1,13 @@
+{
+  "body": {
+    "clinicCode": "apex-dental",
+    "email": "elkelanyshady@gmail.com",
+    "password": "12345678"
+  },
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "84",
+    "host": "localhost:5000",
+    "connection": "keep-alive"
+  }
+}
