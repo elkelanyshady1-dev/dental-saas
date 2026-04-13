@@ -1,0 +1,56 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Hello <strong>{{orgName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 24px;">
+    Your refund has been processed. The details of the refund are below.
+</p>
+
+<div style="background:#d1fae5; border-radius:8px; padding:16px 20px; margin-bottom:24px; text-align:center;">
+    <p style="margin:0; font-size:12px; color:#065f46; text-transform:uppercase; letter-spacing:1px;">Refund Amount</p>
+    <p style="margin:6px 0 0; font-size:32px; font-weight:800; color:#065f46;">{{formatCurrency refundAmount currency}}
+    </p>
+</div>
+
+<table class="data">
+    <tr>
+        <th>Invoice Number</th>
+        <td>{{invoiceNumber}}</td>
+    </tr>
+    <tr>
+        <th>Original Amount</th>
+        <td>{{formatCurrency originalAmount currency}}</td>
+    </tr>
+    <tr>
+        <th>Refund Amount</th>
+        <td>{{formatCurrency refundAmount currency}}</td>
+    </tr>
+    <tr>
+        <th>Refund Type</th>
+        <td><span class="pill pill-green">{{#if isFullRefund}}Full Refund{{else}}Partial Refund{{/if}}</span></td>
+    </tr>
+    <tr>
+        <th>Reason</th>
+        <td>{{or reasonCode "customer_request"}}</td>
+    </tr>
+    <tr>
+        <th>Processed At</th>
+        <td>{{formatDate processedAt}}</td>
+    </tr>
+    {{#if providerRefundId}}<tr>
+        <th>Refund Reference</th>
+        <td><code>{{providerRefundId}}</code></td>
+    </tr>{{/if}}
+</table>
+
+<p style="font-size:13px; color:#64748b; margin-top:24px; line-height:1.6;">
+    Please allow 5-10 business days for the refund to appear on your statement,
+    depending on your payment provider. If you have questions, contact our support team.
+</p>
+
+{{#if supportEmail}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" href="mailto:{{supportEmail}}">Contact Support</a>
+</div>
+{{/if}}
+{{/inline}}
+{{/layout}}

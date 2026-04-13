@@ -1,0 +1,56 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Hello <strong>{{recipientName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 24px;">
+    You have received a reply to your support ticket.
+</p>
+
+<div
+    style="background:#f8fafc; border-left:4px solid #2563eb; border-radius:0 8px 8px 0; padding:16px 20px; margin-bottom:24px;">
+    <p style="margin:0; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:1px;">Ticket
+        #{{ticketId}}</p>
+    <p style="margin:4px 0 0; font-size:15px; font-weight:600; color:#1e3a5f;">{{ticketSubject}}</p>
+</div>
+
+<table class="data" style="margin-bottom:20px;">
+    <tr>
+        <th>Status</th>
+        <td>
+            {{#ifCond ticketStatus "===" "open"}}
+            <span class="pill pill-blue">Open</span>
+            {{else}}
+            {{#ifCond ticketStatus "===" "resolved"}}
+            <span class="pill pill-green">Resolved</span>
+            {{else}}
+            <span class="pill">{{upper ticketStatus}}</span>
+            {{/ifCond}}
+            {{/ifCond}}
+        </td>
+    </tr>
+    <tr>
+        <th>Replied by</th>
+        <td>{{agentName}}</td>
+    </tr>
+    <tr>
+        <th>Reply sent</th>
+        <td>{{formatDate repliedAt}}</td>
+    </tr>
+</table>
+
+<div style="background:#ffffff; border:1px solid #e9ecef; border-radius:8px; padding:20px; margin-bottom:24px;">
+    <p style="margin:0 0 8px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:1px;">Agent Reply
+    </p>
+    <p style="margin:0; font-size:14px; line-height:1.7; color:#1a1a2e; white-space:pre-line;">{{replyBody}}</p>
+</div>
+
+{{#if ticketUrl}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" href="{{ticketUrl}}">View Full Ticket</a>
+</div>
+{{/if}}
+
+<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
+    To reply to this ticket, click "View Full Ticket" above or log in to your account.
+</p>
+{{/inline}}
+{{/layout}}

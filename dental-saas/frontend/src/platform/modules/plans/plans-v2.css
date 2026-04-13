@@ -1,0 +1,1936 @@
+/**
+ * plans-v2.css
+ * v1.0 — Modern Plan Builder Design System
+ *
+ * Light-mode, Manrope/Inter typography, Material Design 3 color tokens.
+ * Replaces the dark-mode plans.css with a clean, product-grade UI.
+ *
+ * Architecture:
+ *   - Base reset still handled by platform.css
+ *   - This file handles: Plan Cards, Plan Editor, GoLive Modal, Archive Modal
+ *   - All colors use the M3 token palette from tailwind config
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+/* ─── CSS Variables ──────────────────────────────────────────────────────────── */
+:root {
+    --plan-primary: #004ac6;
+    --plan-primary-container: #2563eb;
+    --plan-primary-light: rgba(0, 74, 198, 0.08);
+    --plan-on-primary: #ffffff;
+    --plan-surface: #f7f9fb;
+    --plan-surface-container: #eceef0;
+    --plan-surface-low: #f2f4f6;
+    --plan-surface-white: #ffffff;
+    --plan-on-surface: #191c1e;
+    --plan-on-surface-variant: #434655;
+    --plan-outline: #737686;
+    --plan-outline-variant: #c3c6d7;
+    --plan-success: #16a34a;
+    --plan-success-light: rgba(22, 163, 74, 0.1);
+    --plan-warning: #f59e0b;
+    --plan-warning-light: rgba(245, 158, 11, 0.1);
+    --plan-error: #ba1a1a;
+    --plan-error-light: rgba(186, 26, 26, 0.08);
+    --plan-radius-sm: 0.5rem;
+    --plan-radius-md: 0.75rem;
+    --plan-radius-lg: 1rem;
+    --plan-radius-xl: 1.5rem;
+    --plan-shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    --plan-shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --plan-shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+    --plan-shadow-hover: 0 20px 40px rgba(0,0,0,0.1);
+    --plan-font-headline: 'Manrope', sans-serif;
+    --plan-font-body: 'Inter', sans-serif;
+}
+
+/* ─── Plans Page Layout ──────────────────────────────────────────────────────── */
+.plans-page-v2 {
+    padding: 2rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: var(--plan-font-body);
+    color: var(--plan-on-surface);
+}
+
+.plans-page-v2__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2.5rem;
+    gap: 1.5rem;
+}
+
+.plans-page-v2__header-left {
+    flex: 1;
+}
+
+.plans-page-v2__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--plan-primary);
+    margin-bottom: 0.5rem;
+}
+
+.plans-page-v2__title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.plans-page-v2__subtitle {
+    font-size: 0.9rem;
+    color: var(--plan-on-surface-variant);
+    margin: 0;
+    max-width: 28rem;
+    line-height: 1.5;
+}
+
+/* Stats card (top right) */
+.plans-page-v2__stats-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--plan-surface-low);
+    border-radius: var(--plan-radius-lg);
+    padding: 1rem 1.5rem;
+    border: 1px solid rgba(195, 198, 215, 0.1);
+}
+
+.plans-page-v2__stats-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(0, 74, 198, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.plans-page-v2__stats-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--plan-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.plans-page-v2__stats-value {
+    font-family: var(--plan-font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+}
+
+/* ─── Plan Cards Grid ────────────────────────────────────────────────────────── */
+.plan-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+/* ─── Plan Card ──────────────────────────────────────────────────────────────── */
+.plan-card {
+    background: var(--plan-surface-white);
+    border-radius: var(--plan-radius-xl);
+    box-shadow: var(--plan-shadow-md);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(195, 198, 215, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.plan-card:hover {
+    box-shadow: var(--plan-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.plan-card--live {
+    border: 1px solid rgba(195, 198, 215, 0.15);
+}
+
+.plan-card--archived {
+    opacity: 0.65;
+    border-style: dashed;
+}
+
+.plan-card__header {
+    padding: 1.5rem 1.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+}
+
+.plan-card__icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--plan-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: var(--plan-shadow-sm);
+}
+
+.plan-card__icon--enterprise { background: #0f172a; color: #fff; }
+.plan-card__icon--pro { background: var(--plan-primary); color: #fff; }
+.plan-card__icon--starter { background: rgba(0, 74, 198, 0.08); color: var(--plan-primary); }
+.plan-card__icon--default { background: var(--plan-surface-container); color: var(--plan-on-surface-variant); }
+
+/* Badges */
+.plan-card__badge {
+    display: inline-flex;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.plan-card__badge--live {
+    background: rgba(22, 163, 74, 0.1);
+    color: var(--plan-success);
+}
+
+.plan-card__badge--draft {
+    background: var(--plan-surface-container);
+    color: var(--plan-on-surface-variant);
+}
+
+.plan-card__badge--archived {
+    background: var(--plan-surface-container);
+    color: var(--plan-outline);
+}
+
+/* active + sales: amber — visible to sales reps, not public marketing */
+.plan-card__badge--sales {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+
+/* active + internal: slate — live contractually, invisible externally */
+.plan-card__badge--internal {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+}
+
+/* Plan details */
+.plan-card__name {
+    font-family: var(--plan-font-headline);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 0.25rem;
+    padding: 0 1.5rem;
+    letter-spacing: -0.01em;
+}
+
+.plan-card__description {
+    font-size: 0.8rem;
+    color: var(--plan-on-surface-variant);
+    margin: 0 0 1.25rem;
+    padding: 0 1.5rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Price */
+.plan-card__price {
+    padding: 0 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+
+.plan-card__price-amount {
+    font-family: var(--plan-font-headline);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+}
+
+.plan-card__price-period {
+    font-size: 0.8rem;
+    color: var(--plan-on-surface-variant);
+    font-weight: 500;
+}
+
+.plan-card__price-na {
+    font-size: 0.85rem;
+    color: var(--plan-outline);
+    font-style: italic;
+}
+
+/* Usage */
+.plan-card__usage {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid rgba(0,0,0,0.03);
+}
+
+.plan-card__usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.plan-card__usage-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--plan-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.plan-card__usage-count {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--plan-on-surface);
+}
+
+.plan-card__usage-bar {
+    width: 100%;
+    height: 0.375rem;
+    background: var(--plan-surface-container);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.plan-card__usage-fill {
+    height: 100%;
+    background: var(--plan-primary);
+    border-radius: 999px;
+    transition: width 0.8s ease;
+}
+
+/* Timeline */
+.plan-card__timeline {
+    padding: 1.25rem 1.5rem;
+    background: var(--plan-surface-low);
+}
+
+.plan-card__timeline-title {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--plan-outline);
+    margin-bottom: 0.75rem;
+}
+
+.plan-card__timeline-list {
+    position: relative;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.plan-card__timeline-line {
+    position: absolute;
+    left: 0.3125rem;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    width: 1px;
+    background: rgba(195, 198, 215, 0.5);
+}
+
+.plan-card__timeline-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.plan-card__timeline-dot {
+    position: absolute;
+    left: -1.125rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+
+.plan-card__timeline-dot--live {
+    background: var(--plan-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.15);
+}
+
+.plan-card__timeline-dot--draft {
+    background: var(--plan-warning);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.plan-card__timeline-dot--archived {
+    background: var(--plan-outline-variant);
+}
+
+.plan-card__timeline-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.plan-card__timeline-tag {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--plan-outline);
+}
+
+.plan-card__timeline-tag--active {
+    font-weight: 700;
+    color: var(--plan-on-surface);
+}
+
+.plan-card__timeline-date {
+    font-size: 0.6rem;
+    color: var(--plan-outline);
+    letter-spacing: 0.03em;
+}
+
+/* Actions */
+.plan-card__actions {
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+    background: var(--plan-surface-low);
+    border-top: 1px solid rgba(0,0,0,0.03);
+}
+
+.plan-card__btn {
+    padding: 0.625rem 1rem;
+    border-radius: var(--plan-radius-md);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-align: center;
+}
+
+.plan-card__btn--primary {
+    background: var(--plan-primary);
+    color: var(--plan-on-primary);
+    box-shadow: var(--plan-shadow-sm);
+}
+
+.plan-card__btn--primary:hover {
+    opacity: 0.9;
+}
+
+.plan-card__btn--secondary {
+    background: var(--plan-surface-white);
+    color: var(--plan-on-surface);
+    border: 1px solid rgba(195, 198, 215, 0.3);
+    box-shadow: var(--plan-shadow-sm);
+}
+
+.plan-card__btn--secondary:hover {
+    background: var(--plan-surface-low);
+}
+
+/* ─── Plan Editor Layout ─────────────────────────────────────────────────────── */
+.plan-editor {
+    font-family: var(--plan-font-body);
+    color: var(--plan-on-surface);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Plan Header (sticky) */
+.plan-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(195, 198, 215, 0.2);
+    padding: 0.75rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.plan-header__left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.plan-header__back {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--plan-outline);
+    padding: 0.375rem;
+    border-radius: var(--plan-radius-sm);
+    transition: all 0.15s;
+}
+
+.plan-header__back:hover {
+    background: var(--plan-surface-container);
+    color: var(--plan-on-surface);
+}
+
+.plan-header__title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--plan-primary);
+    margin: 0;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+.plan-header__version {
+    font-weight: 600;
+    color: var(--plan-on-surface);
+}
+
+.plan-header__status {
+    display: inline-flex;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.plan-header__status--live {
+    background: var(--plan-success-light);
+    color: var(--plan-success);
+}
+
+.plan-header__status--draft {
+    background: var(--plan-surface-container);
+    color: var(--plan-on-surface-variant);
+}
+
+.plan-header__status--archived {
+    background: var(--plan-surface-container);
+    color: var(--plan-outline);
+}
+
+.plan-header__right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plan-header__btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.plan-header__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.plan-header__btn--primary {
+    background: var(--plan-primary);
+    color: var(--plan-on-primary);
+    box-shadow: 0 2px 8px rgba(0, 74, 198, 0.25);
+}
+
+.plan-header__btn--primary:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.plan-header__btn--secondary {
+    background: var(--plan-surface-white);
+    color: var(--plan-on-surface);
+    border: 1px solid var(--plan-outline-variant);
+}
+
+.plan-header__btn--secondary:hover:not(:disabled) {
+    background: var(--plan-surface-low);
+}
+
+.plan-header__btn--ghost {
+    background: transparent;
+    color: var(--plan-on-surface-variant);
+}
+
+.plan-header__btn--ghost:hover:not(:disabled) {
+    background: var(--plan-surface-container);
+    color: var(--plan-on-surface);
+}
+
+.plan-header__readonly-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--plan-outline);
+    padding: 0.375rem 0.75rem;
+    background: var(--plan-surface-container);
+    border-radius: var(--plan-radius-sm);
+}
+
+/* Tabs */
+.plan-editor__tabs {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0 2rem;
+    border-bottom: 1px solid rgba(195, 198, 215, 0.25);
+    background: var(--plan-surface-white);
+}
+
+.plan-editor__tab {
+    position: relative;
+    padding: 0.875rem 0;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--plan-on-surface-variant);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.plan-editor__tab:hover {
+    color: var(--plan-on-surface);
+}
+
+.plan-editor__tab--active {
+    color: var(--plan-primary);
+    font-weight: 700;
+    border-bottom-color: var(--plan-primary);
+}
+
+.plan-editor__tab-error {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--plan-error);
+    border-radius: 50%;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+    animation: tab-pulse 1.5s infinite;
+}
+
+@keyframes tab-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+/* Content area */
+.plan-editor__content {
+    flex: 1;
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    background: var(--plan-surface);
+}
+
+.plan-editor__main {
+    flex: 1;
+    max-width: 56rem;
+}
+
+.plan-editor__main--full {
+    max-width: 100%;
+}
+
+.plan-editor__sidebar {
+    width: 18rem;
+    flex-shrink: 0;
+}
+
+/* ─── GoLive Modal ───────────────────────────────────────────────────────────── */
+.golive-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+}
+
+.golive-modal {
+    position: relative;
+    background: var(--plan-surface-white);
+    width: 100%;
+    max-width: 32rem;
+    border-radius: var(--plan-radius-lg);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+    overflow: hidden;
+    animation: golive-in 0.2s ease-out;
+}
+
+@keyframes golive-in {
+    from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.golive-progress {
+    height: 0.25rem;
+    background: rgba(0, 74, 198, 0.08);
+}
+
+.golive-progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, var(--plan-primary), var(--plan-primary-container));
+    transition: width 0.6s ease;
+}
+
+.golive-body {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.golive-header {
+    text-align: center;
+}
+
+.golive-icon-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    background: var(--plan-primary-light);
+    border-radius: 50%;
+    margin-bottom: 0.75rem;
+}
+
+.golive-icon {
+    font-size: 2rem;
+}
+
+.golive-title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 0.375rem;
+    letter-spacing: -0.02em;
+}
+
+.golive-subtitle {
+    font-size: 0.85rem;
+    color: var(--plan-on-surface-variant);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.golive-code {
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: 0.8rem;
+    background: var(--plan-surface-container);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: var(--plan-primary);
+}
+
+.golive-loading {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--plan-outline);
+    font-size: 0.875rem;
+}
+
+.golive-section {
+    background: var(--plan-surface-low);
+    border-radius: var(--plan-radius-md);
+    padding: 1.25rem;
+    border: 1px solid rgba(195, 198, 215, 0.08);
+}
+
+.golive-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.golive-section-icon {
+    font-size: 1rem;
+}
+
+.golive-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--plan-on-surface);
+}
+
+.golive-changes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.golive-change-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.golive-change-row:last-child {
+    border-bottom: none;
+}
+
+.golive-change-label {
+    font-size: 0.8rem;
+    color: var(--plan-on-surface-variant);
+    font-weight: 500;
+}
+
+.golive-change-values {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.golive-change-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--plan-primary);
+    background: var(--plan-primary-light);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.golive-impact {
+    background: rgba(0, 74, 198, 0.04);
+    border: 1px solid rgba(0, 74, 198, 0.1);
+    border-radius: var(--plan-radius-md);
+    padding: 1.5rem;
+}
+
+.golive-impact-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.golive-impact-number {
+    font-family: var(--plan-font-headline);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--plan-primary);
+    letter-spacing: -0.02em;
+}
+
+.golive-impact-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--plan-primary);
+    opacity: 0.8;
+}
+
+.golive-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0 0.25rem;
+}
+
+.golive-info-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.golive-info-text {
+    font-size: 0.75rem;
+    color: var(--plan-on-surface-variant);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.golive-confirm-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--plan-on-surface);
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.golive-confirm-checkbox {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    accent-color: var(--plan-primary);
+}
+
+.golive-alert {
+    padding: 0.75rem 1rem;
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.golive-alert--error {
+    background: var(--plan-error-light);
+    color: var(--plan-error);
+    border: 1px solid rgba(186, 26, 26, 0.15);
+}
+
+.golive-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.golive-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--plan-radius-md);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.golive-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.golive-btn--cancel {
+    background: var(--plan-surface-white);
+    color: var(--plan-on-surface-variant);
+    border: 1px solid var(--plan-outline-variant);
+}
+
+.golive-btn--cancel:hover:not(:disabled) {
+    background: var(--plan-surface-low);
+}
+
+.golive-btn--confirm {
+    background: linear-gradient(135deg, var(--plan-primary), var(--plan-primary-container));
+    color: var(--plan-on-primary);
+    box-shadow: 0 4px 12px rgba(0, 74, 198, 0.25);
+}
+
+.golive-btn--confirm:hover:not(:disabled) {
+    opacity: 0.92;
+}
+
+/* ─── Archive Modal ──────────────────────────────────────────────────────────── */
+.archive-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(6px);
+}
+
+.archive-modal {
+    position: relative;
+    background: var(--plan-surface-white);
+    width: 100%;
+    max-width: 30rem;
+    border-radius: var(--plan-radius-lg);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+    overflow: hidden;
+    animation: golive-in 0.2s ease-out;
+}
+
+.archive-stripe {
+    height: 3px;
+    background: rgba(186, 26, 26, 0.2);
+}
+
+.archive-body {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.archive-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.archive-icon-wrap {
+    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
+    background: var(--plan-error-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.archive-icon {
+    font-size: 1.5rem;
+}
+
+.archive-header-text {
+    flex: 1;
+}
+
+.archive-title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 0.375rem;
+    letter-spacing: -0.02em;
+}
+
+.archive-subtitle {
+    font-size: 0.85rem;
+    color: var(--plan-on-surface-variant);
+    margin: 0;
+    line-height: 1.55;
+}
+
+.archive-impact {
+    background: var(--plan-surface-low);
+    border-radius: var(--plan-radius-md);
+    padding: 1.25rem;
+    border: 1px solid rgba(195, 198, 215, 0.1);
+}
+
+.archive-impact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.archive-impact-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.archive-impact-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--plan-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.archive-impact-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+}
+
+.archive-impact-number {
+    font-family: var(--plan-font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--plan-error);
+}
+
+.archive-impact-unit {
+    font-size: 0.85rem;
+    color: var(--plan-on-surface-variant);
+    font-weight: 500;
+}
+
+.archive-impact-status {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.archive-status-icon {
+    color: var(--plan-primary);
+    font-size: 1rem;
+}
+
+.archive-status-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--plan-primary);
+}
+
+.archive-safety-note {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(195, 198, 215, 0.2);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+}
+
+.archive-note-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.archive-note-text {
+    font-size: 0.8rem;
+    color: var(--plan-on-surface-variant);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.archive-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.archive-alert--error {
+    background: var(--plan-error-light);
+    color: var(--plan-error);
+    border: 1px solid rgba(186, 26, 26, 0.15);
+}
+
+.archive-alert--warning {
+    background: var(--plan-warning-light);
+    color: #92400e;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.archive-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.archive-btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.archive-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.archive-btn--cancel {
+    background: var(--plan-surface-container);
+    color: var(--plan-on-surface);
+}
+
+.archive-btn--cancel:hover:not(:disabled) {
+    background: var(--plan-surface-low);
+}
+
+.archive-btn--confirm {
+    background: linear-gradient(135deg, var(--plan-error), #d32f2f);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(186, 26, 26, 0.15);
+}
+
+.archive-btn--confirm:hover:not(:disabled) {
+    opacity: 0.92;
+}
+
+.archive-btn--force {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+}
+
+.archive-btn--force:hover:not(:disabled) {
+    opacity: 0.92;
+}
+
+.archive-footer {
+    background: rgba(0,0,0,0.02);
+    padding: 0.75rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(195, 198, 215, 0.15);
+}
+
+.archive-footer-id {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--plan-outline);
+    letter-spacing: 0.06em;
+}
+
+/* ─── Bottom Stats Panels ────────────────────────────────────────────────────── */
+.plans-page-v2__bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.plans-distribution {
+    background: var(--plan-surface-low);
+    border-radius: var(--plan-radius-xl);
+    padding: 2rem;
+    border: 1px solid rgba(195, 198, 215, 0.1);
+}
+
+.plans-distribution__title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plans-distribution__row {
+    margin-bottom: 1.25rem;
+}
+
+.plans-distribution__row:last-child {
+    margin-bottom: 0;
+}
+
+.plans-distribution__labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--plan-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.375rem;
+}
+
+.plans-distribution__bar {
+    height: 0.75rem;
+    width: 100%;
+    background: var(--plan-surface-white);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(195, 198, 215, 0.15);
+}
+
+.plans-distribution__fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.8s ease;
+}
+
+/* ─── CTA Banner ─────────────────────────────────────────────────────────────── */
+.plans-cta {
+    background: var(--plan-primary-container);
+    color: #fff;
+    border-radius: var(--plan-radius-xl);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.plans-cta__title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem;
+}
+
+.plans-cta__text {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.6;
+    max-width: 24rem;
+    margin: 0;
+}
+
+.plans-cta__btn {
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff;
+    color: var(--plan-primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--plan-radius-md);
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease;
+}
+
+.plans-cta__btn:hover {
+    transform: scale(1.02);
+}
+
+.plans-cta__decor {
+    position: absolute;
+    right: -3rem;
+    bottom: -3rem;
+    width: 12rem;
+    height: 12rem;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+    filter: blur(60px);
+}
+
+/* ─── Create Template Modal (v2 overlay) ─────────────────────────────────────── */
+.create-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(6px);
+}
+
+.create-modal {
+    background: var(--plan-surface-white);
+    width: 100%;
+    max-width: 28rem;
+    border-radius: var(--plan-radius-lg);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+    padding: 2rem;
+    animation: golive-in 0.2s ease-out;
+}
+
+.create-modal__title {
+    font-family: var(--plan-font-headline);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--plan-on-surface);
+    margin: 0 0 0.375rem;
+}
+
+.create-modal__subtitle {
+    font-size: 0.8rem;
+    color: var(--plan-on-surface-variant);
+    margin: 0 0 1.5rem;
+    line-height: 1.5;
+}
+
+.create-modal__field {
+    margin-bottom: 1rem;
+}
+
+.create-modal__label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--plan-on-surface-variant);
+    margin-bottom: 0.375rem;
+}
+
+.create-modal__input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--plan-outline-variant);
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.85rem;
+    color: var(--plan-on-surface);
+    background: var(--plan-surface-low);
+    transition: border-color 0.2s;
+}
+
+.create-modal__input:focus {
+    outline: none;
+    border-color: var(--plan-primary);
+    box-shadow: 0 0 0 3px var(--plan-primary-light);
+}
+
+.create-modal__input--mono {
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: 0.8rem;
+}
+
+.create-modal__hint {
+    font-size: 0.7rem;
+    color: var(--plan-outline);
+    margin-top: 0.25rem;
+}
+
+.create-modal__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+/* ─── Alerts (v2) ────────────────────────────────────────────────────────────── */
+.plans-alert-v2 {
+    padding: 0.75rem 1rem;
+    border-radius: var(--plan-radius-sm);
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.plans-alert-v2--error {
+    background: var(--plan-error-light);
+    border: 1px solid rgba(186, 26, 26, 0.15);
+    color: var(--plan-error);
+}
+
+.plans-alert-v2--success {
+    background: var(--plan-success-light);
+    border: 1px solid rgba(22, 163, 74, 0.15);
+    color: var(--plan-success);
+}
+
+.plans-alert-v2 button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font-size: 1.1rem;
+    opacity: 0.7;
+    padding: 0 0.25rem;
+}
+
+/* ─── Loading State ──────────────────────────────────────────────────────────── */
+.plans-loading-v2 {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--plan-outline);
+    font-size: 1rem;
+}
+
+/* ─── Empty State ────────────────────────────────────────────────────────────── */
+.plans-empty-v2 {
+    text-align: center;
+    padding: 3rem 2rem;
+    border: 2px dashed var(--plan-outline-variant);
+    border-radius: var(--plan-radius-xl);
+    color: var(--plan-on-surface-variant);
+}
+
+.plans-empty-v2__icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.plans-empty-v2__text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* ─── Editor Sidebar ─────────────────────────────────────────────────────────── */
+.editor-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.editor-sidebar__nav {
+    background: var(--plan-surface-white);
+    border-radius: var(--plan-radius-lg);
+    border: 1px solid rgba(195, 198, 215, 0.15);
+    padding: 1.25rem;
+    box-shadow: var(--plan-shadow-sm);
+}
+
+.editor-sidebar__title {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--plan-on-surface-variant);
+    margin-bottom: 0.875rem;
+}
+
+.editor-sidebar__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    margin-bottom: 0.125rem;
+    border-radius: var(--plan-radius-sm);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--plan-on-surface-variant);
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.editor-sidebar__link:hover {
+    background: var(--plan-surface-low);
+    color: var(--plan-on-surface);
+}
+
+.editor-sidebar__link--active {
+    color: var(--plan-primary);
+    font-weight: 700;
+    background: var(--plan-primary-light);
+}
+
+.editor-sidebar__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.editor-sidebar__dot--active {
+    background: var(--plan-primary);
+}
+
+.editor-sidebar__dot--changed {
+    background: var(--plan-error);
+    animation: tab-pulse 1.5s infinite;
+}
+
+.editor-sidebar__changes {
+    background: var(--plan-surface-white);
+    border-radius: var(--plan-radius-lg);
+    border: 1px solid rgba(195, 198, 215, 0.15);
+    padding: 1.25rem;
+    box-shadow: var(--plan-shadow-sm);
+}
+
+.editor-sidebar__change-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(195, 198, 215, 0.1);
+}
+
+.editor-sidebar__change-item:last-child {
+    border-bottom: none;
+}
+
+.editor-sidebar__change-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.editor-sidebar__change-icon--change {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+.editor-sidebar__change-icon--add {
+    background: rgba(22, 163, 74, 0.12);
+    color: var(--plan-success);
+}
+
+.editor-sidebar__change-icon--remove {
+    background: var(--plan-error-light);
+    color: var(--plan-error);
+}
+
+.editor-sidebar__change-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--plan-on-surface);
+    line-height: 1.3;
+}
+
+.editor-sidebar__change-detail {
+    font-size: 0.72rem;
+    color: var(--plan-on-surface-variant);
+    margin-top: 0.125rem;
+    line-height: 1.4;
+}
+
+.editor-sidebar__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.editor-sidebar__btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--plan-radius-md);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-align: center;
+}
+
+.editor-sidebar__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.editor-sidebar__btn--primary {
+    background: var(--plan-primary);
+    color: var(--plan-on-primary);
+    box-shadow: 0 4px 16px rgba(0, 74, 198, 0.25);
+}
+
+.editor-sidebar__btn--primary:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 74, 198, 0.3);
+}
+
+.editor-sidebar__btn--ghost {
+    background: transparent;
+    color: var(--plan-on-surface-variant);
+    font-weight: 500;
+}
+
+.editor-sidebar__btn--ghost:hover:not(:disabled) {
+    text-decoration: underline;
+    color: var(--plan-on-surface);
+}
+
+.editor-sidebar__status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0;
+    font-size: 0.75rem;
+    color: var(--plan-outline);
+}
+
+.editor-sidebar__status-icon {
+    font-size: 1rem;
+}
+
+.editor-sidebar__status-text {
+    font-weight: 500;
+}
+
+/* ─── Unified Editor Sidebar Specialties ─────────────────────────────────── */
+.editor-sidebar__section {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.readiness-check__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.readiness-check__title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.readiness-check__percent {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #004ac6;
+}
+
+.readiness-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: #191c1e;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.readiness-item__icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.readiness-item--done { color: #191c1e; }
+.readiness-item--pending { color: #94a3b8; }
+
+.visibility-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.visibility-card--active {
+    border-color: #004ac6;
+    background: rgba(0, 74, 198, 0.02);
+}
+
+.visibility-card__info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* ─── Entitlements Grid ──────────────────────────────────────────────────────── */
+.entitlements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.entitlement-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.entitlement-card:hover {
+    border-color: rgba(0, 74, 198, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.entitlement-card__header {
+    display: flex;
+    justify-content: space-between;
+    color: #004ac6;
+    margin-bottom: 1rem;
+}
+
+.entitlement-card__label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.entitlement-card__value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #191c1e;
+}
+
+.entitlement-card--premium {
+    border-color: rgba(0, 74, 198, 0.3);
+}
+
+.premium-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #004ac6;
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* ─── Toggles ────────────────────────────────────────────────────────────────── */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #e2e8f0;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px; width: 14px;
+    left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider { background-color: #004ac6; }
+input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* Activity Log */
+.activity-item {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.activity-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.activity-content { flex: 1; }
+.activity-user { font-size: 0.8rem; font-weight: 700; color: #191c1e; }
+.activity-text { font-size: 0.75rem; color: #64748b; margin: 2px 0; line-height: 1.4; }
+.activity-time { font-size: 0.65rem; font-weight: 700; color: #004ac6; text-transform: uppercase; }
+
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .plans-page-v2 {
+        padding: 1rem;
+    }
+
+    .plans-page-v2__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .plan-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .plans-page-v2__bottom {
+        grid-template-columns: 1fr;
+    }
+
+    .plan-header {
+        padding: 0.5rem 1rem;
+        flex-wrap: wrap;
+    }
+
+    .plan-editor__content {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .plan-editor__sidebar {
+        width: 100%;
+    }
+
+    .golive-actions,
+    .archive-actions {
+        flex-direction: column;
+    }
+}
+
+/* ─── Global Form Primitives ────────────────────────────────────────────────── */
+.plans-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.plans-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: #1e293b;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+.plans-input:focus {
+    outline: none;
+    border-color: #004ac6;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(0, 74, 198, 0.1);
+    transform: translateY(-1px);
+}
+
+.plans-input:hover:not(:focus) {
+    border-color: #cbd5e1;
+}
+
+.plans-input::placeholder {
+    color: #94a3b8;
+    opacity: 0.7;
+}
+
+textarea.plans-input {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.6;
+}

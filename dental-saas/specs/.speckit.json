@@ -1,0 +1,8 @@
+{
+  "workflow": "default",
+  "selectedAt": "2026-03-12T09:36:55.445Z",
+  "shell": "powershell",
+  "specFolder": "specs",
+  "taskFolder": "tasks",
+  "promptFolder": "prompts"
+}

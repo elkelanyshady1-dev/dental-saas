@@ -1,0 +1,19 @@
+{
+  "capabilities": [
+    "VIEW_ORGANIZATIONS",
+    "MANAGE_ORGANIZATIONS",
+    "MANAGE_SUBSCRIPTIONS",
+    "VIEW_AUDIT_LOGS",
+    "VIEW_PLATFORM_ANALYTICS",
+    "MANAGE_PLATFORM_USERS",
+    "MANAGE_PLATFORM_SETTINGS"
+  ],
+  "featureFlags": [
+    "ADVANCED_ANALYTICS",
+    "ENTERPRISE_REPORTING",
+    "PLATFORM_KILL_SWITCH",
+    "SYSTEM_MONITOR"
+  ],
+  "version": "1.1.0",
+  "exportedAt": "2026-03-01T09:31:40.000Z"
+}

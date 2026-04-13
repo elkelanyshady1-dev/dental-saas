@@ -1,14 +1,30 @@
-import { useAuth } from "../context/AuthContext";
+/**
+ * useFeature.js — Feature Flag Hook
+ *
+ * HIGH-002 FIX (Production Readiness Patch):
+ * Previously used `user.platformRole === "superadmin"` — SENTINEL violation.
+ * Now delegates to FeatureContext.hasModule() which resolves from the
+ * subscription plan pipeline (capabilities.modules).
+ *
+ * For org users: checks organization.capabilities.modules[featureKey].
+ * For platform users viewing org features: not applicable (platform has
+ * its own feature flag system via PlatformShell).
+ *
+ * SENTINEL RULE: role === "admin" — FORBIDDEN.
+ * SENTINEL RULE: capabilities-based checks — ENFORCED.
+ *
+ * PLANE: Org only.
+ */
+import { useFeatures } from "../context/FeatureContext";
 
 export default function useFeature(featureKey) {
-    const { user } = useAuth();
+    const { hasModule, hasFeature } = useFeatures();
 
-    if (!user || (!user.organization && user.platformRole !== "superadmin")) return false;
+    // Check module-level entitlement first (e.g., "orthodontics", "finance")
+    if (hasModule(featureKey)) return true;
 
-    // If user is a superadmin looking at platform (not mapped to org), or just default true for superadmins.
-    if (user.platformRole === "superadmin" || user.platformRole === "platform_admin") {
-        return true; // Super admins have access to all modules effectively.
-    }
+    // Check sub-feature flag (e.g., "AI_SEGMENTATION")
+    if (hasFeature(featureKey)) return true;
 
-    return user.organization?.features?.[featureKey]?.enabled || false;
+    return false;
 }

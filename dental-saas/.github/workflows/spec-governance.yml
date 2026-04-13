@@ -1,0 +1,73 @@
+name: SPEC-KIT Governance Enforcement
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RULES ENGINE v4.3 — Spec-First CI Gate
+#
+# Enforces the mandatory development pipeline at repository level:
+#   G1 → spec.md + per-module specs exist
+#   G2 → plan.md exists and is non-empty
+#   G3 → tasks.md exists and is non-empty
+#   B1 → No Zero-Trust auth violations (localStorage platformToken, generic "token" key)
+#   B2 → No raw fetch() bypassing interceptors
+#   B3 → No React Query singleton violations, no window.location.reload()
+#   B4 → No cross-plane frontend imports (Platform ↔ Org isolation)
+#   B5 → No BroadcastChannel data payloads (zero-trust type-only events)
+#
+# This job runs BEFORE tests. A violation here blocks the entire pipeline.
+# No developer can merge code to main/develop that violates spec governance.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  spec-governance:
+    name: 🛡 SPEC-KIT Governance (G1/G2/G3 + B1-B5)
+    runs-on: ubuntu-latest
+    # Run for all PRs including draft — catch violations early
+    if: ${{ !github.event.pull_request.draft || github.event_name == 'push' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ripgrep
+        run: |
+          sudo apt-get install -y ripgrep
+          rg --version
+
+      - name: Run SPEC-KIT Enforcement Audit
+        id: spec_audit
+        run: |
+          echo "Running SPEC-KIT Enforcement Audit..."
+          node scripts/auditSpecFlow.js --summary
+        env:
+          NO_COLOR: 1
+
+      - name: Run SPEC-KIT Full Report (on failure)
+        if: failure() && steps.spec_audit.outcome == 'failure'
+        run: node scripts/auditSpecFlow.js
+        env:
+          NO_COLOR: 1
+
+      - name: Upload audit results (JSON)
+        if: always()
+        run: |
+          node scripts/auditSpecFlow.js --json > audit-results.json 2>/dev/null || true
+
+      - name: Upload audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-audit-results
+          path: audit-results.json
+          retention-days: 30

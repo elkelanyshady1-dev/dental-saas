@@ -1,0 +1,87 @@
+{
+    "title": "DentalSaaS Sovereign Governance — v11.0 Hardening",
+    "panels": [
+        {
+            "title": "Refund Success vs Failure",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "rate(dental_saas_refund_execution_total{status=\"completed\"}[5m])",
+                    "legendFormat": "Success"
+                },
+                {
+                    "expr": "rate(dental_saas_refund_execution_total{status=\"failed\"}[5m])",
+                    "legendFormat": "Failure"
+                }
+            ]
+        },
+        {
+            "title": "Stripe Webhook Traffic (by status)",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "rate(dental_saas_webhook_received_total[5m])",
+                    "legendFormat": "{{status}}"
+                }
+            ]
+        },
+        {
+            "title": "Reconciliation Repairs",
+            "type": "bargauge",
+            "targets": [
+                {
+                    "expr": "increase(dental_saas_refund_reconciliation_total{outcome=\"repaired\"}[1h])",
+                    "legendFormat": "Repaired"
+                },
+                {
+                    "expr": "increase(dental_saas_refund_reconciliation_total{outcome=\"failed\"}[1h])",
+                    "legendFormat": "Failed"
+                }
+            ]
+        },
+        {
+            "title": "Financial Integrity: Pending Refunds (>5m)",
+            "type": "stat",
+            "targets": [
+                {
+                    "expr": "dental_saas_active_refund_transactions",
+                    "legendFormat": "Currently Active"
+                }
+            ]
+        },
+        {
+            "title": "Sovereign Audit Chain Conflicts",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "increase(dental_saas_audit_append_total{outcome=\"conflict\"}[5m])",
+                    "legendFormat": "Conflicts"
+                }
+            ]
+        },
+        {
+            "title": "Node.js Process Health",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "dental_saas_process_heap_used_bytes",
+                    "legendFormat": "Heap Memory"
+                },
+                {
+                    "expr": "dental_saas_active_http_requests",
+                    "legendFormat": "Active HTTP Requests"
+                }
+            ]
+        },
+        {
+            "title": "MongoDB Integrity: Transaction Aborts",
+            "type": "graph",
+            "targets": [
+                {
+                    "expr": "rate(dental_saas_mongo_transaction_abort_total[5m])",
+                    "legendFormat": "Aborts"
+                }
+            ]
+        }
+    ]
+}

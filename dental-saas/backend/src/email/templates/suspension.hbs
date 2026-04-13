@@ -1,0 +1,50 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Dear <strong>{{orgName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 20px; line-height:1.6;">
+    We regret to inform you that your <strong>{{platformName}}</strong> account has been
+    <strong style="color:#dc2626;">suspended</strong> due to non-payment.
+</p>
+
+<div
+    style="background:#fee2e2; border-left:4px solid #dc2626; border-radius:8px; padding:16px 20px; margin-bottom:24px;">
+    <p
+        style="margin:0; font-size:13px; color:#991b1b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+        🔒 Account Suspended</p>
+    <p style="margin:6px 0 0; font-size:14px; color:#7f1d1d; line-height:1.5;">
+        All access to your clinic system has been disabled. To restore access, please renew
+        your subscription immediately.
+    </p>
+</div>
+
+<table class="data">
+    <tr>
+        <th>Organization</th>
+        <td>{{orgName}}</td>
+    </tr>
+    {{#if suspendedAt}}
+    <tr>
+        <th>Suspended At</th>
+        <td>{{formatDate suspendedAt}}</td>
+    </tr>
+    {{/if}}
+    {{#if reasonCode}}
+    <tr>
+        <th>Reason</th>
+        <td>{{reasonCode}}</td>
+    </tr>
+    {{/if}}
+</table>
+
+{{#if renewUrl}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" style="background:#dc2626;" href="{{renewUrl}}">Restore Account Now</a>
+</div>
+{{/if}}
+
+<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
+    If you believe this is a mistake or have already made payment, please contact our support team.
+    Data is retained for 30 days after suspension before permanent deletion.
+</p>
+{{/inline}}
+{{/layout}}

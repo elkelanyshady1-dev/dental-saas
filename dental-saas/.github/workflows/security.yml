@@ -1,0 +1,121 @@
+name: Security Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/**'
+      - 'backend/scripts/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/**'
+      - 'backend/scripts/**'
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  security-validation:
+    name: Security Chain Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # ── RLS Enforcement ─────────────────────────────────
+      - name: Validate RLS Compliance
+        run: npm run validate:rls:strict
+
+      - name: Validate Raw Model Usage
+        run: npm run validate:raw-models:strict
+
+      - name: Validate Aggregate Security
+        run: npm run validate:aggregate-security:strict
+
+      - name: Validate Projection Security
+        run: npm run validate:projection-security:strict
+
+      # ── Field-Level Security ────────────────────────────
+      - name: Validate Field Access Coverage
+        run: npm run validate:field-access:strict
+
+      # ── Taxonomy Enforcement ────────────────────────────
+      - name: Validate RLS Taxonomy
+        run: npm run validate:taxonomy:strict
+
+      - name: Validate RLS Exemptions
+        run: npm run validate:rls-exemptions:strict
+
+      # ── Auth & RBAC ─────────────────────────────────────
+      - name: Validate Auth Flow
+        run: npm run validate:auth-flow
+
+      - name: Validate Security Chain
+        run: npm run validate:security-chain:strict
+
+      - name: Validate Auth Controller Integrity
+        run: npm run validate:auth-controller-integrity
+
+      # ── Policy & Permissions ────────────────────────────
+      - name: Validate Policies
+        run: npm run validate:policies:strict
+
+      - name: Validate Role Matrix
+        run: npm run validate:role-matrix
+
+      - name: Validate Capability Invariants
+        run: npm run validate:capability-invariants
+
+      # ── Platform & Plane Isolation ──────────────────────
+      - name: Validate Cross-Plane Isolation
+        run: npm run validate:cross-plane-isolation
+
+      - name: Validate Platform Routes
+        run: npm run validate:platform
+
+      - name: Validate Mount Namespaces
+        run: npm run validate:mounts
+
+      # ── Governance ──────────────────────────────────────
+      - name: Validate Governance Self-Integrity
+        run: npm run validate:governance-self-integrity
+
+      - name: Validate API Integrity
+        run: npm run validate:api-integrity
+
+  governance-engine:
+    name: Governance Engine (Strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: security-validation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run Governance Engine (Strict)
+        run: npm run governance:ci
+        env:
+          GOVERNANCE_STRICT: 'true'

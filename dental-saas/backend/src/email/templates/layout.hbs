@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{{subject}}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f4f6f9;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #1a1a2e;
+    }
+
+    .wrapper {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      padding: 32px 40px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header p {
+      margin: 6px 0 0;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 13px;
+    }
+
+    .body {
+      padding: 40px;
+    }
+
+    .footer {
+      background: #f4f6f9;
+      padding: 24px 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .footer a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .btn {
+      display: inline-block;
+      margin: 24px 0;
+      padding: 14px 32px;
+      background: #2563eb;
+      color: #ffffff !important;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e9ecef;
+      margin: 24px 0;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pill-blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .pill-green {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .pill-red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .pill-amber {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+
+    table.data th {
+      background: #f8fafc;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    table.data td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+
+    table.data tr:last-child td {
+      border-bottom: none;
+    }
+
+    .amount-row {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e3a5f;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>{{platformName}}</h1>
+      <p>Clinic Management Platform</p>
+    </div>
+    <div class="body">
+      {{> body}}
+    </div>
+    <div class="footer">
+      <p>© {{year}} {{platformName}}. All rights reserved.</p>
+      <p>This is an automated message. Please do not reply directly to this email.</p>
+      {{#if supportEmail}}
+      <p>Questions? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+      {{/if}}
+    </div>
+  </div>
+</body>
+
+</html>

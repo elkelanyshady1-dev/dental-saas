@@ -1,0 +1,34 @@
+{
+    "finance_admin": [
+        "MANAGE_SUBSCRIPTIONS",
+        "VIEW_ORGANIZATIONS",
+        "VIEW_PLATFORM_ANALYTICS"
+    ],
+    "operations_admin": [
+        "VIEW_AUDIT_LOGS",
+        "VIEW_ORGANIZATIONS"
+    ],
+    "analyst": [
+        "VIEW_AUDIT_LOGS",
+        "VIEW_ORGANIZATIONS",
+        "VIEW_PLATFORM_ANALYTICS"
+    ],
+    "superadmin": [
+        "MANAGE_ORGANIZATIONS",
+        "MANAGE_PLATFORM_SETTINGS",
+        "MANAGE_PLATFORM_USERS",
+        "MANAGE_SUBSCRIPTIONS",
+        "VIEW_AUDIT_LOGS",
+        "VIEW_ORGANIZATIONS",
+        "VIEW_PLATFORM_ANALYTICS"
+    ],
+    "__capabilities__": [
+        "MANAGE_ORGANIZATIONS",
+        "MANAGE_PLATFORM_SETTINGS",
+        "MANAGE_PLATFORM_USERS",
+        "MANAGE_SUBSCRIPTIONS",
+        "VIEW_AUDIT_LOGS",
+        "VIEW_ORGANIZATIONS",
+        "VIEW_PLATFORM_ANALYTICS"
+    ]
+}

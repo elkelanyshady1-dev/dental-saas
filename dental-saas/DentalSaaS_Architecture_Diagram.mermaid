@@ -1,0 +1,216 @@
+---
+title: DentalSaaS 3-Plane Architecture — Enforcement & Data Flow
+---
+graph TB
+    subgraph CLIENT["CLIENT LAYER"]
+        direction LR
+        OrgFE["Org Frontend<br/>(React + React Query)"]
+        PlatFE["Platform Frontend<br/>(Admin Dashboard)"]
+        SuperFE["Supervisor Frontend<br/>(Review Portal)"]
+        PatientFE["Patient Portal<br/>(Self-Service)"]
+    end
+
+    subgraph GATEWAY["API GATEWAY & MIDDLEWARE CHAIN"]
+        direction TB
+        JWT["JWT Validator<br/>(jwtManager.js)"]
+        TypeGuard["Token Type Guard<br/>(orgProtect / platformProtect /<br/>supervisorProtect)"]
+        ContextInject["Context Injection<br/>(organizationContext.js)<br/>req.context = { userId, orgId, role }"]
+        ContextLock["MISSING: Context Lock<br/>Block req.body.organizationId<br/>Block req.query.organizationId"]
+        SubGuard["Subscription Guard<br/>(orgSubscriptionGuard.js)"]
+        CapResolver["Capability Resolver<br/>(unifiedCapabilityMiddleware.js)"]
+        RBAC["RBAC Check<br/>(authorize / requireOrgPermission)"]
+        PBAC["PBAC Check<br/>(policyMiddleware.js)"]
+        RLS["RLS Context<br/>(rlsContext.js — frozen)"]
+        FLS["FLS Filter<br/>(fieldFilterMiddleware.js)"]
+        AuditInt["Audit Interceptor<br/>(auditInterceptor.js)"]
+
+        JWT --> TypeGuard --> ContextInject --> ContextLock
+        ContextLock --> SubGuard --> CapResolver
+        CapResolver --> RBAC --> PBAC --> RLS --> FLS --> AuditInt
+    end
+
+    subgraph PLATFORM_PLANE["PLATFORM PLANE (Global DB)"]
+        direction TB
+        subgraph PlatControllers["Controllers"]
+            PlatBilling["Billing Controllers<br/>(invoice, ledger, refund)"]
+            PlatOrg["Organization Controller"]
+            PlatPlan["Plan Controllers<br/>(PlanVersion, PlanTemplate)"]
+            PlatGuardian["Guardian Controller<br/>(Invariant Monitor)"]
+        end
+        subgraph PlatServices["Services"]
+            ContractEngine["Contract Engine"]
+            PricingEngine["Pricing Engine"]
+            InvoiceEngine["Invoice Engine"]
+            EntitlementResolver["Entitlement Resolver"]
+            PlatSubscription["Subscription Service"]
+        end
+        subgraph PlatModels["Models (Global DB)"]
+            PlanVersion["PlanVersion"]
+            OrgContract["OrgContract"]
+            PlatformInvoice["PlatformInvoice"]
+            Organization["Organization"]
+            PlatformUser["PlatformUser"]
+            FeatureFlag["FeatureFlag"]
+            BillingLedger["BillingLedger"]
+            LedgerTx["LedgerTransaction"]
+        end
+    end
+
+    subgraph ORG_PLANE["ORGANIZATION PLANE (DB-per-Org)"]
+        direction TB
+        subgraph OrgControllers["Controllers"]
+            PatientCtrl["Patient Controller"]
+            ApptCtrl["Appointment Controller"]
+            OrthoCtrl["Orthodontic Controller"]
+            TreatCtrl["Treatment Controller"]
+            OrgBillCtrl["Org Billing Controller"]
+            FeatCtrl["Features Control"]
+        end
+        subgraph OrgServices["Services"]
+            CaseService["Case Service"]
+            SnapshotService["Snapshot Service"]
+            ClinicalEngine["Clinical Engine"]
+            ApptService["Appointment Service"]
+        end
+        subgraph OrgModels["Models (Per-Org DB)"]
+            Patient["Patient"]
+            Appointment["Appointment"]
+            OrthoCase["OrthodonticCase"]
+            ClinicalEvent["ClinicalEvent"]
+            ClinicalSnapshot["ClinicalSnapshot"]
+            VisitRecord["VisitRecord"]
+            PatientInvoice["PatientInvoice"]
+            OrgAddOn["OrgAddOn"]
+        end
+    end
+
+    subgraph SUPERVISOR_PLANE["SUPERVISOR PLANE (Global DB — Isolated)"]
+        direction TB
+        subgraph SupControllers["Controllers"]
+            SupAuth["Supervisor Auth"]
+            SupDash["Dashboard Controller"]
+            SupReview["Review Controller"]
+            SupInvite["Invitation Controller"]
+        end
+        subgraph SupMiddleware["Access Guards"]
+            SupProtect["supervisorProtect<br/>(JWT type=supervisor)"]
+            SupAccessGuard["supervisorAccessGuard<br/>(CaseAccess lookup)"]
+            SupPermission["requireSupervisorPermission<br/>(canComment, canApprove)"]
+        end
+        subgraph SupModels["Models"]
+            SupervisorUser["SupervisorUser"]
+            CaseAccess["CaseAccess<br/>(Cross-Org Bridge)"]
+            ReviewStage["ReviewStage"]
+            ReviewComment["ReviewComment"]
+            SupervisorInvitation["SupervisorInvitation"]
+        end
+    end
+
+    subgraph SHARED_BRIDGE["SHARED BRIDGE LAYER"]
+        direction LR
+        SharedModels["Shared Model Re-exports<br/>(shared/models/)"]
+        PlanResolver["planResolver.js<br/>(Org reads Platform plans)"]
+        OrgContractReader["orgContractReader.js"]
+        PlatAddOnSvc["platformAddOn.service.js"]
+    end
+
+    subgraph ENFORCEMENT["ENFORCEMENT LAYER"]
+        direction TB
+        subgraph BootGuards["Boot-Time Guards"]
+            SovereignGuard["Sovereign Guard<br/>(Architecture Invariants)"]
+            AuthPipeline["Auth Pipeline Validator"]
+            PermValidator["Permission SSOT Validator"]
+            RLSValidator["RLS Validator"]
+            PolicyCoverage["Policy Coverage Validator"]
+            FieldAccess["Field Access Validator"]
+            RegistryValidator["Registry Validator (9 checks)"]
+        end
+        subgraph RuntimeGuards["Runtime Guards"]
+            SecureModel["secureModel.js<br/>(Query wrapper — fail-closed)"]
+            EventSchema["Event Schema Registry<br/>(Runtime validation)"]
+            ImmutabilityHooks["Mongoose Immutability Hooks<br/>(AuditLog, BillingLedger)"]
+            FSMGuard["State Machine Guards<br/>(Appointment, Refund, Invoice)"]
+            HashChain["SHA-256 Hash Chain<br/>(Audit Integrity)"]
+        end
+        subgraph MissingGuards["MISSING GUARDS (To Build)"]
+            ContextLockMW["contextLock Middleware<br/>Reject body/query orgId"]
+            ImportFirewall["Import Firewall<br/>Block cross-plane requires"]
+            ModelRegistry["Model Ownership Registry<br/>Plane-to-model mapping"]
+            ConnValidator["Connection Plane Validator<br/>Match conn to plane"]
+            PlatFilterAudit["Platform Filter Auditor<br/>Log all multi-org queries"]
+        end
+    end
+
+    subgraph INFRA["INFRASTRUCTURE"]
+        direction LR
+        GlobalDB[("Global MongoDB<br/>(Platform + Supervisor)")]
+        OrgDB1[("dental_org_001<br/>(Org 1)")]
+        OrgDB2[("dental_org_002<br/>(Org 2)")]
+        OrgDBN[("dental_org_N<br/>(Org N)")]
+        Redis[("Redis<br/>(Cache + BullMQ)")]
+        EventBus["Event Bus<br/>(Transactional Outbox)"]
+    end
+
+    %% Client to Gateway
+    OrgFE --> JWT
+    PlatFE --> JWT
+    SuperFE --> JWT
+    PatientFE --> JWT
+
+    %% Gateway to Planes
+    AuditInt -->|"type=platform"| PlatControllers
+    AuditInt -->|"type=organization"| OrgControllers
+    AuditInt -->|"type=supervisor"| SupProtect
+
+    %% Supervisor Chain
+    SupProtect --> SupAccessGuard --> SupPermission --> SupControllers
+
+    %% Plane to DB
+    PlatModels --> GlobalDB
+    OrgModels --> OrgDB1
+    OrgModels --> OrgDB2
+    OrgModels --> OrgDBN
+    SupModels --> GlobalDB
+
+    %% Cross-Plane Bridges (Allowed)
+    OrgServices -->|"READ-ONLY via service"| PlanResolver
+    PlanResolver --> PlatModels
+    SupAccessGuard -->|"CaseAccess lookup"| CaseAccess
+    CaseAccess -->|"Controlled read"| OrgDB1
+
+    %% Enforcement Connections
+    SovereignGuard -.->|"Boot validation"| PLATFORM_PLANE
+    SovereignGuard -.->|"Boot validation"| ORG_PLANE
+    SecureModel -.->|"Query wrapping"| OrgModels
+    HashChain -.->|"Integrity check"| GlobalDB
+
+    %% Event Flow
+    OrgServices --> EventBus
+    PlatServices --> EventBus
+    EventBus --> Redis
+
+    %% Violation Indicators (Red dashed)
+    PlatBilling -.->|"VIOLATION: direct import"| OrgAddOn
+    FeatCtrl -.->|"VIOLATION: mutates platform model"| Organization
+
+    %% Styles
+    classDef platform fill:#1B3A5C,stroke:#0D1F30,color:#fff
+    classDef org fill:#2E75B6,stroke:#1A4A7A,color:#fff
+    classDef supervisor fill:#6B3FA0,stroke:#3D2260,color:#fff
+    classDef missing fill:#CC0000,stroke:#880000,color:#fff
+    classDef bridge fill:#228B22,stroke:#145214,color:#fff
+    classDef infra fill:#555,stroke:#333,color:#fff
+    classDef gateway fill:#E88B00,stroke:#A05E00,color:#fff
+    classDef client fill:#DDD,stroke:#999,color:#333
+    classDef enforcement fill:#1A6B3A,stroke:#0D3D1F,color:#fff
+
+    class PlatControllers,PlatServices,PlatModels platform
+    class OrgControllers,OrgServices,OrgModels org
+    class SupControllers,SupMiddleware,SupModels supervisor
+    class MissingGuards missing
+    class SHARED_BRIDGE,SharedModels,PlanResolver,OrgContractReader,PlatAddOnSvc bridge
+    class GlobalDB,OrgDB1,OrgDB2,OrgDBN,Redis,EventBus infra
+    class JWT,TypeGuard,ContextInject,SubGuard,CapResolver,RBAC,PBAC,RLS,FLS,AuditInt gateway
+    class ContextLock missing
+    class OrgFE,PlatFE,SuperFE,PatientFE client
+    class BootGuards,RuntimeGuards enforcement

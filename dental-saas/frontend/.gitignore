@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment files — never commit secrets
+.env
+.env.production
+.env.staging
+# .env.example IS committed (reference template)
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,0 +1,44 @@
+{
+    "version": "1.0.0",
+    "description": "DentalSaaS Platform Governance Policy — required validation scripts and CI gates",
+    "requiredScripts": [
+        {
+            "name": "validateDesignTokens",
+            "command": "npm run design:validate",
+            "description": "Enforce design token usage — no raw Tailwind colors, hex values, or rgb() calls in source",
+            "phase": "migration",
+            "notes": "Run with --warn-only during the migration sprint. Remove --warn-only to enforce in CI after migration completes."
+        },
+        {
+            "name": "checkPlatformIsolation",
+            "command": "npm run lint:platform",
+            "description": "Verify no cross-plane imports between platform, org, and shared layers",
+            "phase": "always"
+        },
+        {
+            "name": "validatePlatformCapabilities",
+            "command": "node scripts/validatePlatformCapabilities.cjs",
+            "description": "Verify frontend PLATFORM_FEATURES registry matches backend capability contract",
+            "phase": "always"
+        },
+        {
+            "name": "checkJSXTypeLeakage",
+            "command": "npm run lint:jsx",
+            "description": "Detect TypeScript syntax leakage in plain JSX files",
+            "phase": "always"
+        },
+        {
+            "name": "checkRelativeServiceImports",
+            "command": "npm run lint:imports",
+            "description": "Ensure service files use absolute imports, not relative paths that cross plane boundaries",
+            "phase": "always"
+        }
+    ],
+    "designTokenPolicy": {
+        "enforced": false,
+        "enforcedAt": null,
+        "migrationStatus": "in-progress",
+        "targetDate": "TBD",
+        "notes": "Set 'enforced' to true and add 'enforcedAt' date when migration sprint completes and validator runs clean."
+    }
+}

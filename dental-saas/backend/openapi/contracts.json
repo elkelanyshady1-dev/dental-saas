@@ -1,0 +1,829 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DentalSaaS API — Contract-Driven Schemas",
+    "version": "10.0.0",
+    "description": "Auto-generated from Zod response schemas (Phase 10).\n\nThese schemas are the SSOT for all DTO contracts.\nFrontend types are generated from this spec.\nContract tests validate responses against these schemas."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development Server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "PatientListDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {},
+          "displayName": {
+            "type": "string"
+          },
+          "nameEnglish": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameArabic": {
+            "type": "string",
+            "nullable": true
+          },
+          "patientCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneDigits": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "default": "complete"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "primaryBranchId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "default": []
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "default": []
+          },
+          "lastVisit": {
+            "nullable": true
+          },
+          "nextAppointment": {
+            "nullable": true
+          },
+          "assignedDoctorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "priorityScore": {
+            "type": "number",
+            "default": 0
+          },
+          "balance": {
+            "type": "number",
+            "default": 0
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasActiveTreatment": {
+            "type": "boolean",
+            "default": false
+          },
+          "insurance": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "nullable": true
+              },
+              "policyNumber": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "nullable": true
+          },
+          "createdAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "description": "Patient directory list item — compact view for tables and search results."
+      },
+      "PatientSearchDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {},
+          "displayName": {
+            "type": "string"
+          },
+          "nameEnglish": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameArabic": {
+            "type": "string",
+            "nullable": true
+          },
+          "patientCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneDigits": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "nullable": true
+          },
+          "primaryBranchId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "nullable": true
+          },
+          "_matchType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "description": "Patient search result — includes _matchType metadata."
+      },
+      "PatientCoreDTO": {
+        "type": "object",
+        "properties": {
+          "patientCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameArabic": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameEnglish": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "dob": {
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "nationality": {
+            "type": "string",
+            "nullable": true
+          },
+          "nationalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "insurance": {
+            "type": "object",
+            "properties": {},
+            "default": {}
+          },
+          "emergencyContact": {
+            "type": "object",
+            "properties": {},
+            "default": {}
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "status": {
+            "type": "string",
+            "default": "complete"
+          },
+          "version": {}
+        },
+        "required": [
+          "displayName"
+        ],
+        "description": "Patient detail/aggregate view — full profile data."
+      },
+      "PatientSummaryDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {},
+          "displayName": {
+            "type": "string"
+          },
+          "patientCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "description": "Patient minimal summary — for notifications, intake links."
+      },
+      "LabPartnerListDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "default": ""
+          },
+          "location": {
+            "type": "string",
+            "default": ""
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "default": []
+          },
+          "turnaroundDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "default": 0
+          },
+          "ratingCount": {
+            "type": "number",
+            "default": 0
+          },
+          "status": {
+            "type": "string",
+            "default": "active"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "displayName"
+        ],
+        "description": "Lab partner directory listing — compact view."
+      },
+      "LabPartnerDetailDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "default": ""
+          },
+          "location": {
+            "type": "string",
+            "default": ""
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "default": []
+          },
+          "turnaroundDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "default": 0
+          },
+          "ratingCount": {
+            "type": "number",
+            "default": 0
+          },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "default": ""
+              },
+              "email": {
+                "type": "string",
+                "default": ""
+              },
+              "website": {
+                "type": "string",
+                "default": ""
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "default": "active"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedAt": {
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "default": ""
+          },
+          "createdAt": {
+            "nullable": true
+          },
+          "updatedAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "displayName",
+          "contact"
+        ],
+        "description": "Lab partner full profile — includes contact, notes."
+      },
+      "LabCaseListDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "caseCode": {
+            "type": "string"
+          },
+          "patientDisplayName": {
+            "type": "string"
+          },
+          "patientName": {
+            "type": "string",
+            "default": ""
+          },
+          "patientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "labDisplayName": {
+            "type": "string"
+          },
+          "labName": {
+            "type": "string",
+            "default": ""
+          },
+          "labId": {
+            "type": "string",
+            "nullable": true
+          },
+          "applianceType": {
+            "type": "string",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "default": "draft"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "expectedDelivery": {
+            "nullable": true
+          },
+          "actualDelivery": {
+            "nullable": true
+          },
+          "createdAt": {
+            "nullable": true
+          },
+          "updatedAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "caseCode",
+          "patientDisplayName",
+          "labDisplayName",
+          "cost"
+        ],
+        "description": "Lab case list/kanban item — includes display names and cost."
+      },
+      "LabCaseDetailDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "caseCode": {
+            "type": "string"
+          },
+          "patientDisplayName": {
+            "type": "string"
+          },
+          "patientName": {
+            "type": "string",
+            "default": ""
+          },
+          "patientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "labDisplayName": {
+            "type": "string"
+          },
+          "labName": {
+            "type": "string",
+            "default": ""
+          },
+          "labId": {
+            "type": "string",
+            "nullable": true
+          },
+          "applianceType": {
+            "type": "string",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "default": "draft"
+          },
+          "prescription": {
+            "default": {}
+          },
+          "notes": {
+            "type": "string",
+            "default": ""
+          },
+          "cost": {
+            "type": "number"
+          },
+          "expectedDelivery": {
+            "nullable": true
+          },
+          "actualDelivery": {
+            "nullable": true
+          },
+          "trackingNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackingCarrier": {
+            "type": "string",
+            "nullable": true
+          },
+          "claimId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "nullable": true
+          },
+          "updatedAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "caseCode",
+          "patientDisplayName",
+          "labDisplayName",
+          "cost"
+        ],
+        "description": "Lab case full detail — includes prescription, tracking."
+      },
+      "LabClaimDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string",
+            "nullable": true
+          },
+          "caseCode": {
+            "type": "string",
+            "default": ""
+          },
+          "labDisplayName": {
+            "type": "string"
+          },
+          "labName": {
+            "type": "string",
+            "default": ""
+          },
+          "labId": {
+            "type": "string",
+            "nullable": true
+          },
+          "applianceType": {
+            "type": "string",
+            "default": ""
+          },
+          "cost": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "default": "pending"
+          },
+          "approvedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvedAt": {
+            "nullable": true
+          },
+          "paidAt": {
+            "nullable": true
+          },
+          "serviceDate": {
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "default": ""
+          },
+          "createdAt": {
+            "nullable": true
+          },
+          "updatedAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "labDisplayName",
+          "cost"
+        ],
+        "description": "Lab billing claim — financial record with approval workflow."
+      },
+      "LabMessageDTO": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string",
+            "nullable": true
+          },
+          "sender": {
+            "type": "string",
+            "default": "system"
+          },
+          "senderName": {
+            "type": "string",
+            "default": ""
+          },
+          "senderType": {
+            "type": "string",
+            "default": "clinic"
+          },
+          "message": {
+            "type": "string",
+            "default": ""
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "default": []
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "_id",
+          "isSystem"
+        ],
+        "description": "Lab chat message — per-case communication."
+      },
+      "LabDashboardDTO": {
+        "type": "object",
+        "properties": {
+          "kpis": {
+            "type": "object",
+            "properties": {
+              "activeCases": {
+                "type": "number"
+              },
+              "pendingSubmissions": {
+                "type": "number"
+              },
+              "inProduction": {
+                "type": "number"
+              },
+              "monthlyExpenses": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "activeCases",
+              "pendingSubmissions",
+              "inProduction",
+              "monthlyExpenses"
+            ]
+          },
+          "recentActivity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "kpis",
+          "recentActivity"
+        ],
+        "description": "Lab dashboard — KPI aggregation + recent activity."
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/patient/domain": {
+      "get": {
+        "summary": "List patients",
+        "tags": [
+          "Patients"
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated patient list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PatientListDTO"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org/labs": {
+      "get": {
+        "summary": "List lab partners",
+        "tags": [
+          "Lab"
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated lab partner list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LabPartnerListDTO"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org/lab-cases": {
+      "get": {
+        "summary": "List lab cases",
+        "tags": [
+          "Lab"
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated lab case list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LabCaseListDTO"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org/lab-cases/dashboard": {
+      "get": {
+        "summary": "Lab dashboard KPIs",
+        "tags": [
+          "Lab"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard aggregation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LabDashboardDTO"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

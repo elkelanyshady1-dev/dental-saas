@@ -1,0 +1,4814 @@
+{
+  "generated": "2026-03-03T05:05:06.515Z",
+  "totalRoutes": 276,
+  "resolvedHandlers": 84,
+  "unresolvedHandlers": 192,
+  "routes": {
+    "GET /platform/audit-logs": {
+      "handlerName": "getAuditLogs",
+      "file": "index.js",
+      "line": 63,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/audit/verify-chain": {
+      "handlerName": "verifyChain",
+      "file": "index.js",
+      "line": 87,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/feature-flags/stream": {
+      "handlerName": "streamFeatureFlags",
+      "file": "index.js",
+      "line": 110,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/auth/login": {
+      "handlerName": "platformLogin",
+      "file": "auth.routes.js",
+      "line": 51,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/auth/verify-2fa": {
+      "handlerName": "verify2FA",
+      "file": "auth.routes.js",
+      "line": 63,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/auth/refresh": {
+      "handlerName": "platformRefresh",
+      "file": "auth.routes.js",
+      "line": 75,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/auth/logout": {
+      "handlerName": "platformLogout",
+      "file": "auth.routes.js",
+      "line": 87,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/auth/profile": {
+      "handlerName": "platformProfile",
+      "file": "auth.routes.js",
+      "line": 99,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/me": {
+      "handlerName": "platformUserController.getMe",
+      "file": "auth.routes.js",
+      "line": 120,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /platform/me": {
+      "handlerName": "platformUserController.updateMe",
+      "file": "auth.routes.js",
+      "line": 155,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /platform/change-password": {
+      "handlerName": "platformUserController.changePassword",
+      "file": "auth.routes.js",
+      "line": 190,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/users/:userId/manage-credentials": {
+      "handlerName": "platformUserController.manageCredentials",
+      "file": "auth.routes.js",
+      "line": 221,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/capabilities": {
+      "handlerName": "platformMetadataController.getCapabilities",
+      "file": "auth.routes.js",
+      "line": 249,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getCapabilities",
+        "responses": [
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "code"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "capabilities",
+              "capabilityHash"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 64
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          }
+        ]
+      }
+    },
+    "GET /platform/feature-flags": {
+      "handlerName": "platformMetadataController.getFeatureFlags",
+      "file": "auth.routes.js",
+      "line": 269,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getFeatureFlags",
+        "responses": [
+          {
+            "status": 304,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 92
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 99
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 101
+          }
+        ]
+      }
+    },
+    "POST /platform/audit/frontend-event": {
+      "handlerName": "platformMetadataController.logAudit",
+      "file": "auth.routes.js",
+      "line": 296,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:logAudit",
+        "responses": [
+          {
+            "status": 204,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 131
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 134
+          }
+        ]
+      }
+    },
+    "POST /platform/performance-metric": {
+      "handlerName": "platformMetadataController.logPerformance",
+      "file": "auth.routes.js",
+      "line": 312,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:logPerformance",
+        "responses": [
+          {
+            "status": 204,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 148
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 150
+          }
+        ]
+      }
+    },
+    "GET /platform/me/capabilities": {
+      "handlerName": "platformMetadataController.getCapabilities",
+      "file": "auth.routes.js",
+      "line": 333,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getCapabilities",
+        "responses": [
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "code"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "capabilities",
+              "capabilityHash"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 64
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          }
+        ]
+      }
+    },
+    "POST /platform/2fa/setup": {
+      "handlerName": "setup2FA",
+      "file": "auth.routes.js",
+      "line": 361,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/2fa/complete-setup": {
+      "handlerName": "complete2FASetup",
+      "file": "auth.routes.js",
+      "line": 398,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/2fa/disable": {
+      "handlerName": "disable2FA",
+      "file": "auth.routes.js",
+      "line": 421,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/search": {
+      "handlerName": "globalSearch",
+      "file": "organization.routes.js",
+      "line": 113,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations": {
+      "handlerName": "getOrganizations",
+      "file": "organization.routes.js",
+      "line": 167,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/organizations": {
+      "handlerName": "createOrganizationProvisioned",
+      "file": "organization.routes.js",
+      "line": 205,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id": {
+      "handlerName": "getOrganizationDetails",
+      "file": "organization.routes.js",
+      "line": 268,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/analytics": {
+      "handlerName": "getOrganizationAnalytics",
+      "file": "organization.routes.js",
+      "line": 325,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/status": {
+      "handlerName": "updateOrganizationStatus",
+      "file": "organization.routes.js",
+      "line": 373,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/modules": {
+      "handlerName": "updateOrganizationModules",
+      "file": "organization.routes.js",
+      "line": 403,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/archive": {
+      "handlerName": "archiveOrganization",
+      "file": "organization.routes.js",
+      "line": 436,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/restore": {
+      "handlerName": "restoreOrganization",
+      "file": "organization.routes.js",
+      "line": 465,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/configuration": {
+      "handlerName": "getOrganizationConfiguration",
+      "file": "organization.routes.js",
+      "line": 497,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/configuration": {
+      "handlerName": "updateOrganizationConfiguration",
+      "file": "organization.routes.js",
+      "line": 530,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/users": {
+      "handlerName": "getOrganizationUsers",
+      "file": "organization.routes.js",
+      "line": 559,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/users/:userId": {
+      "handlerName": "getOrganizationUserDetails",
+      "file": "organization.routes.js",
+      "line": 599,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/users/:userId": {
+      "handlerName": "updateOrganizationUser",
+      "file": "organization.routes.js",
+      "line": 633,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/branches": {
+      "handlerName": "getOrganizationBranches",
+      "file": "organization.routes.js",
+      "line": 662,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/organizations/:id/branches": {
+      "handlerName": "createBranch",
+      "file": "organization.routes.js",
+      "line": 703,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/branches/:branchId": {
+      "handlerName": "updateBranch",
+      "file": "organization.routes.js",
+      "line": 737,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/branches/:branchId/status": {
+      "handlerName": "updateBranchStatus",
+      "file": "organization.routes.js",
+      "line": 771,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/audit-logs": {
+      "handlerName": "getOrganizationAuditLogs",
+      "file": "organization.routes.js",
+      "line": 800,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/invoices": {
+      "handlerName": "getOrganizationInvoices",
+      "file": "organization.routes.js",
+      "line": 829,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/branches/:branchId/analytics": {
+      "handlerName": "getBranchAnalytics",
+      "file": "organization.routes.js",
+      "line": 880,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/branches/:branchId": {
+      "handlerName": "getBranchDetails",
+      "file": "organization.routes.js",
+      "line": 934,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/organizations/:id/branches/:branchId/configuration": {
+      "handlerName": "getBranchConfiguration",
+      "file": "organization.routes.js",
+      "line": 972,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/branches/:branchId/configuration": {
+      "handlerName": "updateBranchConfiguration",
+      "file": "organization.routes.js",
+      "line": 1012,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/notifications": {
+      "handlerName": "platformNotificationController.getNotifications",
+      "file": "organization.routes.js",
+      "line": 1035,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:getNotifications",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "mapped",
+            "line": 17
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 20
+          }
+        ]
+      }
+    },
+    "PATCH /platform/notifications/read-all": {
+      "handlerName": "platformNotificationController.markAllRead",
+      "file": "organization.routes.js",
+      "line": 1051,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:markAllRead",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 43
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 46
+          }
+        ]
+      }
+    },
+    "PATCH /platform/notifications/:id/read": {
+      "handlerName": "platformNotificationController.markAsRead",
+      "file": "organization.routes.js",
+      "line": 1073,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:markAsRead",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "GET /platform/settings": {
+      "handlerName": "platformSettingsController.getSettings",
+      "file": "organization.routes.js",
+      "line": 1094,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformSettingsController.js:getSettings",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "config",
+            "line": 10
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 13
+          }
+        ]
+      }
+    },
+    "PUT /platform/settings": {
+      "handlerName": "platformSettingsController.updateSettings",
+      "file": "organization.routes.js",
+      "line": 1115,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformSettingsController.js:updateSettings",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "config",
+            "line": 27
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          }
+        ]
+      }
+    },
+    "GET /platform/features": {
+      "handlerName": "platformFeatureController.getAllFeatures",
+      "file": "organization.routes.js",
+      "line": 1138,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/features": {
+      "handlerName": "platformFeatureController.createFeature",
+      "file": "organization.routes.js",
+      "line": 1172,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /platform/features/:id": {
+      "handlerName": "platformFeatureController.updateFeature",
+      "file": "organization.routes.js",
+      "line": 1198,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/org/:orgId/feature/:key": {
+      "handlerName": "platformFeatureController.overrideOrganizationFeature",
+      "file": "organization.routes.js",
+      "line": 1232,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:orgId/plan": {
+      "handlerName": "planController.assignPlanToOrg",
+      "file": "organization.routes.js",
+      "line": 1271,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:assignPlanToOrg",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 206
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 209
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 212
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 214
+          }
+        ]
+      }
+    },
+    "GET /platform/support/tickets": {
+      "handlerName": "supportController.getPlatformTickets",
+      "file": "organization.routes.js",
+      "line": 1293,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:getPlatformTickets",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "tickets",
+            "line": 51
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 53
+          }
+        ]
+      }
+    },
+    "GET /platform/support/ticket/:id/forensic": {
+      "handlerName": "supportController.getForensicContext",
+      "file": "organization.routes.js",
+      "line": 1319,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:getForensicContext",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "context",
+            "line": 139
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 141
+          }
+        ]
+      }
+    },
+    "PATCH /platform/support/ticket/:id/assign": {
+      "handlerName": "supportController.assignTicket",
+      "file": "organization.routes.js",
+      "line": 1346,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:assignTicket",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 67
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "ticket",
+            "line": 80
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 82
+          }
+        ]
+      }
+    },
+    "POST /platform/support/ticket/:id/approve-refund": {
+      "handlerName": "supportController.approveRefund",
+      "file": "organization.routes.js",
+      "line": 1372,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:approveRefund",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "result",
+            "line": 93
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          }
+        ]
+      }
+    },
+    "POST /platform/support/ticket/:id/message": {
+      "handlerName": "supportController.addMessage",
+      "file": "organization.routes.js",
+      "line": 1408,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:addMessage",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 109
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "ticket",
+            "line": 126
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 128
+          }
+        ]
+      }
+    },
+    "POST /platform/finance/exchange-rate": {
+      "handlerName": "exchangeRateController.createOrUpdateRate",
+      "file": "billing.routes.js",
+      "line": 114,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/finance/exchange-rates": {
+      "handlerName": "exchangeRateController.listExchangeRates",
+      "file": "billing.routes.js",
+      "line": 164,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/billing/dashboard": {
+      "handlerName": "billingDashboardController.getDashboard",
+      "file": "billing.routes.js",
+      "line": 195,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/billing/audit-logs/:orgId": {
+      "handlerName": "billingDashboardController.getOrgAuditLogs",
+      "file": "billing.routes.js",
+      "line": 273,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/extend": {
+      "handlerName": "extendSubscription",
+      "file": "billing.routes.js",
+      "line": 307,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/suspend": {
+      "handlerName": "suspendOrganization",
+      "file": "billing.routes.js",
+      "line": 336,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/reactivate": {
+      "handlerName": "reactivateOrganization",
+      "file": "billing.routes.js",
+      "line": 365,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/organizations/:id/cancel": {
+      "handlerName": "cancelSubscription",
+      "file": "billing.routes.js",
+      "line": 394,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/organizations/:id/adjust-credits": {
+      "handlerName": "adjustCredits",
+      "file": "billing.routes.js",
+      "line": 434,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/org/:orgId/subscription": {
+      "handlerName": "subscriptionOverviewController.getSubscriptionOverview",
+      "file": "billing.routes.js",
+      "line": 466,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionOverview.controller.js:getSubscriptionOverview",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 22
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 34
+          }
+        ]
+      }
+    },
+    "GET /platform/org/:orgId/usage": {
+      "handlerName": "usageController.getOrganizationUsage",
+      "file": "billing.routes.js",
+      "line": 497,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformUsage.controller.js:getOrganizationUsage",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 22
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 34
+          }
+        ]
+      }
+    },
+    "GET /platform/plans/catalog": {
+      "handlerName": "planCatalogController.getPlanCatalog",
+      "file": "billing.routes.js",
+      "line": 529,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlanCatalog.controller.js:getPlanCatalog",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 18
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 23
+          }
+        ]
+      }
+    },
+    "GET /platform/addons": {
+      "handlerName": "addonCatalogController.getAddOnCatalog",
+      "file": "billing.routes.js",
+      "line": 557,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformAddonCatalog.controller.js:getAddOnCatalog",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 18
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 23
+          }
+        ]
+      }
+    },
+    "POST /platform/org/:orgId/change-plan": {
+      "handlerName": "subscriptionMutationController.changePlan",
+      "file": "billing.routes.js",
+      "line": 606,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:changePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 27
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "nestedKeys": {
+              "data": [
+                "organizationId",
+                "planId",
+                "version"
+              ]
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 48
+          }
+        ]
+      }
+    },
+    "POST /platform/org/:orgId/add-addon": {
+      "handlerName": "subscriptionMutationController.addAddon",
+      "file": "billing.routes.js",
+      "line": 638,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:addAddon",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 76
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 85
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 86
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 131
+          },
+          {
+            "status": 400,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 137
+          }
+        ]
+      }
+    },
+    "DELETE /platform/org/:orgId/remove-addon": {
+      "handlerName": "subscriptionMutationController.removeAddon",
+      "file": "billing.routes.js",
+      "line": 670,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:removeAddon",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 155
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "message"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 181
+          },
+          {
+            "status": 400,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 187
+          }
+        ]
+      }
+    },
+    "GET /platform/invoices/:invoiceId": {
+      "handlerName": "getInvoiceDetails",
+      "file": "billing.routes.js",
+      "line": 696,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/invoices/:invoiceId/status": {
+      "handlerName": "updateInvoiceStatus",
+      "file": "billing.routes.js",
+      "line": 734,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/plans": {
+      "handlerName": "planController.getAllPlans",
+      "file": "billing.routes.js",
+      "line": 763,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getAllPlans",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "plansWithUsage",
+            "line": 234
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 236
+          }
+        ]
+      }
+    },
+    "POST /platform/plans": {
+      "handlerName": "planController.createPlan",
+      "file": "billing.routes.js",
+      "line": 792,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:createPlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 47
+          },
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 79
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 81
+          }
+        ]
+      }
+    },
+    "GET /platform/plans/:id": {
+      "handlerName": "planController.getPlanById",
+      "file": "billing.routes.js",
+      "line": 813,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getPlanById",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 274
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "plan",
+            "line": 275
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 277
+          }
+        ]
+      }
+    },
+    "PUT /platform/plans/:id": {
+      "handlerName": "planController.updatePlan",
+      "file": "billing.routes.js",
+      "line": 848,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:updatePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 99
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 104
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "currentVersion"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 123
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 141
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 143
+          }
+        ]
+      }
+    },
+    "PATCH /platform/plans/:id/status": {
+      "handlerName": "planController.patchPlanStatus",
+      "file": "billing.routes.js",
+      "line": 882,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:patchPlanStatus",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 156
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 164
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 183
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 185
+          }
+        ]
+      }
+    },
+    "POST /platform/plans/:id/duplicate": {
+      "handlerName": "planController.duplicatePlan",
+      "file": "billing.routes.js",
+      "line": 914,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:duplicatePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 288
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 291
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 294
+          },
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 334
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 336
+          }
+        ]
+      }
+    },
+    "GET /platform/plans/:id/usage": {
+      "handlerName": "planController.getPlanUsage",
+      "file": "billing.routes.js",
+      "line": 937,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getPlanUsage",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "planId",
+              "organizationsCount",
+              "totalUsersAcrossPlan",
+              "totalBranchesAcrossPlan"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 256
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 263
+          }
+        ]
+      }
+    },
+    "GET /platform/orgs/:orgId/billing": {
+      "handlerName": "platformBillingController.getOrgBillingOverview",
+      "file": "billing.routes.js",
+      "line": 982,
+      "shape": {
+        "controllerKey": "src\\modules\\billingDomain\\controllers\\platformBilling.controller.js:getOrgBillingOverview",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "organizationId",
+              "currentCycle",
+              "activeDraft"
+            ],
+            "nestedKeys": {
+              "currentCycle": [
+                "start",
+                "usage"
+              ]
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 29
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 38
+          }
+        ]
+      }
+    },
+    "POST /platform/orgs/:orgId/invoices/generate": {
+      "handlerName": "platformBillingController.manualGenerateInvoice",
+      "file": "billing.routes.js",
+      "line": 1012,
+      "shape": {
+        "controllerKey": "src\\modules\\billingDomain\\controllers\\platformBilling.controller.js:manualGenerateInvoice",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 67
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 69
+          }
+        ]
+      }
+    },
+    "POST /platform/coupons": {
+      "handlerName": "couponController.createCoupon",
+      "file": "billing.routes.js",
+      "line": 1037,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCoupon.controller.js:createCoupon",
+        "responses": [
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "PUT /platform/coupons/:id": {
+      "handlerName": "couponController.updateCoupon",
+      "file": "billing.routes.js",
+      "line": 1066,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCoupon.controller.js:updateCoupon",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 59
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 61
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 62
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 63
+          }
+        ]
+      }
+    },
+    "POST /platform/campaigns": {
+      "handlerName": "campaignController.createCampaign",
+      "file": "billing.routes.js",
+      "line": 1089,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCampaign.controller.js:createCampaign",
+        "responses": [
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "PUT /platform/campaigns/:id": {
+      "handlerName": "campaignController.updateCampaign",
+      "file": "billing.routes.js",
+      "line": 1118,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCampaign.controller.js:updateCampaign",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 59
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 61
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 62
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 63
+          }
+        ]
+      }
+    },
+    "GET /platform/trials": {
+      "handlerName": "trialController.getTrials",
+      "file": "billing.routes.js",
+      "line": 1148,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/organizations/:id/auto-renew": {
+      "handlerName": "revenueController.toggleAutoRenew",
+      "file": "billing.routes.js",
+      "line": 1177,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:toggleAutoRenew",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 27
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 53
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          }
+        ]
+      }
+    },
+    "POST /platform/organizations/:id/manual-payment": {
+      "handlerName": "revenueController.recordManualPayment",
+      "file": "billing.routes.js",
+      "line": 1206,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:recordManualPayment",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 79
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 80
+          },
+          {
+            "status": 400,
+            "keys": [
+              "message"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 83
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 127
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 129
+          }
+        ]
+      }
+    },
+    "POST /platform/organizations/:id/generate-payment-link": {
+      "handlerName": "revenueController.generatePaymentLink",
+      "file": "billing.routes.js",
+      "line": 1235,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:generatePaymentLink",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 144
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 148
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 169
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 171
+          }
+        ]
+      }
+    },
+    "POST /platform/contracts/:id/refund-request": {
+      "handlerName": "refundController.requestRefund",
+      "file": "billing.routes.js",
+      "line": 1305,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/refunds/:id/approve": {
+      "handlerName": "refundController.approveRefund",
+      "file": "billing.routes.js",
+      "line": 1335,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:approveRefund",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "result",
+            "line": 93
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          }
+        ]
+      }
+    },
+    "PATCH /platform/refunds/:id/reject": {
+      "handlerName": "refundController.rejectRefund",
+      "file": "billing.routes.js",
+      "line": 1369,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/refunds/:id/process": {
+      "handlerName": "refundController.processRefund",
+      "file": "billing.routes.js",
+      "line": 1413,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/refunds/:id": {
+      "handlerName": "refundController.getRefund",
+      "file": "billing.routes.js",
+      "line": 1438,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/invoices/:id/refunds": {
+      "handlerName": "refundController.listRefundsByInvoice",
+      "file": "billing.routes.js",
+      "line": 1459,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/dashboard": {
+      "handlerName": "res",
+      "file": "analytics.routes.js",
+      "line": 58,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/analytics": {
+      "handlerName": "getPlatformAnalytics",
+      "file": "analytics.routes.js",
+      "line": 117,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/analytics/events": {
+      "handlerName": "getLatestEvents",
+      "file": "analytics.routes.js",
+      "line": 144,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/analytics/revenue": {
+      "handlerName": "getPlatformRevenueAnalytics",
+      "file": "analytics.routes.js",
+      "line": 176,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/metrics/sales": {
+      "handlerName": "revenueController.getSalesMetrics",
+      "file": "analytics.routes.js",
+      "line": 196,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:getSalesMetrics",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "metrics",
+            "line": 207
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 209
+          }
+        ]
+      }
+    },
+    "GET /platform/__sentinel/rbac-self-check": {
+      "handlerName": "rbacSelfCheck",
+      "file": "governance.routes.js",
+      "line": 30,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSentinelSelfCheck.controller.js:rbacSelfCheck",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 20
+          },
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 25
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "userId",
+              "resolvedCapabilities",
+              "contractCapabilities",
+              "missing",
+              "extra",
+              "roleMatrix",
+              "healthy",
+              "phantomDetected",
+              "timestamp"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 44
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 57
+          }
+        ]
+      }
+    },
+    "GET /platform/__sentinel/api-integrity": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 61,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/__sentinel/response-schema-drift": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 116,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/__sentinel/openapi-runtime-status": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 169,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/governance/platform": {
+      "handlerName": "getPlatformGovernanceUsers",
+      "file": "user.routes.js",
+      "line": 54,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/governance/platform/:id": {
+      "handlerName": "getPlatformUserDetail",
+      "file": "user.routes.js",
+      "line": 66,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/platform/:id/role": {
+      "handlerName": "updatePlatformUserRole",
+      "file": "user.routes.js",
+      "line": 78,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/platform/:id/status": {
+      "handlerName": "updatePlatformUserStatus",
+      "file": "user.routes.js",
+      "line": 90,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/platform/:id/force-logout": {
+      "handlerName": "forceLogoutPlatformUser",
+      "file": "user.routes.js",
+      "line": 102,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/platform/:id/reset-2fa": {
+      "handlerName": "resetPlatformUser2FA",
+      "file": "user.routes.js",
+      "line": 114,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/users": {
+      "handlerName": "getPlatformUsers",
+      "file": "user.routes.js",
+      "line": 131,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/users": {
+      "handlerName": "createPlatformUser",
+      "file": "user.routes.js",
+      "line": 143,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/users/:id": {
+      "handlerName": "getPlatformUserDetails",
+      "file": "user.routes.js",
+      "line": 155,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/users/:id/audit": {
+      "handlerName": "getPlatformUserAuditHistory",
+      "file": "user.routes.js",
+      "line": 167,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/users/:id": {
+      "handlerName": "updatePlatformUser",
+      "file": "user.routes.js",
+      "line": 179,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "DELETE /platform/users/:id": {
+      "handlerName": "deletePlatformUser",
+      "file": "user.routes.js",
+      "line": 191,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/governance/org/:organizationId": {
+      "handlerName": "getOrganizationUsersGovernance",
+      "file": "user.routes.js",
+      "line": 208,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/governance/org/:organizationId/:userId": {
+      "handlerName": "getOrganizationUserDetailGovernance",
+      "file": "user.routes.js",
+      "line": 220,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/org/:organizationId/:userId/status": {
+      "handlerName": "updateOrganizationUserStatusGovernance",
+      "file": "user.routes.js",
+      "line": 232,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/org/:organizationId/:userId/role": {
+      "handlerName": "updateOrganizationUserRoleGovernance",
+      "file": "user.routes.js",
+      "line": 244,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/org/:organizationId/:userId/force-logout": {
+      "handlerName": "forceLogoutOrganizationUser",
+      "file": "user.routes.js",
+      "line": 256,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/governance/org/:organizationId/:userId/reset-password": {
+      "handlerName": "resetOrganizationUserPassword",
+      "file": "user.routes.js",
+      "line": 268,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/contracts/needs-renewal": {
+      "handlerName": "dashboardController.getContractsNeedingRenewal",
+      "file": "contracts.routes.js",
+      "line": 137,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/contracts": {
+      "handlerName": "contractController.createContract",
+      "file": "contracts.routes.js",
+      "line": 203,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/contracts/:id/status": {
+      "handlerName": "contractController.updateContractStatus",
+      "file": "contracts.routes.js",
+      "line": 251,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/contracts/:id/replace": {
+      "handlerName": "contractController.replaceContract",
+      "file": "contracts.routes.js",
+      "line": 299,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/contracts/:id/upload-document": {
+      "handlerName": "contractController.uploadContractDocument",
+      "file": "contracts.routes.js",
+      "line": 346,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/contracts/:id/invoice": {
+      "handlerName": "invoiceController.generateInvoice",
+      "file": "contracts.routes.js",
+      "line": 391,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/contracts/:id/invoices": {
+      "handlerName": "invoiceController.listContractInvoices",
+      "file": "contracts.routes.js",
+      "line": 433,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /platform/invoices/:id": {
+      "handlerName": "invoiceController.getInvoice",
+      "file": "contracts.routes.js",
+      "line": 465,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /platform/invoices/:id/pay": {
+      "handlerName": "invoiceController.recordPayment",
+      "file": "contracts.routes.js",
+      "line": 519,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/contracts/:id/auto-renew": {
+      "handlerName": "contractController.setAutoRenew",
+      "file": "contracts.routes.js",
+      "line": 587,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /platform/contracts/:id/cancel": {
+      "handlerName": "contractController.cancelContract",
+      "file": "contracts.routes.js",
+      "line": 647,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/audit-logs": {
+      "handlerName": "getAuditLogs",
+      "file": "index.js",
+      "line": 63,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/audit/verify-chain": {
+      "handlerName": "verifyChain",
+      "file": "index.js",
+      "line": 87,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/feature-flags/stream": {
+      "handlerName": "streamFeatureFlags",
+      "file": "index.js",
+      "line": 110,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/auth/login": {
+      "handlerName": "platformLogin",
+      "file": "auth.routes.js",
+      "line": 51,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/auth/verify-2fa": {
+      "handlerName": "verify2FA",
+      "file": "auth.routes.js",
+      "line": 63,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/auth/refresh": {
+      "handlerName": "platformRefresh",
+      "file": "auth.routes.js",
+      "line": 75,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/auth/logout": {
+      "handlerName": "platformLogout",
+      "file": "auth.routes.js",
+      "line": 87,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/auth/profile": {
+      "handlerName": "platformProfile",
+      "file": "auth.routes.js",
+      "line": 99,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/me": {
+      "handlerName": "platformUserController.getMe",
+      "file": "auth.routes.js",
+      "line": 120,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /api/platform/me": {
+      "handlerName": "platformUserController.updateMe",
+      "file": "auth.routes.js",
+      "line": 155,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /api/platform/change-password": {
+      "handlerName": "platformUserController.changePassword",
+      "file": "auth.routes.js",
+      "line": 190,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/users/:userId/manage-credentials": {
+      "handlerName": "platformUserController.manageCredentials",
+      "file": "auth.routes.js",
+      "line": 221,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/capabilities": {
+      "handlerName": "platformMetadataController.getCapabilities",
+      "file": "auth.routes.js",
+      "line": 249,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getCapabilities",
+        "responses": [
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "code"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "capabilities",
+              "capabilityHash"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 64
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          }
+        ]
+      }
+    },
+    "GET /api/platform/feature-flags": {
+      "handlerName": "platformMetadataController.getFeatureFlags",
+      "file": "auth.routes.js",
+      "line": 269,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getFeatureFlags",
+        "responses": [
+          {
+            "status": 304,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 92
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 99
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 101
+          }
+        ]
+      }
+    },
+    "POST /api/platform/audit/frontend-event": {
+      "handlerName": "platformMetadataController.logAudit",
+      "file": "auth.routes.js",
+      "line": 296,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:logAudit",
+        "responses": [
+          {
+            "status": 204,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 131
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 134
+          }
+        ]
+      }
+    },
+    "POST /api/platform/performance-metric": {
+      "handlerName": "platformMetadataController.logPerformance",
+      "file": "auth.routes.js",
+      "line": 312,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:logPerformance",
+        "responses": [
+          {
+            "status": 204,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isSendResponse": true,
+            "line": 148
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 150
+          }
+        ]
+      }
+    },
+    "GET /api/platform/me/capabilities": {
+      "handlerName": "platformMetadataController.getCapabilities",
+      "file": "auth.routes.js",
+      "line": 333,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformMetadataController.js:getCapabilities",
+        "responses": [
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "code"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "capabilities",
+              "capabilityHash"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 64
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          }
+        ]
+      }
+    },
+    "POST /api/platform/2fa/setup": {
+      "handlerName": "setup2FA",
+      "file": "auth.routes.js",
+      "line": 361,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/2fa/complete-setup": {
+      "handlerName": "complete2FASetup",
+      "file": "auth.routes.js",
+      "line": 398,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/2fa/disable": {
+      "handlerName": "disable2FA",
+      "file": "auth.routes.js",
+      "line": 421,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/search": {
+      "handlerName": "globalSearch",
+      "file": "organization.routes.js",
+      "line": 113,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations": {
+      "handlerName": "getOrganizations",
+      "file": "organization.routes.js",
+      "line": 167,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/organizations": {
+      "handlerName": "createOrganizationProvisioned",
+      "file": "organization.routes.js",
+      "line": 205,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id": {
+      "handlerName": "getOrganizationDetails",
+      "file": "organization.routes.js",
+      "line": 268,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/analytics": {
+      "handlerName": "getOrganizationAnalytics",
+      "file": "organization.routes.js",
+      "line": 325,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/status": {
+      "handlerName": "updateOrganizationStatus",
+      "file": "organization.routes.js",
+      "line": 373,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/modules": {
+      "handlerName": "updateOrganizationModules",
+      "file": "organization.routes.js",
+      "line": 403,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/archive": {
+      "handlerName": "archiveOrganization",
+      "file": "organization.routes.js",
+      "line": 436,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/restore": {
+      "handlerName": "restoreOrganization",
+      "file": "organization.routes.js",
+      "line": 465,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/configuration": {
+      "handlerName": "getOrganizationConfiguration",
+      "file": "organization.routes.js",
+      "line": 497,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/configuration": {
+      "handlerName": "updateOrganizationConfiguration",
+      "file": "organization.routes.js",
+      "line": 530,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/users": {
+      "handlerName": "getOrganizationUsers",
+      "file": "organization.routes.js",
+      "line": 559,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/users/:userId": {
+      "handlerName": "getOrganizationUserDetails",
+      "file": "organization.routes.js",
+      "line": 599,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/users/:userId": {
+      "handlerName": "updateOrganizationUser",
+      "file": "organization.routes.js",
+      "line": 633,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/branches": {
+      "handlerName": "getOrganizationBranches",
+      "file": "organization.routes.js",
+      "line": 662,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/organizations/:id/branches": {
+      "handlerName": "createBranch",
+      "file": "organization.routes.js",
+      "line": 703,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/branches/:branchId": {
+      "handlerName": "updateBranch",
+      "file": "organization.routes.js",
+      "line": 737,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/branches/:branchId/status": {
+      "handlerName": "updateBranchStatus",
+      "file": "organization.routes.js",
+      "line": 771,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/audit-logs": {
+      "handlerName": "getOrganizationAuditLogs",
+      "file": "organization.routes.js",
+      "line": 800,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/invoices": {
+      "handlerName": "getOrganizationInvoices",
+      "file": "organization.routes.js",
+      "line": 829,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/branches/:branchId/analytics": {
+      "handlerName": "getBranchAnalytics",
+      "file": "organization.routes.js",
+      "line": 880,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/branches/:branchId": {
+      "handlerName": "getBranchDetails",
+      "file": "organization.routes.js",
+      "line": 934,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/organizations/:id/branches/:branchId/configuration": {
+      "handlerName": "getBranchConfiguration",
+      "file": "organization.routes.js",
+      "line": 972,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/branches/:branchId/configuration": {
+      "handlerName": "updateBranchConfiguration",
+      "file": "organization.routes.js",
+      "line": 1012,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/notifications": {
+      "handlerName": "platformNotificationController.getNotifications",
+      "file": "organization.routes.js",
+      "line": 1035,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:getNotifications",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "mapped",
+            "line": 17
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 20
+          }
+        ]
+      }
+    },
+    "PATCH /api/platform/notifications/read-all": {
+      "handlerName": "platformNotificationController.markAllRead",
+      "file": "organization.routes.js",
+      "line": 1051,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:markAllRead",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 43
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 46
+          }
+        ]
+      }
+    },
+    "PATCH /api/platform/notifications/:id/read": {
+      "handlerName": "platformNotificationController.markAsRead",
+      "file": "organization.routes.js",
+      "line": 1073,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformNotificationController.js:markAsRead",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "GET /api/platform/settings": {
+      "handlerName": "platformSettingsController.getSettings",
+      "file": "organization.routes.js",
+      "line": 1094,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformSettingsController.js:getSettings",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "config",
+            "line": 10
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 13
+          }
+        ]
+      }
+    },
+    "PUT /api/platform/settings": {
+      "handlerName": "platformSettingsController.updateSettings",
+      "file": "organization.routes.js",
+      "line": 1115,
+      "shape": {
+        "controllerKey": "src\\controllers\\platformSettingsController.js:updateSettings",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "config",
+            "line": 27
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          }
+        ]
+      }
+    },
+    "GET /api/platform/features": {
+      "handlerName": "platformFeatureController.getAllFeatures",
+      "file": "organization.routes.js",
+      "line": 1138,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/features": {
+      "handlerName": "platformFeatureController.createFeature",
+      "file": "organization.routes.js",
+      "line": 1172,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PUT /api/platform/features/:id": {
+      "handlerName": "platformFeatureController.updateFeature",
+      "file": "organization.routes.js",
+      "line": 1198,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/org/:orgId/feature/:key": {
+      "handlerName": "platformFeatureController.overrideOrganizationFeature",
+      "file": "organization.routes.js",
+      "line": 1232,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:orgId/plan": {
+      "handlerName": "planController.assignPlanToOrg",
+      "file": "organization.routes.js",
+      "line": 1271,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:assignPlanToOrg",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 206
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 209
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 212
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 214
+          }
+        ]
+      }
+    },
+    "GET /api/platform/support/tickets": {
+      "handlerName": "supportController.getPlatformTickets",
+      "file": "organization.routes.js",
+      "line": 1293,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:getPlatformTickets",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "tickets",
+            "line": 51
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 53
+          }
+        ]
+      }
+    },
+    "GET /api/platform/support/ticket/:id/forensic": {
+      "handlerName": "supportController.getForensicContext",
+      "file": "organization.routes.js",
+      "line": 1319,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:getForensicContext",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "context",
+            "line": 139
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 141
+          }
+        ]
+      }
+    },
+    "PATCH /api/platform/support/ticket/:id/assign": {
+      "handlerName": "supportController.assignTicket",
+      "file": "organization.routes.js",
+      "line": 1346,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:assignTicket",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 67
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "ticket",
+            "line": 80
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 82
+          }
+        ]
+      }
+    },
+    "POST /api/platform/support/ticket/:id/approve-refund": {
+      "handlerName": "supportController.approveRefund",
+      "file": "organization.routes.js",
+      "line": 1372,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:approveRefund",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "result",
+            "line": 93
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          }
+        ]
+      }
+    },
+    "POST /api/platform/support/ticket/:id/message": {
+      "handlerName": "supportController.addMessage",
+      "file": "organization.routes.js",
+      "line": 1408,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:addMessage",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 109
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "ticket",
+            "line": 126
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 128
+          }
+        ]
+      }
+    },
+    "POST /api/platform/finance/exchange-rate": {
+      "handlerName": "exchangeRateController.createOrUpdateRate",
+      "file": "billing.routes.js",
+      "line": 114,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/finance/exchange-rates": {
+      "handlerName": "exchangeRateController.listExchangeRates",
+      "file": "billing.routes.js",
+      "line": 164,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/billing/dashboard": {
+      "handlerName": "billingDashboardController.getDashboard",
+      "file": "billing.routes.js",
+      "line": 195,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/billing/audit-logs/:orgId": {
+      "handlerName": "billingDashboardController.getOrgAuditLogs",
+      "file": "billing.routes.js",
+      "line": 273,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/extend": {
+      "handlerName": "extendSubscription",
+      "file": "billing.routes.js",
+      "line": 307,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/suspend": {
+      "handlerName": "suspendOrganization",
+      "file": "billing.routes.js",
+      "line": 336,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/reactivate": {
+      "handlerName": "reactivateOrganization",
+      "file": "billing.routes.js",
+      "line": 365,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/organizations/:id/cancel": {
+      "handlerName": "cancelSubscription",
+      "file": "billing.routes.js",
+      "line": 394,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/organizations/:id/adjust-credits": {
+      "handlerName": "adjustCredits",
+      "file": "billing.routes.js",
+      "line": 434,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/org/:orgId/subscription": {
+      "handlerName": "subscriptionOverviewController.getSubscriptionOverview",
+      "file": "billing.routes.js",
+      "line": 466,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionOverview.controller.js:getSubscriptionOverview",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 22
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 34
+          }
+        ]
+      }
+    },
+    "GET /api/platform/org/:orgId/usage": {
+      "handlerName": "usageController.getOrganizationUsage",
+      "file": "billing.routes.js",
+      "line": 497,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformUsage.controller.js:getOrganizationUsage",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 22
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 28
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 34
+          }
+        ]
+      }
+    },
+    "GET /api/platform/plans/catalog": {
+      "handlerName": "planCatalogController.getPlanCatalog",
+      "file": "billing.routes.js",
+      "line": 529,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlanCatalog.controller.js:getPlanCatalog",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 18
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 23
+          }
+        ]
+      }
+    },
+    "GET /api/platform/addons": {
+      "handlerName": "addonCatalogController.getAddOnCatalog",
+      "file": "billing.routes.js",
+      "line": 557,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformAddonCatalog.controller.js:getAddOnCatalog",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 18
+          },
+          {
+            "status": 500,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 23
+          }
+        ]
+      }
+    },
+    "POST /api/platform/org/:orgId/change-plan": {
+      "handlerName": "subscriptionMutationController.changePlan",
+      "file": "billing.routes.js",
+      "line": 606,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:changePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 27
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 30
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "nestedKeys": {
+              "data": [
+                "organizationId",
+                "planId",
+                "version"
+              ]
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 48
+          }
+        ]
+      }
+    },
+    "POST /api/platform/org/:orgId/add-addon": {
+      "handlerName": "subscriptionMutationController.addAddon",
+      "file": "billing.routes.js",
+      "line": 638,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:addAddon",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 76
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 85
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 86
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "data"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 131
+          },
+          {
+            "status": 400,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 137
+          }
+        ]
+      }
+    },
+    "DELETE /api/platform/org/:orgId/remove-addon": {
+      "handlerName": "subscriptionMutationController.removeAddon",
+      "file": "billing.routes.js",
+      "line": 670,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSubscriptionMutation.controller.js:removeAddon",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 155
+          },
+          {
+            "status": 200,
+            "keys": [
+              "success",
+              "message"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 181
+          },
+          {
+            "status": 400,
+            "keys": [
+              "success",
+              "error"
+            ],
+            "nestedKeys": {
+              "error": []
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 187
+          }
+        ]
+      }
+    },
+    "GET /api/platform/invoices/:invoiceId": {
+      "handlerName": "getInvoiceDetails",
+      "file": "billing.routes.js",
+      "line": 696,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/invoices/:invoiceId/status": {
+      "handlerName": "updateInvoiceStatus",
+      "file": "billing.routes.js",
+      "line": 734,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/plans": {
+      "handlerName": "planController.getAllPlans",
+      "file": "billing.routes.js",
+      "line": 763,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getAllPlans",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "plansWithUsage",
+            "line": 234
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 236
+          }
+        ]
+      }
+    },
+    "POST /api/platform/plans": {
+      "handlerName": "planController.createPlan",
+      "file": "billing.routes.js",
+      "line": 792,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:createPlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 47
+          },
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 79
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 81
+          }
+        ]
+      }
+    },
+    "GET /api/platform/plans/:id": {
+      "handlerName": "planController.getPlanById",
+      "file": "billing.routes.js",
+      "line": 813,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getPlanById",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 274
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "plan",
+            "line": 275
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 277
+          }
+        ]
+      }
+    },
+    "PUT /api/platform/plans/:id": {
+      "handlerName": "planController.updatePlan",
+      "file": "billing.routes.js",
+      "line": 848,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:updatePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 99
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 104
+          },
+          {
+            "status": 409,
+            "keys": [
+              "message",
+              "currentVersion"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 123
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 141
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 143
+          }
+        ]
+      }
+    },
+    "PATCH /api/platform/plans/:id/status": {
+      "handlerName": "planController.patchPlanStatus",
+      "file": "billing.routes.js",
+      "line": 882,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:patchPlanStatus",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 156
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 164
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 183
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 185
+          }
+        ]
+      }
+    },
+    "POST /api/platform/plans/:id/duplicate": {
+      "handlerName": "planController.duplicatePlan",
+      "file": "billing.routes.js",
+      "line": 914,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:duplicatePlan",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 288
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 291
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 294
+          },
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 334
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 336
+          }
+        ]
+      }
+    },
+    "GET /api/platform/plans/:id/usage": {
+      "handlerName": "planController.getPlanUsage",
+      "file": "billing.routes.js",
+      "line": 937,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformPlan.controller.js:getPlanUsage",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "planId",
+              "organizationsCount",
+              "totalUsersAcrossPlan",
+              "totalBranchesAcrossPlan"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 256
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 263
+          }
+        ]
+      }
+    },
+    "GET /api/platform/orgs/:orgId/billing": {
+      "handlerName": "platformBillingController.getOrgBillingOverview",
+      "file": "billing.routes.js",
+      "line": 982,
+      "shape": {
+        "controllerKey": "src\\modules\\billingDomain\\controllers\\platformBilling.controller.js:getOrgBillingOverview",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [
+              "organizationId",
+              "currentCycle",
+              "activeDraft"
+            ],
+            "nestedKeys": {
+              "currentCycle": [
+                "start",
+                "usage"
+              ]
+            },
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 29
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 38
+          }
+        ]
+      }
+    },
+    "POST /api/platform/orgs/:orgId/invoices/generate": {
+      "handlerName": "platformBillingController.manualGenerateInvoice",
+      "file": "billing.routes.js",
+      "line": 1012,
+      "shape": {
+        "controllerKey": "src\\modules\\billingDomain\\controllers\\platformBilling.controller.js:manualGenerateInvoice",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 67
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 69
+          }
+        ]
+      }
+    },
+    "POST /api/platform/coupons": {
+      "handlerName": "couponController.createCoupon",
+      "file": "billing.routes.js",
+      "line": 1037,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCoupon.controller.js:createCoupon",
+        "responses": [
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "PUT /api/platform/coupons/:id": {
+      "handlerName": "couponController.updateCoupon",
+      "file": "billing.routes.js",
+      "line": 1066,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCoupon.controller.js:updateCoupon",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 59
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 61
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 62
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 63
+          }
+        ]
+      }
+    },
+    "POST /api/platform/campaigns": {
+      "handlerName": "campaignController.createCampaign",
+      "file": "billing.routes.js",
+      "line": 1089,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCampaign.controller.js:createCampaign",
+        "responses": [
+          {
+            "status": 201,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 33
+          }
+        ]
+      }
+    },
+    "PUT /api/platform/campaigns/:id": {
+      "handlerName": "campaignController.updateCampaign",
+      "file": "billing.routes.js",
+      "line": 1118,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformCampaign.controller.js:updateCampaign",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 59
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 61
+          },
+          {
+            "status": 409,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 62
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 63
+          }
+        ]
+      }
+    },
+    "GET /api/platform/trials": {
+      "handlerName": "trialController.getTrials",
+      "file": "billing.routes.js",
+      "line": 1148,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/organizations/:id/auto-renew": {
+      "handlerName": "revenueController.toggleAutoRenew",
+      "file": "billing.routes.js",
+      "line": 1177,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:toggleAutoRenew",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 27
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 31
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 53
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 55
+          }
+        ]
+      }
+    },
+    "POST /api/platform/organizations/:id/manual-payment": {
+      "handlerName": "revenueController.recordManualPayment",
+      "file": "billing.routes.js",
+      "line": 1206,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:recordManualPayment",
+        "responses": [
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 70
+          },
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 79
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 80
+          },
+          {
+            "status": 400,
+            "keys": [
+              "message"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 83
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 127
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 129
+          }
+        ]
+      }
+    },
+    "POST /api/platform/organizations/:id/generate-payment-link": {
+      "handlerName": "revenueController.generatePaymentLink",
+      "file": "billing.routes.js",
+      "line": 1235,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:generatePaymentLink",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 144
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 148
+          },
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 169
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 171
+          }
+        ]
+      }
+    },
+    "POST /api/platform/contracts/:id/refund-request": {
+      "handlerName": "refundController.requestRefund",
+      "file": "billing.routes.js",
+      "line": 1305,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/refunds/:id/approve": {
+      "handlerName": "refundController.approveRefund",
+      "file": "billing.routes.js",
+      "line": 1335,
+      "shape": {
+        "controllerKey": "src\\platform\\support\\controllers\\platformSupport.controller.js:approveRefund",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "result",
+            "line": 93
+          },
+          {
+            "status": 400,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 95
+          }
+        ]
+      }
+    },
+    "PATCH /api/platform/refunds/:id/reject": {
+      "handlerName": "refundController.rejectRefund",
+      "file": "billing.routes.js",
+      "line": 1369,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/refunds/:id/process": {
+      "handlerName": "refundController.processRefund",
+      "file": "billing.routes.js",
+      "line": 1413,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/refunds/:id": {
+      "handlerName": "refundController.getRefund",
+      "file": "billing.routes.js",
+      "line": 1438,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/invoices/:id/refunds": {
+      "handlerName": "refundController.listRefundsByInvoice",
+      "file": "billing.routes.js",
+      "line": 1459,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/dashboard": {
+      "handlerName": "res",
+      "file": "analytics.routes.js",
+      "line": 58,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/analytics": {
+      "handlerName": "getPlatformAnalytics",
+      "file": "analytics.routes.js",
+      "line": 117,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/analytics/events": {
+      "handlerName": "getLatestEvents",
+      "file": "analytics.routes.js",
+      "line": 144,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/analytics/revenue": {
+      "handlerName": "getPlatformRevenueAnalytics",
+      "file": "analytics.routes.js",
+      "line": 176,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/metrics/sales": {
+      "handlerName": "revenueController.getSalesMetrics",
+      "file": "analytics.routes.js",
+      "line": 196,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformRevenue.controller.js:getSalesMetrics",
+        "responses": [
+          {
+            "status": 200,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "isVariableResponse": true,
+            "variableName": "metrics",
+            "line": 207
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 209
+          }
+        ]
+      }
+    },
+    "GET /api/platform/__sentinel/rbac-self-check": {
+      "handlerName": "rbacSelfCheck",
+      "file": "governance.routes.js",
+      "line": 30,
+      "shape": {
+        "controllerKey": "src\\platform\\domain\\controllers\\platformSentinelSelfCheck.controller.js:rbacSelfCheck",
+        "responses": [
+          {
+            "status": 404,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 20
+          },
+          {
+            "status": 401,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 25
+          },
+          {
+            "status": 200,
+            "keys": [
+              "role",
+              "userId",
+              "resolvedCapabilities",
+              "contractCapabilities",
+              "missing",
+              "extra",
+              "roleMatrix",
+              "healthy",
+              "phantomDetected",
+              "timestamp"
+            ],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 44
+          },
+          {
+            "status": 500,
+            "keys": [],
+            "isDynamic": false,
+            "isPartialDynamic": false,
+            "line": 57
+          }
+        ]
+      }
+    },
+    "GET /api/platform/__sentinel/api-integrity": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 61,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/__sentinel/response-schema-drift": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 116,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/__sentinel/openapi-runtime-status": {
+      "handlerName": "res",
+      "file": "governance.routes.js",
+      "line": 169,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/governance/platform": {
+      "handlerName": "getPlatformGovernanceUsers",
+      "file": "user.routes.js",
+      "line": 54,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/governance/platform/:id": {
+      "handlerName": "getPlatformUserDetail",
+      "file": "user.routes.js",
+      "line": 66,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/platform/:id/role": {
+      "handlerName": "updatePlatformUserRole",
+      "file": "user.routes.js",
+      "line": 78,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/platform/:id/status": {
+      "handlerName": "updatePlatformUserStatus",
+      "file": "user.routes.js",
+      "line": 90,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/platform/:id/force-logout": {
+      "handlerName": "forceLogoutPlatformUser",
+      "file": "user.routes.js",
+      "line": 102,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/platform/:id/reset-2fa": {
+      "handlerName": "resetPlatformUser2FA",
+      "file": "user.routes.js",
+      "line": 114,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/users": {
+      "handlerName": "getPlatformUsers",
+      "file": "user.routes.js",
+      "line": 131,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/users": {
+      "handlerName": "createPlatformUser",
+      "file": "user.routes.js",
+      "line": 143,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/users/:id": {
+      "handlerName": "getPlatformUserDetails",
+      "file": "user.routes.js",
+      "line": 155,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/users/:id/audit": {
+      "handlerName": "getPlatformUserAuditHistory",
+      "file": "user.routes.js",
+      "line": 167,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/users/:id": {
+      "handlerName": "updatePlatformUser",
+      "file": "user.routes.js",
+      "line": 179,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "DELETE /api/platform/users/:id": {
+      "handlerName": "deletePlatformUser",
+      "file": "user.routes.js",
+      "line": 191,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/governance/org/:organizationId": {
+      "handlerName": "getOrganizationUsersGovernance",
+      "file": "user.routes.js",
+      "line": 208,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/governance/org/:organizationId/:userId": {
+      "handlerName": "getOrganizationUserDetailGovernance",
+      "file": "user.routes.js",
+      "line": 220,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/org/:organizationId/:userId/status": {
+      "handlerName": "updateOrganizationUserStatusGovernance",
+      "file": "user.routes.js",
+      "line": 232,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/org/:organizationId/:userId/role": {
+      "handlerName": "updateOrganizationUserRoleGovernance",
+      "file": "user.routes.js",
+      "line": 244,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/org/:organizationId/:userId/force-logout": {
+      "handlerName": "forceLogoutOrganizationUser",
+      "file": "user.routes.js",
+      "line": 256,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/governance/org/:organizationId/:userId/reset-password": {
+      "handlerName": "resetOrganizationUserPassword",
+      "file": "user.routes.js",
+      "line": 268,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/contracts/needs-renewal": {
+      "handlerName": "dashboardController.getContractsNeedingRenewal",
+      "file": "contracts.routes.js",
+      "line": 137,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/contracts": {
+      "handlerName": "contractController.createContract",
+      "file": "contracts.routes.js",
+      "line": 203,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/contracts/:id/status": {
+      "handlerName": "contractController.updateContractStatus",
+      "file": "contracts.routes.js",
+      "line": 251,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/contracts/:id/replace": {
+      "handlerName": "contractController.replaceContract",
+      "file": "contracts.routes.js",
+      "line": 299,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/contracts/:id/upload-document": {
+      "handlerName": "contractController.uploadContractDocument",
+      "file": "contracts.routes.js",
+      "line": 346,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/contracts/:id/invoice": {
+      "handlerName": "invoiceController.generateInvoice",
+      "file": "contracts.routes.js",
+      "line": 391,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/contracts/:id/invoices": {
+      "handlerName": "invoiceController.listContractInvoices",
+      "file": "contracts.routes.js",
+      "line": 433,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "GET /api/platform/invoices/:id": {
+      "handlerName": "invoiceController.getInvoice",
+      "file": "contracts.routes.js",
+      "line": 465,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "POST /api/platform/invoices/:id/pay": {
+      "handlerName": "invoiceController.recordPayment",
+      "file": "contracts.routes.js",
+      "line": 519,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/contracts/:id/auto-renew": {
+      "handlerName": "contractController.setAutoRenew",
+      "file": "contracts.routes.js",
+      "line": 587,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    },
+    "PATCH /api/platform/contracts/:id/cancel": {
+      "handlerName": "contractController.cancelContract",
+      "file": "contracts.routes.js",
+      "line": 647,
+      "shape": {
+        "controllerKey": null,
+        "responses": [],
+        "unresolved": true
+      }
+    }
+  }
+}

@@ -1,0 +1,1458 @@
+openapi: 3.0.3
+
+info:
+  title: DentalSaaS Platform API
+  version: 1.0.0
+  description: |
+    Sovereign Platform Plane API for DentalSaaS.
+    Governs multi-tenant administration, capability enforcement
+    and distributed governance (v19.3).
+
+servers:
+  - url: /api/platform
+    description: Platform Plane (same-origin via Vite proxy / Nginx)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Security
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Minimal shared shapes ─────────────────────────────────────────────────
+    PlatformUser:
+      type: object
+      properties:
+        id:         { type: string }
+        name:       { type: string }
+        email:      { type: string }
+        role:       { type: string, enum: [superadmin, admin, support] }
+        isActive:   { type: boolean }
+        isTwoFactorEnabled: { type: boolean }
+
+    Organization:
+      type: object
+      properties:
+        id:            { type: string }
+        name:          { type: string }
+        status:        { type: string, enum: [active, suspended, trial, cancelled] }
+        regionCode:    { type: string }
+        plan:          { type: string }
+        createdAt:     { type: string, format: date-time }
+
+    Branch:
+      type: object
+      properties:
+        id:     { type: string }
+        name:   { type: string }
+        status: { type: string }
+
+    AuditLog:
+      type: object
+      properties:
+        id:          { type: string }
+        action:      { type: string }
+        actorId:     { type: string }
+        currentHash: { type: string }
+        createdAt:   { type: string, format: date-time }
+
+    Invoice:
+      type: object
+      properties:
+        id:         { type: string }
+        total:      { type: number }
+        status:     { type: string, enum: [draft, issued, paid, overdue] }
+        issuedAt:   { type: string, format: date-time }
+
+    CapabilityMap:
+      type: object
+      description: Key = capability name, Value = boolean (granted/denied)
+      additionalProperties:
+        type: boolean
+      example:
+        MANAGE_ADMINS: true
+        VIEW_FINANCE: false
+
+    FeatureFlagMap:
+      type: object
+      additionalProperties:
+        type: boolean
+      example:
+        ADVANCED_ANALYTICS: true
+        PLATFORM_KILL_SWITCH: false
+
+    Notification:
+      type: object
+      properties:
+        id:       { type: string }
+        message:  { type: string }
+        read:     { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Plan:
+      type: object
+      properties:
+        id:     { type: string }
+        name:   { type: string }
+        price:  { type: number }
+        status: { type: string }
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code:    { type: string }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Default security (bearer) — overridden to [] for public routes
+# ─────────────────────────────────────────────────────────────────────────────
+security:
+  - bearerAuth: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# All paths are relative to /api/platform (server base URL)
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # /auth — platformAuthRoutes (PUBLIC — no bearer required)
+  # Mounted at: /api/platform/auth
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /auth/login:
+    post:
+      summary: Platform superadmin login
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email }
+                password: { type: string }
+      responses:
+        200:
+          description: Login successful — access token returned, refresh token set as HttpOnly cookie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:     { type: string, description: JWT access token }
+                  user:      { $ref: '#/components/schemas/PlatformUser' }
+                  requires2FA: { type: boolean }
+        401:
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/verify-2fa:
+    post:
+      summary: Complete TOTP two-factor authentication
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, totpCode]
+              properties:
+                email:    { type: string }
+                totpCode: { type: string, minLength: 6, maxLength: 6 }
+      responses:
+        200:
+          description: 2FA verified — full session established
+        401:
+          description: Invalid or expired TOTP code
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token using HttpOnly refresh cookie
+      tags: [Auth]
+      security: []
+      responses:
+        200:
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user:  { $ref: '#/components/schemas/PlatformUser' }
+        401:
+          description: Refresh token invalid or expired
+
+  /auth/profile:
+    get:
+      summary: Get current platform user profile
+      tags: [Auth]
+      security: []
+      responses:
+        200:
+          description: Platform user profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformUser' }
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # / — platformAccountRoutes (PROTECTED)
+  # Mounted at: /api/platform
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /capabilities:
+    get:
+      summary: Get resolved capability matrix for the authenticated platform user
+      tags: [Governance]
+      responses:
+        200:
+          description: Capability map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  capabilities: { $ref: '#/components/schemas/CapabilityMap' }
+                  metadata:
+                    type: object
+                    properties:
+                      policyVersion: { type: string }
+        409:
+          description: Capability snapshot mismatch (Enterprise mode) — re-authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  code:    { type: string, example: CAPABILITY_HASH_MISMATCH }
+
+  /feature-flags:
+    get:
+      summary: Get active platform feature flag registry
+      tags: [Governance]
+      parameters:
+        - name: If-None-Match
+          in: header
+          schema: { type: string }
+          description: ETag for conditional GET (returns 304 if unchanged)
+      responses:
+        200:
+          description: Feature flags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flags:   { $ref: '#/components/schemas/FeatureFlagMap' }
+                  version: { type: string, example: v1.0 }
+          headers:
+            ETag:
+              schema: { type: string }
+              description: SHA-256 hash of flag state for conditional caching
+            Cache-Control:
+              schema: { type: string, example: 'private, must-revalidate' }
+            Vary:
+              schema: { type: string, example: Authorization }
+        304:
+          description: Flags unchanged (ETag match)
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # /core — platformRoutes (PROTECTED)
+  # Mounted at: /api/platform/core
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /core/dashboard:
+    get:
+      summary: Platform dashboard summary
+      tags: [Dashboard]
+      responses:
+        200:
+          description: Dashboard data for authenticated platform user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  user:    { $ref: '#/components/schemas/PlatformUser' }
+
+  /core/search:
+    get:
+      summary: Global platform-wide search
+      tags: [Dashboard]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Search results
+
+  # ── SSE Stream (Enterprise only) ──────────────────────────────────────────
+
+  /core/feature-flags/stream:
+    get:
+      summary: SSE real-time feature flag stream (Enterprise mode only)
+      tags: [Governance]
+      description: |
+        Opens a Server-Sent Events stream. Pushes flag updates in real-time.
+        Only registered when `PLATFORM_MODE=ENTERPRISE`.
+        Client should use `EventSource` with `withCredentials: true`.
+      responses:
+        200:
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        404:
+          description: Not registered (LEAN mode)
+
+  /core/audit/frontend-event:
+    post:
+      summary: Log an audited frontend action
+      tags: [Audit]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, capabilityUsed, targetEntity]
+              properties:
+                actorId:        { type: string }
+                actorRole:      { type: string }
+                capabilityUsed: { type: string }
+                featureFlag:    { type: string }
+                targetEntity:   { type: string }
+                correlationId:  { type: string }
+                timestamp:      { type: string, format: date-time }
+      responses:
+        204:
+          description: Audit event accepted
+
+  /core/performance-metric:
+    post:
+      summary: Log a frontend performance metric
+      tags: [Audit]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                featureKey:   { type: string }
+                durationMs:   { type: number }
+                correlationId: { type: string }
+      responses:
+        204:
+          description: Metric accepted
+
+  # ── Analytics ─────────────────────────────────────────────────────────────
+
+  /core/analytics:
+    get:
+      summary: Platform-wide analytics summary
+      tags: [Analytics]
+      responses:
+        200:
+          description: Analytics data
+
+  /core/analytics/events:
+    get:
+      summary: Latest platform events
+      tags: [Analytics]
+      responses:
+        200:
+          description: Event list
+
+  /core/analytics/revenue:
+    get:
+      summary: Platform revenue analytics
+      tags: [Analytics]
+      responses:
+        200:
+          description: Revenue analytics
+
+  /core/metrics/sales:
+    get:
+      summary: Sales metrics dashboard
+      tags: [Analytics]
+      responses:
+        200:
+          description: Sales metrics
+
+  # ── Audit ─────────────────────────────────────────────────────────────────
+
+  /core/audit-logs:
+    get:
+      summary: Platform-wide audit log (superadmin only)
+      tags: [Audit]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        200:
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:  { type: array, items: { $ref: '#/components/schemas/AuditLog' } }
+                  total: { type: integer }
+
+  /core/audit/verify-chain:
+    get:
+      summary: Verify immutable audit hash chain (Enterprise + superadmin only)
+      tags: [Audit]
+      description: |
+        Recomputes SHA-256 hashes chronologically.
+        Detects any tampering in the audit log chain.
+        Only available when `PLATFORM_MODE=ENTERPRISE`.
+      responses:
+        200:
+          description: Chain verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:          { type: boolean }
+                  scannedEntries: { type: integer }
+                  brokenAt:
+                    nullable: true
+                    type: object
+                    properties:
+                      entryId:      { type: string }
+                      action:       { type: string }
+                      createdAt:    { type: string, format: date-time }
+                      expectedHash: { type: string }
+                      storedHash:   { type: string }
+
+  # ── Organizations ─────────────────────────────────────────────────────────
+
+  /core/organizations:
+    get:
+      summary: List all organizations
+      tags: [Organizations]
+      responses:
+        200:
+          description: Organization list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Organization' }
+    post:
+      summary: Provision a new organization (superadmin only)
+      tags: [Organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:       { type: string }
+                regionCode: { type: string }
+                plan:       { type: string }
+      responses:
+        201:
+          description: Organization created
+
+  /core/organizations/{id}:
+    get:
+      summary: Get organization details
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Organization details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Organization' }
+
+  /core/organizations/{id}/status:
+    patch:
+      summary: Update organization status (active/suspended)
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        200:
+          description: Status updated
+
+  /core/organizations/{id}/configuration:
+    get:
+      summary: Get organization configuration
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Configuration object
+    patch:
+      summary: Update organization configuration
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: Configuration updated
+
+  /core/organizations/{id}/analytics:
+    get:
+      summary: Get organization-level analytics
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Organization analytics
+
+  /core/organizations/{id}/audit-logs:
+    get:
+      summary: Get audit logs scoped to a specific organization
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Audit logs
+
+  # ── Organization Users ────────────────────────────────────────────────────
+
+  /core/organizations/{id}/users:
+    get:
+      summary: List users in an organization
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: User list
+
+  /core/organizations/{id}/users/{userId}:
+    get:
+      summary: Get user details within an organization
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: User details
+    patch:
+      summary: Update a user within an organization
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: User updated
+
+  # ── Organization Branches ─────────────────────────────────────────────────
+
+  /core/organizations/{id}/branches:
+    get:
+      summary: List branches of an organization
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Branch list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Branch' }
+    post:
+      summary: Create a new branch
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        201:
+          description: Branch created
+
+  /core/organizations/{id}/branches/{branchId}:
+    get:
+      summary: Get branch details
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Branch details
+    patch:
+      summary: Update branch
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: Branch updated
+
+  /core/organizations/{id}/branches/{branchId}/status:
+    patch:
+      summary: Update branch status (active/suspended)
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        200:
+          description: Status updated
+
+  /core/organizations/{id}/branches/{branchId}/analytics:
+    get:
+      summary: Get analytics for a specific branch
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Branch analytics
+
+  /core/organizations/{id}/branches/{branchId}/configuration:
+    get:
+      summary: Get branch configuration
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Configuration
+    patch:
+      summary: Update branch configuration
+      tags: [Organizations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: Updated
+
+  /core/organizations/{id}/invoices:
+    get:
+      summary: List invoices for an organization
+      tags: [Billing]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invoice' }
+
+  # ── Subscription Lifecycle ────────────────────────────────────────────────
+
+  /core/organizations/{id}/extend:
+    patch:
+      summary: Extend organization subscription
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days: { type: integer }
+      responses:
+        200:
+          description: Subscription extended
+
+  /core/organizations/{id}/suspend:
+    patch:
+      summary: Suspend organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Organization suspended
+
+  /core/organizations/{id}/reactivate:
+    patch:
+      summary: Reactivate suspended organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Organization reactivated
+
+  /core/organizations/{id}/cancel:
+    post:
+      summary: Cancel organization subscription
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode: { type: string, enum: [immediate, end_of_period] }
+      responses:
+        200:
+          description: Subscription cancelled
+
+  /core/organizations/{id}/adjust-credits:
+    post:
+      summary: Manually adjust organization credits
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amountMinor]
+              properties:
+                amountMinor: { type: integer, description: Amount in minor currency units }
+      responses:
+        200:
+          description: Credits adjusted
+
+  /core/organizations/{id}/auto-renew:
+    patch:
+      summary: Toggle auto-renew for organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Auto-renew toggled
+
+  /core/organizations/{id}/manual-payment:
+    post:
+      summary: Record a manual payment for an organization
+      tags: [Billing]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountMinor: { type: integer }
+                reference:   { type: string }
+      responses:
+        200:
+          description: Payment recorded
+
+  /core/organizations/{id}/generate-payment-link:
+    post:
+      summary: Generate a payment link for an organization
+      tags: [Billing]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Payment link generated
+
+  /core/organizations/{orgId}/plan:
+    patch:
+      summary: Assign a plan to an organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId: { type: string }
+      responses:
+        200:
+          description: Plan assigned
+
+  /core/org/{orgId}/subscription:
+    get:
+      summary: Get subscription overview for an organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Subscription overview
+
+  /core/org/{orgId}/usage:
+    get:
+      summary: Get usage metrics for an organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Usage data
+
+  /core/org/{orgId}/change-plan:
+    post:
+      summary: Change organization plan
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId:          { type: string }
+                expectedVersion: { type: integer }
+      responses:
+        200:
+          description: Plan changed
+
+  /core/org/{orgId}/add-addon:
+    post:
+      summary: Add an add-on to an organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [addonKey]
+              properties:
+                addonKey:        { type: string }
+                expectedVersion: { type: integer }
+      responses:
+        200:
+          description: Add-on activated
+
+  /core/org/{orgId}/remove-addon:
+    delete:
+      summary: Remove an add-on from an organization
+      tags: [Subscriptions]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                addonKey:        { type: string }
+                expectedVersion: { type: integer }
+      responses:
+        200:
+          description: Add-on removed
+
+  # ── Invoices ──────────────────────────────────────────────────────────────
+
+  /core/invoices/{invoiceId}:
+    get:
+      summary: Get invoice details
+      tags: [Billing]
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Invoice details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Invoice' }
+
+  /core/invoices/{invoiceId}/status:
+    patch:
+      summary: Update invoice status
+      tags: [Billing]
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [draft, issued, paid, overdue] }
+      responses:
+        200:
+          description: Status updated
+
+  # ── Billing Governance ────────────────────────────────────────────────────
+
+  /core/orgs/{orgId}/billing:
+    get:
+      summary: Get org billing overview (superadmin only)
+      tags: [Billing]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Billing overview
+
+  /core/orgs/{orgId}/invoices/generate:
+    post:
+      summary: Manually generate an invoice for an org (superadmin only)
+      tags: [Billing]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      responses:
+        201:
+          description: Invoice generated
+
+  # ── Plans ─────────────────────────────────────────────────────────────────
+
+  /core/plans:
+    get:
+      summary: List all plans
+      tags: [Plans]
+      responses:
+        200:
+          description: Plan catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Plan' }
+    post:
+      summary: Create a plan (superadmin only)
+      tags: [Plans]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price]
+              properties:
+                name:  { type: string }
+                price: { type: number }
+      responses:
+        201:
+          description: Plan created
+
+  /core/plans/{id}:
+    put:
+      summary: Update a plan (superadmin only)
+      tags: [Plans]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: Plan updated
+
+  /core/plans/{id}/status:
+    patch:
+      summary: Activate or archive a plan
+      tags: [Plans]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, archived] }
+      responses:
+        200:
+          description: Plan status updated
+
+  /core/plans/{id}/usage:
+    get:
+      summary: Get usage statistics for a plan
+      tags: [Plans]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Usage stats
+
+  /core/addons:
+    get:
+      summary: List available add-ons
+      tags: [Plans]
+      responses:
+        200:
+          description: Add-on catalog
+
+  /core/trials:
+    get:
+      summary: List all trial organizations (superadmin only)
+      tags: [Subscriptions]
+      responses:
+        200:
+          description: Trial list
+
+  # ── Coupons & Campaigns ───────────────────────────────────────────────────
+
+  /core/coupons:
+    post:
+      summary: Create a discount coupon (superadmin only)
+      tags: [Coupons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:       { type: string }
+                discount:   { type: number }
+                validUntil: { type: string, format: date-time }
+      responses:
+        201:
+          description: Coupon created
+
+  /core/coupons/{id}:
+    put:
+      summary: Update a coupon (superadmin only)
+      tags: [Coupons]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Coupon updated
+
+  /core/campaigns:
+    post:
+      summary: Create a marketing campaign (superadmin only)
+      tags: [Coupons]
+      responses:
+        201:
+          description: Campaign created
+
+  /core/campaigns/{id}:
+    put:
+      summary: Update a campaign (superadmin only)
+      tags: [Coupons]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Campaign updated
+
+  # ── Features ──────────────────────────────────────────────────────────────
+
+  /core/features:
+    get:
+      summary: List all platform feature flags (managed)
+      tags: [Features]
+      responses:
+        200:
+          description: Feature list
+    post:
+      summary: Create a platform feature (superadmin only)
+      tags: [Features]
+      responses:
+        201:
+          description: Feature created
+
+  /core/features/{id}:
+    put:
+      summary: Update a feature (superadmin only)
+      tags: [Features]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Feature updated
+
+  /core/org/{orgId}/feature/{key}:
+    patch:
+      summary: Override a feature flag for a specific organization
+      tags: [Features]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+        - { name: key, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Feature overridden
+
+  # ── Support ───────────────────────────────────────────────────────────────
+
+  /core/support/tickets:
+    get:
+      summary: List all platform support tickets
+      tags: [Support]
+      responses:
+        200:
+          description: Ticket list
+
+  /core/support/ticket/{id}/forensic:
+    get:
+      summary: Get forensic context for a support ticket
+      tags: [Support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Forensic context
+
+  /core/support/ticket/{id}/assign:
+    patch:
+      summary: Assign a ticket to a support agent
+      tags: [Support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Ticket assigned
+
+  /core/support/ticket/{id}/approve-refund:
+    post:
+      summary: Approve a refund for a support ticket
+      tags: [Support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Refund approved
+
+  /core/support/ticket/{id}/message:
+    post:
+      summary: Add a message to a support ticket
+      tags: [Support]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+      responses:
+        200:
+          description: Message added
+
+  # ── Platform User Profile ─────────────────────────────────────────────────
+
+  /core/me:
+    get:
+      summary: Get authenticated platform user profile
+      tags: [Profile]
+      responses:
+        200:
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformUser' }
+    put:
+      summary: Update authenticated platform user profile
+      tags: [Profile]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:  { type: string }
+                email: { type: string, format: email }
+      responses:
+        200:
+          description: Profile updated
+
+  /core/change-password:
+    put:
+      summary: Change platform user password
+      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword:     { type: string, minLength: 8 }
+      responses:
+        200:
+          description: Password changed
+
+  /core/users/{userId}/manage-credentials:
+    patch:
+      summary: Admin credential management for platform users
+      tags: [Profile]
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Credentials managed
+
+  # ── 2FA ───────────────────────────────────────────────────────────────────
+
+  /core/2fa/setup:
+    post:
+      summary: Initiate 2FA TOTP setup for the authenticated user
+      tags: [Auth]
+      responses:
+        200:
+          description: QR code and secret returned
+
+  /core/2fa/complete-setup:
+    post:
+      summary: Verify and complete 2FA setup
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totpCode]
+              properties:
+                totpCode: { type: string }
+      responses:
+        200:
+          description: 2FA enabled
+
+  /core/2fa/disable:
+    post:
+      summary: Disable 2FA for authenticated user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totpCode]
+              properties:
+                totpCode: { type: string }
+      responses:
+        200:
+          description: 2FA disabled
+
+  # ── Notifications ─────────────────────────────────────────────────────────
+
+  /core/notifications:
+    get:
+      summary: Get platform notifications for authenticated user
+      tags: [Notifications]
+      responses:
+        200:
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Notification' }
+
+  /core/notifications/read-all:
+    patch:
+      summary: Mark all notifications as read
+      tags: [Notifications]
+      responses:
+        200:
+          description: All marked read
+
+  /core/notifications/{id}/read:
+    patch:
+      summary: Mark a specific notification as read
+      tags: [Notifications]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Notification marked read
+
+  # ── Settings ──────────────────────────────────────────────────────────────
+
+  /core/settings:
+    get:
+      summary: Get global platform settings
+      tags: [Settings]
+      responses:
+        200:
+          description: Settings object
+    put:
+      summary: Update global platform settings (superadmin only)
+      tags: [Settings]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: Settings updated
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # /core/users — platformUserGovernanceRoutes
+  # Mounted at: /api/platform/core/users
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /core/users/platform:
+    get:
+      summary: List all platform superadmin users
+      tags: [UserGovernance]
+      responses:
+        200:
+          description: Platform user list
+
+  /core/users/platform/{id}:
+    get:
+      summary: Get platform user details + audit trail (superadmin only)
+      tags: [UserGovernance]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: User detail + audit logs
+
+  /core/users/platform/{id}/force-logout:
+    patch:
+      summary: Force logout all sessions for a platform user
+      tags: [UserGovernance]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Sessions revoked
+
+  /core/users/org/{orgId}:
+    get:
+      summary: List org users (governance view)
+      tags: [UserGovernance]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Org user list
+
+  /core/users/org/{orgId}/{userId}:
+    get:
+      operationId: usersOrgUserDetail
+      summary: Get org user detail (governance view)
+      tags: [UserGovernance]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: User detail
+
+  /core/users/org/{orgId}/{userId}/force-logout:
+    patch:
+      summary: Force logout all sessions for an org user
+      tags: [UserGovernance]
+      parameters:
+        - { name: orgId, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        200:
+          description: Sessions revoked
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tags
+# ─────────────────────────────────────────────────────────────────────────────
+tags:
+  - { name: Auth,            description: "Authentication and session management" }
+  - { name: Governance,      description: "Capabilities, feature flags, and kill switch" }
+  - { name: Dashboard,       description: "Global platform overview and search" }
+  - { name: Analytics,       description: "Platform-wide and org-level analytics" }
+  - { name: Audit,           description: "Audit logs and hash-chain verification" }
+  - { name: Organizations,   description: "Multi-tenant organization management" }
+  - { name: Subscriptions,   description: "Subscription lifecycle management" }
+  - { name: Billing,         description: "Invoices and billing governance" }
+  - { name: Plans,           description: "Plan catalog and governance" }
+  - { name: Coupons,         description: "Coupon and campaign management" }
+  - { name: Features,        description: "Platform feature flag governance" }
+  - { name: Support,         description: "Support ticket management" }
+  - { name: Profile,         description: "Platform user self-management" }
+  - { name: Notifications,   description: "Platform notification management" }
+  - { name: Settings,        description: "Global platform settings" }
+  - { name: UserGovernance,  description: "Cross-user session and credential governance" }

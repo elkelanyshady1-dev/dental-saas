@@ -1,0 +1,273 @@
+{
+  "policyVersion": "1.0.0",
+  "score": 52,
+  "passed": 16,
+  "failed": 0,
+  "warnings": 24,
+  "warningsCount": 24,
+  "enforcementMode": "lenient",
+  "overallStatus": "PASSED",
+  "scoreBreakdown": {
+    "baseScore": 100,
+    "warningPenalty": 48,
+    "failurePenalty": 0,
+    "warningPenaltyPerItem": 2,
+    "failurePenaltyPerItem": 20
+  },
+  "delta": {
+    "scoreChange": 0,
+    "warningsChange": 0,
+    "failuresChange": 0,
+    "previousTimestamp": "2026-03-03T04:49:55.946Z"
+  },
+  "validators": [
+    {
+      "name": "validate:capability-invariants",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 301,
+      "resultLine": "PASSED",
+      "warningCount": 0,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:api-integrity",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 232,
+      "resultLine": "PASSED",
+      "warningCount": 0,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:response-schema",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 149,
+      "resultLine": "PASSED",
+      "warningCount": 0,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:swagger-drift",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 38,
+      "resultLine": "PASSED",
+      "warningCount": 0,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:runtime-integrity",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 54,
+      "resultLine": "PASSED (19ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": {
+        "health": [
+          {
+            "attemptNumber": 1,
+            "errorCode": null,
+            "durationMs": 15
+          }
+        ]
+      }
+    },
+    {
+      "name": "validate:auth-flow",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 54,
+      "resultLine": "PASSED (18ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": {
+        "invalidCredentials": [
+          {
+            "attemptNumber": 1,
+            "errorCode": null,
+            "durationMs": 17
+          }
+        ]
+      }
+    },
+    {
+      "name": "validate:auth-controller-integrity",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 40,
+      "resultLine": "PASSED (1ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:jwt-env-integrity",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 39,
+      "resultLine": "PASSED (0ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:jwt-secret-entropy",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 38,
+      "resultLine": "PASSED (0ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:environment-config",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 46,
+      "resultLine": "PASSED (15ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:platform-seed-integrity",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 314,
+      "resultLine": "PASSED (99ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:role-drift",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 35,
+      "resultLine": "PASSED (0ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:auth-model-alignment",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 245,
+      "resultLine": "PASSED (29ms, 0 failures, 0 warnings)",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:cross-plane-isolation",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 71,
+      "resultLine": "PASSED",
+      "warningCount": 0,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:governance-self-integrity",
+      "status": "PASSED",
+      "classification": "PASSED",
+      "durationMs": 38,
+      "resultLine": "PASSED (1ms, 0 failures, 1 warnings)",
+      "warningCount": 4,
+      "warnings": [
+        {
+          "type": "NOT_LAST_VALIDATOR",
+          "severity": "low",
+          "message": "governance-self-integrity is not the last validator (last is: validate:capabilities-response)",
+          "metadata": {},
+          "code": "GOV_NOT_LAST",
+          "recommendation": "Move validate:governance-self-integrity to the end of ci.requiredScripts"
+        }
+      ],
+      "failures": [],
+      "retryMetadata": null
+    },
+    {
+      "name": "validate:capabilities-response",
+      "status": "PASSED",
+      "classification": null,
+      "durationMs": 373,
+      "resultLine": "PASSED",
+      "warningCount": 2,
+      "warnings": [],
+      "failures": [],
+      "retryMetadata": null
+    }
+  ],
+  "dynamicIssues": [],
+  "issuesByEndpoint": {
+    "GLOBAL": [
+      {
+        "validator": "validate:governance-self-integrity",
+        "type": "NOT_LAST_VALIDATOR",
+        "severity": "low",
+        "file": null,
+        "line": null,
+        "message": "governance-self-integrity is not the last validator (last is: validate:capabilities-response)"
+      }
+    ]
+  },
+  "endpointSummary": [
+    {
+      "endpoint": "GLOBAL",
+      "highestSeverity": "LOW",
+      "issueCount": 1
+    }
+  ],
+  "previousEndpoints": [
+    "GLOBAL"
+  ],
+  "timestamp": "2026-03-03T05:05:08.009Z",
+  "warningDetails": [
+    {
+      "validator": "validate:governance-self-integrity",
+      "code": "GOV_NOT_LAST",
+      "message": "governance-self-integrity is not the last validator (last is: validate:capabilities-response)",
+      "recommendation": "Move validate:governance-self-integrity to the end of ci.requiredScripts",
+      "severity": "low"
+    }
+  ],
+  "operationalContext": {
+    "nodeVersion": "v24.13.1",
+    "platform": "win32",
+    "env": "development",
+    "port": "5000",
+    "serverStartTime": "2026-03-03T05:05:08.009Z",
+    "serverUptimeSeconds": 2
+  },
+  "operationalAudit": {
+    "runtimeBaseUrl": "http://localhost:5000",
+    "runtimeIntegrity": "PASSED",
+    "authSimulation": "PASSED",
+    "envIntegrity": "PASSED"
+  }
+}

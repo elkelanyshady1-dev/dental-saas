@@ -1,0 +1,9 @@
+{
+  "case": "case_005",
+  "source": "synthetic",
+  "n_points": 4096,
+  "n_classes": 8,
+  "sampling_method": "boundary_aware",
+  "boundary_ratio": 0.3,
+  "seed": 46
+}

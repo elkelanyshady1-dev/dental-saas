@@ -1,0 +1,63 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Dear <strong>{{orgName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 20px; line-height:1.6;">
+    We were unable to process payment for your <strong>{{platformName}}</strong> subscription.
+    {{#if isExhausted}}
+    <strong style="color:#dc2626;">All retry attempts have been exhausted.</strong>
+    Your account will be suspended if payment is not received soon.
+    {{else}}
+    We will automatically retry in the next billing cycle.
+    {{/if}}
+</p>
+
+<div
+    style="background:#fee2e2; border-left:4px solid #f87171; border-radius:8px; padding:16px 20px; margin-bottom:24px;">
+    <p
+        style="margin:0; font-size:13px; color:#991b1b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+        {{#if isExhausted}}❌ Retries Exhausted{{else}}⚠ Payment Failed{{/if}}
+    </p>
+    <p style="margin:6px 0 0; font-size:14px; color:#7f1d1d; line-height:1.5;">
+        {{#if isExhausted}}
+        No further automatic retries will be attempted. Please update your payment method immediately.
+        {{else}}
+        Retry attempt {{retryCount}} of {{maxRetries}} failed. We will try again automatically.
+        {{/if}}
+    </p>
+</div>
+
+<table class="data">
+    <tr>
+        <th>Invoice</th>
+        <td>{{invoiceNumber}}</td>
+    </tr>
+    <tr>
+        <th>Amount</th>
+        <td><strong>{{formatCurrency amount currency}}</strong></td>
+    </tr>
+    {{#if retryCount}}
+    <tr>
+        <th>Attempt</th>
+        <td>{{retryCount}} / {{maxRetries}}</td>
+    </tr>
+    {{/if}}
+    {{#if failedAt}}
+    <tr>
+        <th>Failed At</th>
+        <td>{{formatDate failedAt}}</td>
+    </tr>
+    {{/if}}
+</table>
+
+{{#if updatePaymentUrl}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" style="background:#dc2626;" href="{{updatePaymentUrl}}">Update Payment Method</a>
+</div>
+{{/if}}
+
+<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
+    Common reasons for payment failure: insufficient funds, expired card, or bank refusal.
+    Please contact your bank or update your payment details to avoid service interruption.
+</p>
+{{/inline}}
+{{/layout}}

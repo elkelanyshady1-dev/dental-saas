@@ -1,0 +1,3513 @@
+{
+  "generated": "2026-03-03T05:05:06.306Z",
+  "totalRoutes": 276,
+  "duplicates": 0,
+  "routes": [
+    {
+      "method": "GET",
+      "fullPath": "/platform/audit-logs",
+      "routePath": "/audit-logs",
+      "mountPrefix": "/platform",
+      "file": "index.js",
+      "line": 63,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_AUDIT_LOGS)"
+      ],
+      "handlerName": "getAuditLogs"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/audit/verify-chain",
+      "routePath": "/audit/verify-chain",
+      "mountPrefix": "/platform",
+      "file": "index.js",
+      "line": 87,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "verifyChain"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/feature-flags/stream",
+      "routePath": "/feature-flags/stream",
+      "mountPrefix": "/platform",
+      "file": "index.js",
+      "line": 110,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "streamFeatureFlags"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/auth/login",
+      "routePath": "/auth/login",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 51,
+      "middleware": [],
+      "handlerName": "platformLogin"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/auth/verify-2fa",
+      "routePath": "/auth/verify-2fa",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 63,
+      "middleware": [],
+      "handlerName": "verify2FA"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/auth/refresh",
+      "routePath": "/auth/refresh",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 75,
+      "middleware": [],
+      "handlerName": "platformRefresh"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/auth/logout",
+      "routePath": "/auth/logout",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 87,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformLogout"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/auth/profile",
+      "routePath": "/auth/profile",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 99,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformProfile"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/me",
+      "routePath": "/me",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 120,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.getMe"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/me",
+      "routePath": "/me",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 155,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.updateMe"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/change-password",
+      "routePath": "/change-password",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 190,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.changePassword"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/users/:userId/manage-credentials",
+      "routePath": "/users/:userId/manage-credentials",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 221,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.manageCredentials"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/capabilities",
+      "routePath": "/capabilities",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 249,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getCapabilities"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/feature-flags",
+      "routePath": "/feature-flags",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 269,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getFeatureFlags"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/audit/frontend-event",
+      "routePath": "/audit/frontend-event",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 296,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.logAudit"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/performance-metric",
+      "routePath": "/performance-metric",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 312,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.logPerformance"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/me/capabilities",
+      "routePath": "/me/capabilities",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 333,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getCapabilities"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/2fa/setup",
+      "routePath": "/2fa/setup",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 361,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "setup2FA"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/2fa/complete-setup",
+      "routePath": "/2fa/complete-setup",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 398,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "complete2FASetup"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/2fa/disable",
+      "routePath": "/2fa/disable",
+      "mountPrefix": "/platform",
+      "file": "auth.routes.js",
+      "line": 421,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "disable2FA"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/search",
+      "routePath": "/search",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 113,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "globalSearch"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations",
+      "routePath": "/organizations",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 167,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizations"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations",
+      "routePath": "/organizations",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 205,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "createOrganizationProvisioned"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id",
+      "routePath": "/organizations/:id",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 268,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/analytics",
+      "routePath": "/organizations/:id/analytics",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 325,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationAnalytics"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/status",
+      "routePath": "/organizations/:id/status",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 373,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "updateOrganizationStatus"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/modules",
+      "routePath": "/organizations/:id/modules",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 403,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationModules"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/archive",
+      "routePath": "/organizations/:id/archive",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 436,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "archiveOrganization"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/restore",
+      "routePath": "/organizations/:id/restore",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 465,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "restoreOrganization"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/configuration",
+      "routePath": "/organizations/:id/configuration",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 497,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationConfiguration"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/configuration",
+      "routePath": "/organizations/:id/configuration",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 530,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationConfiguration"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/users",
+      "routePath": "/organizations/:id/users",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 559,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationUsers"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/users/:userId",
+      "routePath": "/organizations/:id/users/:userId",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 599,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationUserDetails"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/users/:userId",
+      "routePath": "/organizations/:id/users/:userId",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 633,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/branches",
+      "routePath": "/organizations/:id/branches",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 662,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationBranches"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations/:id/branches",
+      "routePath": "/organizations/:id/branches",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 703,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "createBranch"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/branches/:branchId",
+      "routePath": "/organizations/:id/branches/:branchId",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 737,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "updateBranch"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/branches/:branchId/status",
+      "routePath": "/organizations/:id/branches/:branchId/status",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 771,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "updateBranchStatus"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/audit-logs",
+      "routePath": "/organizations/:id/audit-logs",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 800,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationAuditLogs"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/invoices",
+      "routePath": "/organizations/:id/invoices",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 829,
+      "middleware": [
+        "...pBillingRead"
+      ],
+      "handlerName": "getOrganizationInvoices"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/branches/:branchId/analytics",
+      "routePath": "/organizations/:id/branches/:branchId/analytics",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 880,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/branches/:branchId",
+      "routePath": "/organizations/:id/branches/:branchId",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 934,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/organizations/:id/branches/:branchId/configuration",
+      "routePath": "/organizations/:id/branches/:branchId/configuration",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 972,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchConfiguration"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/branches/:branchId/configuration",
+      "routePath": "/organizations/:id/branches/:branchId/configuration",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1012,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateBranchConfiguration"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/notifications",
+      "routePath": "/notifications",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1035,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.getNotifications"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/notifications/read-all",
+      "routePath": "/notifications/read-all",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1051,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.markAllRead"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/notifications/:id/read",
+      "routePath": "/notifications/:id/read",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1073,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.markAsRead"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/settings",
+      "routePath": "/settings",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1094,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformSettingsController.getSettings"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/settings",
+      "routePath": "/settings",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1115,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_SETTINGS)"
+      ],
+      "handlerName": "platformSettingsController.updateSettings"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/features",
+      "routePath": "/features",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1138,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformFeatureController.getAllFeatures"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/features",
+      "routePath": "/features",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1172,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "platformFeatureController.createFeature"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/features/:id",
+      "routePath": "/features/:id",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1198,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "platformFeatureController.updateFeature"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/org/:orgId/feature/:key",
+      "routePath": "/org/:orgId/feature/:key",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1232,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "platformFeatureController.overrideOrganizationFeature"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:orgId/plan",
+      "routePath": "/organizations/:orgId/plan",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1271,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "planController.assignPlanToOrg"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/support/tickets",
+      "routePath": "/support/tickets",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1293,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.getPlatformTickets"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/support/ticket/:id/forensic",
+      "routePath": "/support/ticket/:id/forensic",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1319,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.getForensicContext"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/support/ticket/:id/assign",
+      "routePath": "/support/ticket/:id/assign",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1346,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.assignTicket"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/support/ticket/:id/approve-refund",
+      "routePath": "/support/ticket/:id/approve-refund",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1372,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "supportController.approveRefund"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/support/ticket/:id/message",
+      "routePath": "/support/ticket/:id/message",
+      "mountPrefix": "/platform",
+      "file": "organization.routes.js",
+      "line": 1408,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.addMessage"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/finance/exchange-rate",
+      "routePath": "/finance/exchange-rate",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 114,
+      "middleware": [
+        "...pSettings"
+      ],
+      "handlerName": "exchangeRateController.createOrUpdateRate"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/finance/exchange-rates",
+      "routePath": "/finance/exchange-rates",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 164,
+      "middleware": [
+        "...pSettings"
+      ],
+      "handlerName": "exchangeRateController.listExchangeRates"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/billing/dashboard",
+      "routePath": "/billing/dashboard",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 195,
+      "middleware": [
+        "...pAnalytics"
+      ],
+      "handlerName": "billingDashboardController.getDashboard"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/billing/audit-logs/:orgId",
+      "routePath": "/billing/audit-logs/:orgId",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 273,
+      "middleware": [
+        "...pAuditRead"
+      ],
+      "handlerName": "billingDashboardController.getOrgAuditLogs"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/extend",
+      "routePath": "/organizations/:id/extend",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 307,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "extendSubscription"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/suspend",
+      "routePath": "/organizations/:id/suspend",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 336,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "suspendOrganization"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/reactivate",
+      "routePath": "/organizations/:id/reactivate",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 365,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "reactivateOrganization"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations/:id/cancel",
+      "routePath": "/organizations/:id/cancel",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 394,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "cancelSubscription"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations/:id/adjust-credits",
+      "routePath": "/organizations/:id/adjust-credits",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 434,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "adjustCredits"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/org/:orgId/subscription",
+      "routePath": "/org/:orgId/subscription",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 466,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "subscriptionOverviewController.getSubscriptionOverview"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/org/:orgId/usage",
+      "routePath": "/org/:orgId/usage",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 497,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "usageController.getOrganizationUsage"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/plans/catalog",
+      "routePath": "/plans/catalog",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 529,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planCatalogController.getPlanCatalog"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/addons",
+      "routePath": "/addons",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 557,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "addonCatalogController.getAddOnCatalog"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/org/:orgId/change-plan",
+      "routePath": "/org/:orgId/change-plan",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 606,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.changePlan"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/org/:orgId/add-addon",
+      "routePath": "/org/:orgId/add-addon",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 638,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.addAddon"
+    },
+    {
+      "method": "DELETE",
+      "fullPath": "/platform/org/:orgId/remove-addon",
+      "routePath": "/org/:orgId/remove-addon",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 670,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.removeAddon"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/invoices/:invoiceId",
+      "routePath": "/invoices/:invoiceId",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 696,
+      "middleware": [
+        "...pBillingRead"
+      ],
+      "handlerName": "getInvoiceDetails"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/invoices/:invoiceId/status",
+      "routePath": "/invoices/:invoiceId/status",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 734,
+      "middleware": [
+        "...pBillingUpdate"
+      ],
+      "handlerName": "updateInvoiceStatus"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/plans",
+      "routePath": "/plans",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 763,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planController.getAllPlans"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/plans",
+      "routePath": "/plans",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 792,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.createPlan"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/plans/:id",
+      "routePath": "/plans/:id",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 813,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "planController.getPlanById"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/plans/:id",
+      "routePath": "/plans/:id",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 848,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.updatePlan"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/plans/:id/status",
+      "routePath": "/plans/:id/status",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 882,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.patchPlanStatus"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/plans/:id/duplicate",
+      "routePath": "/plans/:id/duplicate",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 914,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.duplicatePlan"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/plans/:id/usage",
+      "routePath": "/plans/:id/usage",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 937,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planController.getPlanUsage"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/orgs/:orgId/billing",
+      "routePath": "/orgs/:orgId/billing",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 982,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "platformBillingController.getOrgBillingOverview"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/orgs/:orgId/invoices/generate",
+      "routePath": "/orgs/:orgId/invoices/generate",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1012,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "platformBillingController.manualGenerateInvoice"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/coupons",
+      "routePath": "/coupons",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1037,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "couponController.createCoupon"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/coupons/:id",
+      "routePath": "/coupons/:id",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1066,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "couponController.updateCoupon"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/campaigns",
+      "routePath": "/campaigns",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1089,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "campaignController.createCampaign"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/platform/campaigns/:id",
+      "routePath": "/campaigns/:id",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1118,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "campaignController.updateCampaign"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/trials",
+      "routePath": "/trials",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1148,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "trialController.getTrials"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/organizations/:id/auto-renew",
+      "routePath": "/organizations/:id/auto-renew",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1177,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.toggleAutoRenew"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations/:id/manual-payment",
+      "routePath": "/organizations/:id/manual-payment",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1206,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.recordManualPayment"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/organizations/:id/generate-payment-link",
+      "routePath": "/organizations/:id/generate-payment-link",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1235,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.generatePaymentLink"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/contracts/:id/refund-request",
+      "routePath": "/contracts/:id/refund-request",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1305,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.requestRefund"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/refunds/:id/approve",
+      "routePath": "/refunds/:id/approve",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1335,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.approveRefund"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/refunds/:id/reject",
+      "routePath": "/refunds/:id/reject",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1369,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.rejectRefund"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/refunds/:id/process",
+      "routePath": "/refunds/:id/process",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1413,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.processRefund"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/refunds/:id",
+      "routePath": "/refunds/:id",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1438,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.getRefund"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/invoices/:id/refunds",
+      "routePath": "/invoices/:id/refunds",
+      "mountPrefix": "/platform",
+      "file": "billing.routes.js",
+      "line": 1459,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.listRefundsByInvoice"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/dashboard",
+      "routePath": "/dashboard",
+      "mountPrefix": "/platform",
+      "file": "analytics.routes.js",
+      "line": 58,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/analytics",
+      "routePath": "/analytics",
+      "mountPrefix": "/platform",
+      "file": "analytics.routes.js",
+      "line": 117,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "getPlatformAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/analytics/events",
+      "routePath": "/analytics/events",
+      "mountPrefix": "/platform",
+      "file": "analytics.routes.js",
+      "line": 144,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "getLatestEvents"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/analytics/revenue",
+      "routePath": "/analytics/revenue",
+      "mountPrefix": "/platform",
+      "file": "analytics.routes.js",
+      "line": 176,
+      "middleware": [
+        "...pRev"
+      ],
+      "handlerName": "getPlatformRevenueAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/metrics/sales",
+      "routePath": "/metrics/sales",
+      "mountPrefix": "/platform",
+      "file": "analytics.routes.js",
+      "line": 196,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "revenueController.getSalesMetrics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/__sentinel/rbac-self-check",
+      "routePath": "/__sentinel/rbac-self-check",
+      "mountPrefix": "/platform",
+      "file": "governance.routes.js",
+      "line": 30,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "rbacSelfCheck"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/__sentinel/api-integrity",
+      "routePath": "/__sentinel/api-integrity",
+      "mountPrefix": "/platform",
+      "file": "governance.routes.js",
+      "line": 61,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/__sentinel/response-schema-drift",
+      "routePath": "/__sentinel/response-schema-drift",
+      "mountPrefix": "/platform",
+      "file": "governance.routes.js",
+      "line": 116,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/__sentinel/openapi-runtime-status",
+      "routePath": "/__sentinel/openapi-runtime-status",
+      "mountPrefix": "/platform",
+      "file": "governance.routes.js",
+      "line": 169,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/governance/platform",
+      "routePath": "/governance/platform",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 54,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformGovernanceUsers"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/governance/platform/:id",
+      "routePath": "/governance/platform/:id",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 66,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserDetail"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/platform/:id/role",
+      "routePath": "/governance/platform/:id/role",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 78,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUserRole"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/platform/:id/status",
+      "routePath": "/governance/platform/:id/status",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 90,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUserStatus"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/platform/:id/force-logout",
+      "routePath": "/governance/platform/:id/force-logout",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 102,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "forceLogoutPlatformUser"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/platform/:id/reset-2fa",
+      "routePath": "/governance/platform/:id/reset-2fa",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 114,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "resetPlatformUser2FA"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/users",
+      "routePath": "/users",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 131,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUsers"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/users",
+      "routePath": "/users",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 143,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "createPlatformUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 155,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/users/:id/audit",
+      "routePath": "/users/:id/audit",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 167,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserAuditHistory"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 179,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUser"
+    },
+    {
+      "method": "DELETE",
+      "fullPath": "/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 191,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "deletePlatformUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/governance/org/:organizationId",
+      "routePath": "/governance/org/:organizationId",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 208,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "getOrganizationUsersGovernance"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/governance/org/:organizationId/:userId",
+      "routePath": "/governance/org/:organizationId/:userId",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 220,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "getOrganizationUserDetailGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/org/:organizationId/:userId/status",
+      "routePath": "/governance/org/:organizationId/:userId/status",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 232,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updateOrganizationUserStatusGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/org/:organizationId/:userId/role",
+      "routePath": "/governance/org/:organizationId/:userId/role",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 244,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updateOrganizationUserRoleGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/org/:organizationId/:userId/force-logout",
+      "routePath": "/governance/org/:organizationId/:userId/force-logout",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 256,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "forceLogoutOrganizationUser"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/governance/org/:organizationId/:userId/reset-password",
+      "routePath": "/governance/org/:organizationId/:userId/reset-password",
+      "mountPrefix": "/platform",
+      "file": "user.routes.js",
+      "line": 268,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "resetOrganizationUserPassword"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/contracts/needs-renewal",
+      "routePath": "/contracts/needs-renewal",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 137,
+      "middleware": [
+        "...pAnalytics"
+      ],
+      "handlerName": "dashboardController.getContractsNeedingRenewal"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/contracts",
+      "routePath": "/contracts",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 203,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.createContract"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/contracts/:id/status",
+      "routePath": "/contracts/:id/status",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 251,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.updateContractStatus"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/contracts/:id/replace",
+      "routePath": "/contracts/:id/replace",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 299,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.replaceContract"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/contracts/:id/upload-document",
+      "routePath": "/contracts/:id/upload-document",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 346,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.uploadContractDocument"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/contracts/:id/invoice",
+      "routePath": "/contracts/:id/invoice",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 391,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.generateInvoice"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/contracts/:id/invoices",
+      "routePath": "/contracts/:id/invoices",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 433,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.listContractInvoices"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/platform/invoices/:id",
+      "routePath": "/invoices/:id",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 465,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.getInvoice"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/platform/invoices/:id/pay",
+      "routePath": "/invoices/:id/pay",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 519,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.recordPayment"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/contracts/:id/auto-renew",
+      "routePath": "/contracts/:id/auto-renew",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 587,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.setAutoRenew"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/platform/contracts/:id/cancel",
+      "routePath": "/contracts/:id/cancel",
+      "mountPrefix": "/platform",
+      "file": "contracts.routes.js",
+      "line": 647,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.cancelContract"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/audit-logs",
+      "routePath": "/audit-logs",
+      "mountPrefix": "/api/platform",
+      "file": "index.js",
+      "line": 63,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_AUDIT_LOGS)"
+      ],
+      "handlerName": "getAuditLogs"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/audit/verify-chain",
+      "routePath": "/audit/verify-chain",
+      "mountPrefix": "/api/platform",
+      "file": "index.js",
+      "line": 87,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "verifyChain"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/feature-flags/stream",
+      "routePath": "/feature-flags/stream",
+      "mountPrefix": "/api/platform",
+      "file": "index.js",
+      "line": 110,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "streamFeatureFlags"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/auth/login",
+      "routePath": "/auth/login",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 51,
+      "middleware": [],
+      "handlerName": "platformLogin"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/auth/verify-2fa",
+      "routePath": "/auth/verify-2fa",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 63,
+      "middleware": [],
+      "handlerName": "verify2FA"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/auth/refresh",
+      "routePath": "/auth/refresh",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 75,
+      "middleware": [],
+      "handlerName": "platformRefresh"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/auth/logout",
+      "routePath": "/auth/logout",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 87,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformLogout"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/auth/profile",
+      "routePath": "/auth/profile",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 99,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformProfile"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/me",
+      "routePath": "/me",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 120,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.getMe"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/me",
+      "routePath": "/me",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 155,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.updateMe"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/change-password",
+      "routePath": "/change-password",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 190,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.changePassword"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/users/:userId/manage-credentials",
+      "routePath": "/users/:userId/manage-credentials",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 221,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformUserController.manageCredentials"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/capabilities",
+      "routePath": "/capabilities",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 249,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getCapabilities"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/feature-flags",
+      "routePath": "/feature-flags",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 269,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getFeatureFlags"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/audit/frontend-event",
+      "routePath": "/audit/frontend-event",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 296,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.logAudit"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/performance-metric",
+      "routePath": "/performance-metric",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 312,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.logPerformance"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/me/capabilities",
+      "routePath": "/me/capabilities",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 333,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformMetadataController.getCapabilities"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/2fa/setup",
+      "routePath": "/2fa/setup",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 361,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "setup2FA"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/2fa/complete-setup",
+      "routePath": "/2fa/complete-setup",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 398,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "complete2FASetup"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/2fa/disable",
+      "routePath": "/2fa/disable",
+      "mountPrefix": "/api/platform",
+      "file": "auth.routes.js",
+      "line": 421,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "disable2FA"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/search",
+      "routePath": "/search",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 113,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "globalSearch"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations",
+      "routePath": "/organizations",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 167,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizations"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations",
+      "routePath": "/organizations",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 205,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "createOrganizationProvisioned"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id",
+      "routePath": "/organizations/:id",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 268,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/analytics",
+      "routePath": "/organizations/:id/analytics",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 325,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationAnalytics"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/status",
+      "routePath": "/organizations/:id/status",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 373,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "updateOrganizationStatus"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/modules",
+      "routePath": "/organizations/:id/modules",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 403,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationModules"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/archive",
+      "routePath": "/organizations/:id/archive",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 436,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "archiveOrganization"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/restore",
+      "routePath": "/organizations/:id/restore",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 465,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "restoreOrganization"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/configuration",
+      "routePath": "/organizations/:id/configuration",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 497,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationConfiguration"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/configuration",
+      "routePath": "/organizations/:id/configuration",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 530,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationConfiguration"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/users",
+      "routePath": "/organizations/:id/users",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 559,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationUsers"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/users/:userId",
+      "routePath": "/organizations/:id/users/:userId",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 599,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationUserDetails"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/users/:userId",
+      "routePath": "/organizations/:id/users/:userId",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 633,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateOrganizationUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/branches",
+      "routePath": "/organizations/:id/branches",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 662,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationBranches"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations/:id/branches",
+      "routePath": "/organizations/:id/branches",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 703,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "createBranch"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId",
+      "routePath": "/organizations/:id/branches/:branchId",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 737,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "updateBranch"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId/status",
+      "routePath": "/organizations/:id/branches/:branchId/status",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 771,
+      "middleware": [
+        "...pBranch"
+      ],
+      "handlerName": "updateBranchStatus"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/audit-logs",
+      "routePath": "/organizations/:id/audit-logs",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 800,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getOrganizationAuditLogs"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/invoices",
+      "routePath": "/organizations/:id/invoices",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 829,
+      "middleware": [
+        "...pBillingRead"
+      ],
+      "handlerName": "getOrganizationInvoices"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId/analytics",
+      "routePath": "/organizations/:id/branches/:branchId/analytics",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 880,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId",
+      "routePath": "/organizations/:id/branches/:branchId",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 934,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId/configuration",
+      "routePath": "/organizations/:id/branches/:branchId/configuration",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 972,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "getBranchConfiguration"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/branches/:branchId/configuration",
+      "routePath": "/organizations/:id/branches/:branchId/configuration",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1012,
+      "middleware": [
+        "...pUpdate"
+      ],
+      "handlerName": "updateBranchConfiguration"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/notifications",
+      "routePath": "/notifications",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1035,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.getNotifications"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/notifications/read-all",
+      "routePath": "/notifications/read-all",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1051,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.markAllRead"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/notifications/:id/read",
+      "routePath": "/notifications/:id/read",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1073,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformNotificationController.markAsRead"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/settings",
+      "routePath": "/settings",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1094,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformSettingsController.getSettings"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/settings",
+      "routePath": "/settings",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1115,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_SETTINGS)"
+      ],
+      "handlerName": "platformSettingsController.updateSettings"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/features",
+      "routePath": "/features",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1138,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "platformFeatureController.getAllFeatures"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/features",
+      "routePath": "/features",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1172,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "platformFeatureController.createFeature"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/features/:id",
+      "routePath": "/features/:id",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1198,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "platformFeatureController.updateFeature"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/org/:orgId/feature/:key",
+      "routePath": "/org/:orgId/feature/:key",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1232,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "platformFeatureController.overrideOrganizationFeature"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:orgId/plan",
+      "routePath": "/organizations/:orgId/plan",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1271,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "planController.assignPlanToOrg"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/support/tickets",
+      "routePath": "/support/tickets",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1293,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.getPlatformTickets"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/support/ticket/:id/forensic",
+      "routePath": "/support/ticket/:id/forensic",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1319,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.getForensicContext"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/support/ticket/:id/assign",
+      "routePath": "/support/ticket/:id/assign",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1346,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.assignTicket"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/support/ticket/:id/approve-refund",
+      "routePath": "/support/ticket/:id/approve-refund",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1372,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "supportController.approveRefund"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/support/ticket/:id/message",
+      "routePath": "/support/ticket/:id/message",
+      "mountPrefix": "/api/platform",
+      "file": "organization.routes.js",
+      "line": 1408,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_ORGANIZATIONS)"
+      ],
+      "handlerName": "supportController.addMessage"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/finance/exchange-rate",
+      "routePath": "/finance/exchange-rate",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 114,
+      "middleware": [
+        "...pSettings"
+      ],
+      "handlerName": "exchangeRateController.createOrUpdateRate"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/finance/exchange-rates",
+      "routePath": "/finance/exchange-rates",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 164,
+      "middleware": [
+        "...pSettings"
+      ],
+      "handlerName": "exchangeRateController.listExchangeRates"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/billing/dashboard",
+      "routePath": "/billing/dashboard",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 195,
+      "middleware": [
+        "...pAnalytics"
+      ],
+      "handlerName": "billingDashboardController.getDashboard"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/billing/audit-logs/:orgId",
+      "routePath": "/billing/audit-logs/:orgId",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 273,
+      "middleware": [
+        "...pAuditRead"
+      ],
+      "handlerName": "billingDashboardController.getOrgAuditLogs"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/extend",
+      "routePath": "/organizations/:id/extend",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 307,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "extendSubscription"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/suspend",
+      "routePath": "/organizations/:id/suspend",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 336,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "suspendOrganization"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/reactivate",
+      "routePath": "/organizations/:id/reactivate",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 365,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "reactivateOrganization"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations/:id/cancel",
+      "routePath": "/organizations/:id/cancel",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 394,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "cancelSubscription"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations/:id/adjust-credits",
+      "routePath": "/organizations/:id/adjust-credits",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 434,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "adjustCredits"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/org/:orgId/subscription",
+      "routePath": "/org/:orgId/subscription",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 466,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "subscriptionOverviewController.getSubscriptionOverview"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/org/:orgId/usage",
+      "routePath": "/org/:orgId/usage",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 497,
+      "middleware": [
+        "...pOrgRead"
+      ],
+      "handlerName": "usageController.getOrganizationUsage"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/plans/catalog",
+      "routePath": "/plans/catalog",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 529,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planCatalogController.getPlanCatalog"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/addons",
+      "routePath": "/addons",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 557,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "addonCatalogController.getAddOnCatalog"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/org/:orgId/change-plan",
+      "routePath": "/org/:orgId/change-plan",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 606,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.changePlan"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/org/:orgId/add-addon",
+      "routePath": "/org/:orgId/add-addon",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 638,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.addAddon"
+    },
+    {
+      "method": "DELETE",
+      "fullPath": "/api/platform/org/:orgId/remove-addon",
+      "routePath": "/org/:orgId/remove-addon",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 670,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "subscriptionMutationController.removeAddon"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/invoices/:invoiceId",
+      "routePath": "/invoices/:invoiceId",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 696,
+      "middleware": [
+        "...pBillingRead"
+      ],
+      "handlerName": "getInvoiceDetails"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/invoices/:invoiceId/status",
+      "routePath": "/invoices/:invoiceId/status",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 734,
+      "middleware": [
+        "...pBillingUpdate"
+      ],
+      "handlerName": "updateInvoiceStatus"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/plans",
+      "routePath": "/plans",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 763,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planController.getAllPlans"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/plans",
+      "routePath": "/plans",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 792,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.createPlan"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/plans/:id",
+      "routePath": "/plans/:id",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 813,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "planController.getPlanById"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/plans/:id",
+      "routePath": "/plans/:id",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 848,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.updatePlan"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/plans/:id/status",
+      "routePath": "/plans/:id/status",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 882,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.patchPlanStatus"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/plans/:id/duplicate",
+      "routePath": "/plans/:id/duplicate",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 914,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "planController.duplicatePlan"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/plans/:id/usage",
+      "routePath": "/plans/:id/usage",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 937,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "planController.getPlanUsage"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/orgs/:orgId/billing",
+      "routePath": "/orgs/:orgId/billing",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 982,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "platformBillingController.getOrgBillingOverview"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/orgs/:orgId/invoices/generate",
+      "routePath": "/orgs/:orgId/invoices/generate",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1012,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "platformBillingController.manualGenerateInvoice"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/coupons",
+      "routePath": "/coupons",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1037,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "couponController.createCoupon"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/coupons/:id",
+      "routePath": "/coupons/:id",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1066,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "couponController.updateCoupon"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/campaigns",
+      "routePath": "/campaigns",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1089,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "campaignController.createCampaign"
+    },
+    {
+      "method": "PUT",
+      "fullPath": "/api/platform/campaigns/:id",
+      "routePath": "/campaigns/:id",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1118,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "campaignController.updateCampaign"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/trials",
+      "routePath": "/trials",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1148,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly"
+      ],
+      "handlerName": "trialController.getTrials"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/organizations/:id/auto-renew",
+      "routePath": "/organizations/:id/auto-renew",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1177,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.toggleAutoRenew"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations/:id/manual-payment",
+      "routePath": "/organizations/:id/manual-payment",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1206,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.recordManualPayment"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/organizations/:id/generate-payment-link",
+      "routePath": "/organizations/:id/generate-payment-link",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1235,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_SUBSCRIPTIONS)"
+      ],
+      "handlerName": "revenueController.generatePaymentLink"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/contracts/:id/refund-request",
+      "routePath": "/contracts/:id/refund-request",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1305,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.requestRefund"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/refunds/:id/approve",
+      "routePath": "/refunds/:id/approve",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1335,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.approveRefund"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/refunds/:id/reject",
+      "routePath": "/refunds/:id/reject",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1369,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.rejectRefund"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/refunds/:id/process",
+      "routePath": "/refunds/:id/process",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1413,
+      "middleware": [
+        "superAdminOnly",
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.processRefund"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/refunds/:id",
+      "routePath": "/refunds/:id",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1438,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.getRefund"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/invoices/:id/refunds",
+      "routePath": "/invoices/:id/refunds",
+      "mountPrefix": "/api/platform",
+      "file": "billing.routes.js",
+      "line": 1459,
+      "middleware": [
+        "...pRefundManage"
+      ],
+      "handlerName": "refundController.listRefundsByInvoice"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/dashboard",
+      "routePath": "/dashboard",
+      "mountPrefix": "/api/platform",
+      "file": "analytics.routes.js",
+      "line": 58,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/analytics",
+      "routePath": "/analytics",
+      "mountPrefix": "/api/platform",
+      "file": "analytics.routes.js",
+      "line": 117,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "getPlatformAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/analytics/events",
+      "routePath": "/analytics/events",
+      "mountPrefix": "/api/platform",
+      "file": "analytics.routes.js",
+      "line": 144,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "getLatestEvents"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/analytics/revenue",
+      "routePath": "/analytics/revenue",
+      "mountPrefix": "/api/platform",
+      "file": "analytics.routes.js",
+      "line": 176,
+      "middleware": [
+        "...pRev"
+      ],
+      "handlerName": "getPlatformRevenueAnalytics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/metrics/sales",
+      "routePath": "/metrics/sales",
+      "mountPrefix": "/api/platform",
+      "file": "analytics.routes.js",
+      "line": 196,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_PLATFORM_ANALYTICS)"
+      ],
+      "handlerName": "revenueController.getSalesMetrics"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/__sentinel/rbac-self-check",
+      "routePath": "/__sentinel/rbac-self-check",
+      "mountPrefix": "/api/platform",
+      "file": "governance.routes.js",
+      "line": 30,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "rbacSelfCheck"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/__sentinel/api-integrity",
+      "routePath": "/__sentinel/api-integrity",
+      "mountPrefix": "/api/platform",
+      "file": "governance.routes.js",
+      "line": 61,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/__sentinel/response-schema-drift",
+      "routePath": "/__sentinel/response-schema-drift",
+      "mountPrefix": "/api/platform",
+      "file": "governance.routes.js",
+      "line": 116,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/__sentinel/openapi-runtime-status",
+      "routePath": "/__sentinel/openapi-runtime-status",
+      "mountPrefix": "/api/platform",
+      "file": "governance.routes.js",
+      "line": 169,
+      "middleware": [
+        "platformProtect"
+      ],
+      "handlerName": "res"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/governance/platform",
+      "routePath": "/governance/platform",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 54,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformGovernanceUsers"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/governance/platform/:id",
+      "routePath": "/governance/platform/:id",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 66,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserDetail"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/platform/:id/role",
+      "routePath": "/governance/platform/:id/role",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 78,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUserRole"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/platform/:id/status",
+      "routePath": "/governance/platform/:id/status",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 90,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUserStatus"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/platform/:id/force-logout",
+      "routePath": "/governance/platform/:id/force-logout",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 102,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "forceLogoutPlatformUser"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/platform/:id/reset-2fa",
+      "routePath": "/governance/platform/:id/reset-2fa",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 114,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "resetPlatformUser2FA"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/users",
+      "routePath": "/users",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 131,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUsers"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/users",
+      "routePath": "/users",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 143,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "createPlatformUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 155,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserDetails"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/users/:id/audit",
+      "routePath": "/users/:id/audit",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 167,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "getPlatformUserAuditHistory"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 179,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updatePlatformUser"
+    },
+    {
+      "method": "DELETE",
+      "fullPath": "/api/platform/users/:id",
+      "routePath": "/users/:id",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 191,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "deletePlatformUser"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/governance/org/:organizationId",
+      "routePath": "/governance/org/:organizationId",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 208,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "getOrganizationUsersGovernance"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/governance/org/:organizationId/:userId",
+      "routePath": "/governance/org/:organizationId/:userId",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 220,
+      "middleware": [
+        "platformProtect",
+        "authorizePlatformPermission(VIEW_ORGANIZATIONS)"
+      ],
+      "handlerName": "getOrganizationUserDetailGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/org/:organizationId/:userId/status",
+      "routePath": "/governance/org/:organizationId/:userId/status",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 232,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updateOrganizationUserStatusGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/org/:organizationId/:userId/role",
+      "routePath": "/governance/org/:organizationId/:userId/role",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 244,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "updateOrganizationUserRoleGovernance"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/org/:organizationId/:userId/force-logout",
+      "routePath": "/governance/org/:organizationId/:userId/force-logout",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 256,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "forceLogoutOrganizationUser"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/governance/org/:organizationId/:userId/reset-password",
+      "routePath": "/governance/org/:organizationId/:userId/reset-password",
+      "mountPrefix": "/api/platform",
+      "file": "user.routes.js",
+      "line": 268,
+      "middleware": [
+        "platformProtect",
+        "superAdminOnly",
+        "authorizePlatformPermission(MANAGE_PLATFORM_USERS)"
+      ],
+      "handlerName": "resetOrganizationUserPassword"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/contracts/needs-renewal",
+      "routePath": "/contracts/needs-renewal",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 137,
+      "middleware": [
+        "...pAnalytics"
+      ],
+      "handlerName": "dashboardController.getContractsNeedingRenewal"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/contracts",
+      "routePath": "/contracts",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 203,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.createContract"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/contracts/:id/status",
+      "routePath": "/contracts/:id/status",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 251,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.updateContractStatus"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/contracts/:id/replace",
+      "routePath": "/contracts/:id/replace",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 299,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.replaceContract"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/contracts/:id/upload-document",
+      "routePath": "/contracts/:id/upload-document",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 346,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.uploadContractDocument"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/contracts/:id/invoice",
+      "routePath": "/contracts/:id/invoice",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 391,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.generateInvoice"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/contracts/:id/invoices",
+      "routePath": "/contracts/:id/invoices",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 433,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.listContractInvoices"
+    },
+    {
+      "method": "GET",
+      "fullPath": "/api/platform/invoices/:id",
+      "routePath": "/invoices/:id",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 465,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.getInvoice"
+    },
+    {
+      "method": "POST",
+      "fullPath": "/api/platform/invoices/:id/pay",
+      "routePath": "/invoices/:id/pay",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 519,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "invoiceController.recordPayment"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/contracts/:id/auto-renew",
+      "routePath": "/contracts/:id/auto-renew",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 587,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.setAutoRenew"
+    },
+    {
+      "method": "PATCH",
+      "fullPath": "/api/platform/contracts/:id/cancel",
+      "routePath": "/contracts/:id/cancel",
+      "mountPrefix": "/api/platform",
+      "file": "contracts.routes.js",
+      "line": 647,
+      "middleware": [
+        "...pSub"
+      ],
+      "handlerName": "contractController.cancelContract"
+    }
+  ]
+}

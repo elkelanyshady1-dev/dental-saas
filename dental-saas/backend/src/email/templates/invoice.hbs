@@ -1,0 +1,79 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Hello <strong>{{orgName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 24px;">
+    A new invoice has been generated for your subscription. Please find the details below.
+</p>
+
+<table class="data">
+    <tr>
+        <th>Invoice Number</th>
+        <td><strong>{{invoiceNumber}}</strong></td>
+    </tr>
+    <tr>
+        <th>Invoice Date</th>
+        <td>{{formatDate billingCycleStart}}</td>
+    </tr>
+    <tr>
+        <th>Due Date</th>
+        <td>{{formatDate dueDate}}</td>
+    </tr>
+    <tr>
+        <th>Billing Period</th>
+        <td>{{formatDate billingCycleStart}} – {{formatDate billingCycleEnd}}</td>
+    </tr>
+    <tr>
+        <th>Plan</th>
+        <td>{{planVersionTag}}</td>
+    </tr>
+    <tr>
+        <th>Status</th>
+        <td><span class="pill pill-blue">{{upper status}}</span></td>
+    </tr>
+</table>
+
+<table class="data" style="margin-top:8px;">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th style="text-align:right;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each lineItems}}
+        <tr>
+            <td>{{description}}</td>
+            <td style="text-align:right;">{{formatCurrency total ../currency}}</td>
+        </tr>
+        {{/each}}
+        {{#if couponDiscountAmount}}
+        <tr>
+            <td style="color:#065f46;">Discount ({{couponCode}})</td>
+            <td style="text-align:right; color:#065f46;">−{{formatCurrency couponDiscountAmount currency}}</td>
+        </tr>
+        {{/if}}
+        {{#if taxAmount}}
+        <tr>
+            <td>Tax ({{taxPercent}}%)</td>
+            <td style="text-align:right;">{{formatCurrency taxAmount currency}}</td>
+        </tr>
+        {{/if}}
+        <tr class="amount-row">
+            <td><strong>Total Due</strong></td>
+            <td style="text-align:right;"><strong>{{formatCurrency totalAmount currency}}</strong></td>
+        </tr>
+    </tbody>
+</table>
+
+{{#if invoiceUrl}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" href="{{invoiceUrl}}">View Invoice</a>
+</div>
+{{/if}}
+
+<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
+    A PDF copy of this invoice is attached to this email for your records.
+    Payment is due by <strong>{{formatDate dueDate}}</strong>.
+</p>
+{{/inline}}
+{{/layout}}

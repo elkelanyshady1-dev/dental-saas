@@ -1,0 +1,3 @@
+# Dataset hard cases directory
+# Populated automatically by the hard-case mining system.
+# Top 20% most difficult scans are symlinked/copied here for priority training.

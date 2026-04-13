@@ -1,0 +1,60 @@
+groups:
+  - name: DentalSaaSResilience
+    rules:
+      # 1. Redis Connectivity
+      - alert: RedisConnectionDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Distributed locking and Pub/Sub are unavailable. System falling back to polling."
+
+      # 2. Outbox Backlog
+      - alert: OutboxBacklogHigh
+        expr: sum(dental_saas_outbox_pending_total) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High outbox backlog"
+          description: "Outbox event queue is growing. Latency may increase."
+
+      - alert: OutboxStall
+        expr: rate(dental_saas_outbox_processed_total[5m]) == 0 and sum(dental_saas_outbox_pending_total) > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox processing stalled"
+          description: "Events are pending but none are being processed. Check outbox.processor.job logs."
+
+      # 3. Orphaned Events (Crash Recovery)
+      - alert: OutboxEventsReclaimed
+        expr: increase(dental_saas_outbox_reclaimed_total[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Orphaned outbox events reclaimed"
+          description: "A processor may have crashed. Events were reverted to PENDING and reclaimed."
+
+      # 4. Lock Contention
+      - alert: HighLockContention
+        expr: rate(dental_saas_distributed_lock_contention_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High distributed lock contention"
+          description: "Multiple nodes are competing for the same mutation locks."
+
+      # 5. Pub/Sub Anomaly
+      - alert: PubSubNotificationDrop
+        expr: rate(dental_saas_mutation_pubsub_notifications_total[10m]) == 0 and rate(dental_saas_subscription_mutation_total{outcome="success"}[10m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pub/Sub notifications dropped"
+          description: "Mutations are succeeding but no Pub/Sub notifications are being emitted. Check Redis connectivity."

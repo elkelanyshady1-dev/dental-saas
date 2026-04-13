@@ -1,0 +1,10 @@
+require("module-alias/register");
+require("dotenv").config();
+require("../src/email/engine/renderTemplate");
+require("../src/services/email/emailService");
+require("../src/services/email/sendEmail");
+require("../src/infrastructure/queues/emailQueue");
+require("../src/infrastructure/workers/emailWorker");
+require("../src/events/email.events");
+console.log("ALL EMAIL MODULES OK");
+process.exit(0);

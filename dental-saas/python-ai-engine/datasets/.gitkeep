@@ -1,0 +1,11 @@
+# Training datasets go here
+# Expected structure:
+#   datasets/
+#     cases/
+#       sample_001/
+#         points.npy
+#         tooth_labels.npy
+#         base_plane.json
+#         bite_transform.json
+#     augmented/
+#       ...

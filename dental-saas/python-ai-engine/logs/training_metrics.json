@@ -1,0 +1,15 @@
+{
+  "total_epochs": 1,
+  "history": [
+    {
+      "epoch": 1,
+      "lr": 0.001,
+      "elapsed_s": 1.14,
+      "train_loss": 3.583549,
+      "train_accuracy": 0.040894,
+      "train_mIoU": 0.006139,
+      "val_loss": 3.483701,
+      "val_accuracy": 0.0
+    }
+  ]
+}

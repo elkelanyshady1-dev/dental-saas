@@ -1,0 +1,50 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<p style="font-size:15px; margin:0 0 4px;">Dear <strong>{{orgName}}</strong>,</p>
+<p style="color:#64748b; font-size:14px; margin:0 0 20px; line-height:1.6;">
+    Your subscription has expired and your account has entered a
+    <strong>grace period</strong>. Please renew before the deadline to avoid service interruption.
+</p>
+
+<div
+    style="background:#fef3c7; border-left:4px solid #f59e0b; border-radius:8px; padding:16px 20px; margin-bottom:24px;">
+    <p
+        style="margin:0; font-size:13px; color:#92400e; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+        ⚠ Action Required</p>
+    <p style="margin:6px 0 0; font-size:14px; color:#78350f; line-height:1.5;">
+        Your grace period expires in <strong>{{gracePeriodDays}} days</strong>.
+        After that, all access to your clinic will be suspended.
+    </p>
+</div>
+
+<table class="data">
+    <tr>
+        <th>Organization</th>
+        <td>{{orgName}}</td>
+    </tr>
+    {{#if expiredAt}}
+    <tr>
+        <th>Expired At</th>
+        <td>{{formatDate expiredAt}}</td>
+    </tr>
+    {{/if}}
+    {{#if graceEndsAt}}
+    <tr>
+        <th>Grace Period Ends</th>
+        <td><strong>{{formatDate graceEndsAt}}</strong></td>
+    </tr>
+    {{/if}}
+</table>
+
+{{#if renewUrl}}
+<div style="text-align:center; margin-top:24px;">
+    <a class="btn" href="{{renewUrl}}">Renew Subscription Now</a>
+</div>
+{{/if}}
+
+<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
+    If you have already renewed or believe this message is in error,
+    please contact our support team immediately.
+</p>
+{{/inline}}
+{{/layout}}

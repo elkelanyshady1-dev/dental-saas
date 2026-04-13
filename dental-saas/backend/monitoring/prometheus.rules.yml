@@ -1,0 +1,67 @@
+groups:
+  - name: DentalSaaS-Hardening-Alerts
+    rules:
+      # 1. High Refund Failure Rate
+      # Increase > 3 in 5m (Signal, not noise)
+      - alert: HighRefundFailureRate
+        expr: increase(dental_saas_refund_execution_total{status="failed"}[5m]) > 3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spike in failed refunds detected"
+          description: "There have been more than 3 failed refund attempts in the last 5 minutes. Immediate investigation required for financial drift."
+
+      # 2. Audit Chain Conflict
+      # Any conflict is a sign of high concurrency or attack
+      - alert: AuditChainConflict
+        expr: increase(dental_saas_audit_append_total{outcome="conflict"}[5m]) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Audit chain conflict detected"
+          description: "Concurrent attempt to append to the audit log blocked. High load or potential race condition."
+
+      # 3. Webhook Signature Failures
+      # Increase > 10 in 1m (Potential attack or config error)
+      - alert: WebhookSignatureFailureSpike
+        expr: increase(dental_saas_webhook_received_total{status="signature_failed"}[1m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Webhook signature failure spike"
+          description: "Detected over 10 webhook signature failures in 1 minute. Possible replay attack or invalid STRIPE_WEBHOOK_SECRET."
+
+      # 4. MongoDB Transaction Aborts
+      # High abort rate indicates performance issues or locking contention
+      - alert: HighMongoAbortRate
+        expr: rate(dental_saas_mongo_transaction_abort_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High MongoDB transaction abort rate"
+          description: "Transaction abort rate is over 0.5/sec. Check for lock contention or slow queries."
+
+      # 5. SLA Breach Spike
+      - alert: SLABreachSpike
+        expr: increase(dental_saas_sla_breach_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in SLA breaches"
+          description: "More than 5 SLA breaches detected in the last 10 minutes. Support team capacity may be exceeded."
+
+      # 6. Reconciliation Failures
+      # Any reconciliation failure is critical (manual repair path blocked)
+      - alert: RefundReconciliationFailure
+        expr: increase(dental_saas_refund_reconciliation_total{outcome="failed"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Refund reconciliation job failed"
+          description: "The repair-only reconciliation job failed to fix a PENDING refund. Manual intervention required."

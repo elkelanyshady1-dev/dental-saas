@@ -1,0 +1,842 @@
+/**
+ * plans.css
+ * v20.2 TDS Sovereign — Plan Builder Design System
+ *
+ * Token alignment: plans module uses the platform's dark-surface intentionally
+ * (consistent with sidebar: --color-sidebar-bg). Bridged to CSS vars below.
+ * Do NOT convert to light surface — Plan Builder is a power-user tool.
+ */
+
+/* ─── Platform Token Bridges ─────────────────────────────────────────────── */
+/* Map plan-scoped variables to platform design tokens */
+:root {
+    --plans-surface: var(--color-sidebar-hover, #1e293b);
+    --plans-surface-deep: var(--color-sidebar-bg, #0f172a);
+    --plans-border: var(--color-sidebar-border, #334155);
+    --plans-text: var(--color-text-disabled, #f1f5f9);
+    --plans-text-muted: var(--color-text-muted, #94a3b8);
+    --plans-text-subtle: var(--color-text-secondary, #64748b);
+    --plans-accent: var(--color-brand-accent, #6366f1);
+    --plans-accent-hover: #4f46e5;
+    --plans-accent-lt: rgba(99, 102, 241, 0.15);
+    --plans-success: var(--color-success, #22c55e);
+    --plans-success-lt: rgba(34, 197, 94, 0.15);
+    --plans-danger: var(--color-danger, #ef4444);
+    --plans-danger-lt: rgba(239, 68, 68, 0.15);
+    --plans-warning: var(--color-warning, #f59e0b);
+    --plans-warning-lt: rgba(245, 158, 11, 0.15);
+}
+
+/* ─── Page Layout ─────────────────────────────────────────────────────────── */
+.plans-page {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #e2e8f0;
+}
+
+.plans-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.plans-header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.plans-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0;
+}
+
+.plans-subtitle {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-top: 0.25rem;
+}
+
+.plans-loading {
+    text-align: center;
+    padding: 4rem;
+    color: #64748b;
+    font-size: 1rem;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
+.plans-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.plans-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.plans-btn-primary {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+}
+
+.plans-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.plans-btn-outline {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+}
+
+.plans-btn-outline:hover:not(:disabled) {
+    border-color: #6366f1;
+    color: #818cf8;
+}
+
+.plans-btn-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.plans-btn-warning:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+.plans-btn-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.plans-btn-success:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.25);
+}
+
+.plans-btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.plans-btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.plans-btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* ─── Table ────────────────────────────────────────────────────────────────── */
+.plans-table-container {
+    background: rgba(22, 32, 52, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(71, 85, 105, 0.6);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.plans-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.plans-table th {
+    text-align: left;
+    padding: 0.875rem 1rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.5);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+.plans-table td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+}
+
+.plans-table tr:hover {
+    background: rgba(51, 65, 85, 0.15);
+}
+
+.plans-row-inactive {
+    opacity: 0.55;
+}
+
+.plans-cell-name {
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.plans-code-badge {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.plans-version-badge {
+    background: rgba(34, 211, 238, 0.12);
+    color: #22d3ee;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.plans-status-chip {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.plans-status-chip.active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.plans-status-chip.inactive {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.plans-usage-badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.plans-usage-warning {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.plans-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.plans-empty {
+    text-align: center;
+    color: #64748b;
+    padding: 2rem;
+}
+
+/* ─── Alerts ───────────────────────────────────────────────────────────────── */
+.plans-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.plans-alert button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: inherit;
+    opacity: 0.7;
+}
+
+.plans-alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.plans-alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+}
+
+.plans-alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+}
+
+/* ─── Tabs ─────────────────────────────────────────────────────────────────── */
+.plans-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #1e293b;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+.plans-tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.plans-tab:hover {
+    color: #94a3b8;
+}
+
+.plans-tab.active {
+    color: #818cf8;
+    border-bottom-color: #6366f1;
+}
+
+.plans-tab-content {
+    background: rgba(22, 32, 52, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(71, 85, 105, 0.6);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* ─── Form Elements ────────────────────────────────────────────────────────── */
+.plans-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.plans-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 0;
+}
+
+.plans-section-desc {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.plans-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.plans-subsection-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin: 1rem 0 0.5rem;
+    grid-column: 1 / -1;
+}
+
+.plans-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    flex: 1;
+}
+
+.plans-form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.plans-form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.plans-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.plans-label-hint {
+    font-weight: 400;
+    text-transform: none;
+    color: #64748b;
+    margin-left: 0.5rem;
+}
+
+.plans-field-hint {
+    font-size: 0.75rem;
+    color: #475569;
+}
+
+.plans-input,
+.plans-select,
+.plans-textarea {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    color: #e2e8f0;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+}
+
+.plans-input:focus,
+.plans-select:focus,
+.plans-textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.plans-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.plans-input-sm {
+    max-width: 180px;
+}
+
+.plans-input-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.plans-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ─── Toggle ───────────────────────────────────────────────────────────────── */
+.plans-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+}
+
+.plans-toggle input {
+    display: none;
+}
+
+.plans-toggle-slider {
+    width: 44px;
+    height: 24px;
+    background: #334155;
+    border-radius: 999px;
+    position: relative;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.plans-toggle-slider::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 18px;
+    height: 18px;
+    background: #64748b;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.plans-toggle input:checked+.plans-toggle-slider {
+    background: #6366f1;
+}
+
+.plans-toggle input:checked+.plans-toggle-slider::after {
+    left: 23px;
+    background: #fff;
+}
+
+.plans-toggle-label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+.plans-toggle-sm {
+    gap: 0.5rem;
+}
+
+/* ─── Limits ───────────────────────────────────────────────────────────────── */
+.plans-limit-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* ─── Modules Grid ─────────────────────────────────────────────────────────── */
+.plans-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.plans-module-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.plans-module-card:hover {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.plans-module-card input:checked~.plans-module-label {
+    color: #818cf8;
+}
+
+.plans-module-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.plans-comm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+/* ─── Region Cards ─────────────────────────────────────────────────────────── */
+.plans-region-card {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.plans-region-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.plans-region-header h4 {
+    font-size: 1rem;
+    color: #e2e8f0;
+    margin: 0;
+}
+
+/* ─── Country Chips ────────────────────────────────────────────────────────── */
+.plans-country-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.plans-chip {
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #334155;
+    background: rgba(30, 41, 59, 0.5);
+    color: #94a3b8;
+    transition: all 0.15s ease;
+}
+
+.plans-chip:hover:not(:disabled) {
+    border-color: #6366f1;
+    color: #818cf8;
+}
+
+.plans-chip.selected {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
+    color: #a5b4fc;
+}
+
+.plans-chip.taken {
+    opacity: 0.3;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+/* ─── Stripe Details ───────────────────────────────────────────────────────── */
+.plans-stripe-details {
+    margin-top: 1rem;
+}
+
+.plans-stripe-details summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #64748b;
+    padding: 0.5rem 0;
+    user-select: none;
+}
+
+.plans-stripe-details summary:hover {
+    color: #94a3b8;
+}
+
+.plans-stripe-details[open] summary {
+    color: #818cf8;
+}
+
+/* ─── Visibility Grid ──────────────────────────────────────────────────────── */
+.plans-visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.plans-visibility-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.plans-visibility-card:hover {
+    border-color: #475569;
+}
+
+.plans-visibility-card.hidden-country {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.plans-visibility-code {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    min-width: 28px;
+}
+
+.plans-visibility-name {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* ─── Empty State ──────────────────────────────────────────────────────────── */
+.plans-empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #475569;
+    border: 1px dashed #334155;
+    border-radius: 12px;
+}
+
+/* ─── Modal ────────────────────────────────────────────────────────────────── */
+.plans-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.plans-modal {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 420px;
+    width: 100%;
+}
+
+.plans-modal h3 {
+    font-size: 1.1rem;
+    color: #f1f5f9;
+    margin: 0 0 0.5rem;
+}
+
+.plans-modal-info {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.plans-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+
+/* ─── Diff Preview Modal (Phase 7B) ───────────────────────────────────── */
+.plans-diff-modal {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 560px;
+    width: 100%;
+}
+
+.plans-diff-modal h3 {
+    font-size: 1.1rem;
+    color: #f1f5f9;
+    margin: 0 0 0.5rem;
+}
+
+.plans-diff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.plans-diff-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid #334155;
+    border-radius: 8px;
+}
+
+.plans-diff-section {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #e2e8f0;
+}
+
+.plans-diff-fields {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+.plans-diff-badge {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Validation Errors (Phase 7B) ────────────────────────────────────── */
+.plans-field-error {
+    font-size: 0.75rem;
+    color: #fca5a5;
+    margin-top: 0.25rem;
+}
+
+.plans-input-error {
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.plans-tab-error-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #ef4444;
+    border-radius: 50%;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+    animation: plans-pulse 1.5s infinite;
+}
+
+@keyframes plans-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+/* ─── ConfirmDialog entrance animation ───────────────────────────────────── */
+@keyframes plans-dialog-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ─── Version Display (Phase 7B) ──────────────────────────────────────── */
+.plans-version-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(34, 211, 238, 0.06);
+    border: 1px solid rgba(34, 211, 238, 0.15);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.plans-version-badge-lg {
+    background: rgba(34, 211, 238, 0.15);
+    color: #22d3ee;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.plans-version-text {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* ─── JSON Editor (Phase 7B) ──────────────────────────────────────────── */
+.plans-json-editor {
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    tab-size: 2;
+    resize: vertical;
+    min-height: 120px;
+}

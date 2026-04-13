@@ -1,5 +1,16 @@
 {
+  "scripts": {
+    "gemini": "node ./scripts/gemini.js",
+    "audit:spec": "node scripts/auditSpecFlow.js --summary",
+    "audit:spec:full": "node scripts/auditSpecFlow.js",
+    "audit:spec:json": "node scripts/auditSpecFlow.js --json",
+    "audit:spec:watch": "node scripts/spec-audit.js"
+  },
   "devDependencies": {
+    "@google/gemini-cli": "^0.5.5",
     "md-to-pdf": "^5.2.5"
+  },
+  "dependencies": {
+    "sonner": "^2.0.7"
   }
 }

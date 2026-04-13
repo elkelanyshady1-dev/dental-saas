@@ -2,9 +2,24 @@ node_modules/
 backend/node_modules/
 frontend/node_modules/
 
+# Environment files
 .env
+.env.*
 backend/.env
+backend/.env.*
 frontend/.env
+frontend/.env.*
+!*.env.example
 
 dist/
 build/
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+~$*
+
+# Phase 9+10 governance scan artifacts (generated on CI run)
+backend/scripts/routeGraph.json
+backend/scripts/controllerResponseShapes.json
+backend/scripts/swaggerResponseSchemas.json

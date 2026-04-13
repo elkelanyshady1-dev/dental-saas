@@ -2,6 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════
+   DENTALSAAS DESIGN TOKEN BRIDGE — CSS Custom Properties
+   Single source of truth. Consumed by:
+     - Platform cockpit layout
+     - Org-plane (future)
+     - Dark mode overrides (future, via [data-theme="dark"])
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* Aura Medical Pro — Brand */
+  --color-brand-primary:      #004ac6; /* Clinical Curator Anchor */
+  --color-brand-primary-lt:   #eff6ff;
+  --color-brand-primary-hover:#2563eb;
+  --color-primary_container:  #2563eb;
+  --color-brand-accent:       #4f46e5;
+  --color-brand-border:       #dbeafe;
+
+  /* Aura Medical Pro — Surfaces (The No-Line Rule) */
+  --color-bg:                 #f7f9fb; /* Base Layer: surface */
+  --color-surface:            #f7f9fb;
+  --color-surface-low:        #f2f4f6; /* Sectioning: surface-container-low */
+  --color-surface-lowest:     #ffffff; /* Actionable Cards: surface-container-lowest */
+  --color-surface-high:       #e6e8ea; /* Active/Elevated: surface-container-high */
+  
+  --color-bg-grad:            linear-gradient(135deg, #004ac6 0%, #2563eb 100%); /* Signature Texture */
+  --color-surface-hover:      rgba(0, 74, 198, 0.04);
+
+  /* Sidebar */
+  --color-sidebar-bg:         #0f172a;
+  --color-sidebar-hover:      #1e293b;
+  --color-sidebar-text:       #cbd5e1;
+  --color-sidebar-text-muted: #64748b;
+  --color-sidebar-active:     #004ac6;
+  --color-sidebar-border:     #1e293b;
+
+  /* Typography (The Authority vs utility dialogue) */
+  --color-text-primary:       #191c1e; /* on_surface */
+  --color-text-secondary:     #434655; /* on_surface_variant */
+  --color-text-muted:         #737686; /* outline */
+  --color-text-placeholder:   #94a3b8;
+  --color-text-disabled:      #c3c6d7;
+
+  /* Borders (The Ghost Border Fallback) */
+  --color-border-default:     rgba(195, 198, 215, 0.15); /* Ghost Border: outline-variant 15% */
+  --color-border-soft:        rgba(195, 198, 215, 0.10);
+  --color-border-focus:       #004ac6;
+
+  /* Semantics */
+  --color-success:            #10b981;
+  --color-success-bg:         #ecfdf5;
+  --color-success-text:       #047857;
+  --color-success-border:     #d1fae5;
+
+  --color-warning:            #f59e0b;
+  --color-warning-bg:         #fffbeb;
+  --color-warning-text:       #d97706;
+
+  --color-danger:             #ef4444;
+  --color-danger-bg:          #fef2f2;
+  --color-danger-text:        #b91c1c;
+  --color-danger-border:      #fee2e2;
+
+  /* Radius (Premium Roundedness) */
+  --radius-sm:   0.5rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1.0rem;
+  --radius-xl:   1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows (Ambient Shadows) */
+  --shadow-xs:    0 1px 2px rgba(25, 28, 30, 0.04);
+  --shadow-sm:    0 1px 3px rgba(25, 28, 30, 0.06);
+  --shadow-md:    0 4px 12px rgba(25, 28, 30, 0.08);
+  --shadow-lg:    0 12px 32px -4px rgba(25, 28, 30, 0.06); /* Ambient Shadow */
+  --shadow-brand: 0 4px 14px rgba(0, 74, 198, 0.25);
+
+  /* Transitions */
+  --transition-fast:    all 0.1s ease;
+  --transition-default: all 0.2s ease;
+  --transition-slow:    all 0.3s ease;
+}
+
+/* ── Dark mode scaffold (future) ────────────────────────
+   Apply [data-theme="dark"] to <html> to activate.
+   Override token values here — no component code changes.
+[data-theme="dark"] {
+  --color-surface:      #1e293b;
+  --color-surface-soft: #0f172a;
+  --color-text-primary: #f1f5f9;
+  ...etc...
+}
+──────────────────────────────────────────────────────── */
+
 /* Base Reset */
 *,
 *::before,
@@ -48,6 +141,10 @@ body {
   box-shadow: 0 0 20px rgba(37, 99, 235, 0.15);
 }
 
+/* Hide scrollbar but keep scroll functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 .glow-hover:hover {
   box-shadow: 0 0 25px rgba(37, 99, 235, 0.25);
 }
@@ -65,7 +162,7 @@ body {
   }
 }
 
-.animate-fade-in {
+.animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
@@ -108,6 +205,54 @@ body {
 
 @layer base {
   * {
-    @apply border-gray-200;
+    /* Use slate-200 (token-aligned) as default border — not gray-200 */
+    @apply border-slate-200;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PRINT STYLES — Clean clinical print output
+   ═══════════════════════════════════════════════════════ */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+    font-size: 12pt !important;
+  }
+
+  /* Hide interactive elements */
+  .print\\:hidden,
+  button,
+  select,
+  textarea,
+  input,
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  /* Full-width photos */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Remove shadows and borders */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Clean backgrounds */
+  .bg-gradient-to-br,
+  .bg-gradient-to-r {
+    background: white !important;
+  }
+
+  /* Ensure grid stays compact */
+  .grid {
+    page-break-inside: avoid;
   }
 }

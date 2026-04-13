@@ -1,0 +1,252 @@
+{
+  "main": {
+    "id": "1399706b62f0f967",
+    "type": "split",
+    "children": [
+      {
+        "id": "e4ab6e8e7ab9cdf9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d2fa83068f0ab12e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Domains/TDS for orthodontic case engine.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "TDS for orthodontic case engine"
+            }
+          },
+          {
+            "id": "c2b2da6c60b14e08",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture/Organization Plane.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Organization Plane"
+            }
+          },
+          {
+            "id": "6c36cfd071d11a79",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b709ee10920c5b8c",
+    "type": "split",
+    "children": [
+      {
+        "id": "ca9e2533e96741bd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5d367d8991b8709a",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "7d693fca4f9c07d6",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "62daf67a32333ced",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "578db512fe3c8422",
+    "type": "split",
+    "children": [
+      {
+        "id": "49c903d863736ec6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "69f1eae475e1d988",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Untitled/Untitled.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Untitled"
+            }
+          },
+          {
+            "id": "741c0059747ef14c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Untitled/Untitled.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Untitled"
+            }
+          },
+          {
+            "id": "d36b05bce225c751",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "b1cfae8f184f7a5d",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "70fb1adcb199e7a8",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Untitled/Untitled.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Untitled"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "6c36cfd071d11a79",
+  "lastOpenFiles": [
+    "Domains/Appointment Domain.md",
+    "Domains/Appointment Domain — Stats.md",
+    "knowledge-base/00_System/SystemOverview.md",
+    "Architecture/AI Engine.md",
+    "Architecture/Auto UI Engine.md",
+    "Architecture/Domain Naming Enforcement.md",
+    "Architecture/Finance Domain Consolidation Phase 1.md",
+    "Architecture/Finance vs Accounting.md",
+    "Architecture/Org DDD Audit.md",
+    "Architecture/Org Finance Domain Audit.md",
+    "Architecture/Patient Portal.md",
+    "Architecture/Supervisor Plane.md",
+    "Architecture/Platform Plane.md",
+    "Untitled.md",
+    "Architecture/Organization Plane.md",
+    "Untitled/Untitled.md",
+    "Home.md",
+    "Aligner workflow management system.md",
+    "Untitled",
+    "Domains/TDS for orthodontic case engine.md",
+    "2026-03-30.md",
+    "Untitled.canvas",
+    "Untitled 1.md",
+    "prompts/Untitled.md",
+    "prompts",
+    "Domains/Accounting Domain.md",
+    "Planning/Roadmap.md",
+    "Domains/Finance Domain.md",
+    "Planning/Untitled.md",
+    "knowledge-base/08_Rules",
+    "knowledge-base/07_Audits",
+    "knowledge-base/06_Billing",
+    "knowledge-base/05_Auth",
+    "knowledge-base/04_Pricing",
+    "knowledge-base/03_Frontend",
+    "knowledge-base/02_Backend",
+    "knowledge-base/01_Architecture",
+    "Untitled 1.canvas"
+  ]
+}

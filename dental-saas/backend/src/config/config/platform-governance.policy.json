@@ -1,0 +1,108 @@
+{
+    "policyVersion": "1.0.0",
+    "platformPlane": {
+        "namespace": {
+            "canonicalPrefix": "/api/platform",
+            "forbiddenPrefixes": [
+                "/api/platform/core"
+            ],
+            "legacyRewriteAllowed": true,
+            "legacyRemovalTargetVersion": "v13"
+        },
+        "capabilityContract": {
+            "sourceOfTruth": "PLATFORM_CAPABILITIES",
+            "allowedCapabilities": [
+                "VIEW_ORGANIZATIONS",
+                "MANAGE_ORGANIZATIONS",
+                "MANAGE_SUBSCRIPTIONS",
+                "VIEW_AUDIT_LOGS",
+                "VIEW_PLATFORM_ANALYTICS",
+                "MANAGE_PLATFORM_USERS",
+                "MANAGE_PLATFORM_SETTINGS"
+            ],
+            "noRawStrings": true,
+            "resolverFile": "platformCapabilityResolver.js"
+        },
+        "rbac": {
+            "authMiddlewareRequired": "platformProtect",
+            "permissionMiddlewareRequired": "authorizePlatformPermission",
+            "inlineRoleChecksForbidden": true,
+            "allowedAuthOnlyRoutes": [
+                "/auth/*",
+                "/capabilities",
+                "/feature-flags",
+                "/me*",
+                "/audit/frontend-event",
+                "/performance-metric",
+                "/__sentinel/*"
+            ]
+        },
+        "guardMatrix": {
+            "GET": "VIEW_*",
+            "POST": "MANAGE_*",
+            "PATCH": "MANAGE_*",
+            "PUT": "MANAGE_*",
+            "DELETE": "MANAGE_*"
+        },
+        "swagger": {
+            "requireDocumentation": true,
+            "ignoreRoutes": [
+                "/auth/*",
+                "/__sentinel/*"
+            ],
+            "strictMode": false
+        },
+        "responseContract": {
+            "staticDriftDetection": true,
+            "runtimeValidation": {
+                "enabledInNonProduction": true,
+                "envFlag": "RUNTIME_OPENAPI_VALIDATION",
+                "strictEnvFlag": "OPENAPI_RUNTIME_STRICT"
+            }
+        },
+        "financialSovereignty": {
+            "platformFinanceDir": "src/modules/platformFinance",
+            "organizationFinanceDir": "src/modules/organizationFinance",
+            "crossImportForbidden": true,
+            "subscriptionMutationAuthority": "platform"
+        },
+        "planVersioning": {
+            "incrementStrategy": "$inc",
+            "immutableOnSubscription": true,
+            "renewalAnchorField": "basePriceAtSubscription"
+        },
+        "isoCountryInvariant": {
+            "storageFormat": "ISO-3166-1-alpha-2",
+            "displayNamesForbiddenInDB": true
+        },
+        "ci": {
+            "requiredScripts": [
+                "validate:capability-invariants",
+                "validate:api-integrity",
+                "validate:response-schema",
+                "validate:swagger-drift",
+                "validate:runtime-integrity",
+                "validate:auth-flow",
+                "validate:auth-controller-integrity",
+                "validate:jwt-env-integrity",
+                "validate:jwt-secret-entropy",
+                "validate:environment-config",
+                "validate:platform-seed-integrity",
+                "validate:role-drift",
+                "validate:auth-model-alignment",
+                "validate:cross-plane-isolation",
+                "validate:governance-self-integrity",
+                "validate:capabilities-response"
+            ],
+            "blockOnFailure": true,
+            "enforcementLevel": "lenient"
+        },
+        "structuralChangeRequiresRFC": [
+            "capabilityContractChange",
+            "subscriptionStateMachineChange",
+            "pricingAuthorityChange",
+            "namespaceChange",
+            "financialModelChange"
+        ]
+    }
+}
