@@ -115,6 +115,10 @@ async function createContract(data, actorId, options = {}) {
         // v23.0: Access type — MUST be persisted to prevent Mongoose default overriding
         // the orchestrator's resolved value. Omitting this field → default "paid" → split-brain.
         accessType = null,
+        // v24.0: Promo access fields — computed by BillingOrchestrator for accessType === "promo"
+        promoDays = 0,
+        promoStartDate = null,
+        promoEndDate = null,
     } = data;
 
     // Validate: org must exist
@@ -269,6 +273,10 @@ async function createContract(data, actorId, options = {}) {
         trialDays,
         trialStartDate: trialStartDate || (trialDays > 0 ? new Date() : null),
         trialEndDate: dataTrialEndDate || (trialDays > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() + trialDays); return d; })() : null),
+        // Promo access fields (accessType === "promo" only)
+        promoDays,
+        promoStartDate,
+        promoEndDate,
         autoRenew,
         gracePeriodDays,
         renewalTerms: renewalTerms || { inflationPercent: 0, autoRenew, interval: "monthly" },

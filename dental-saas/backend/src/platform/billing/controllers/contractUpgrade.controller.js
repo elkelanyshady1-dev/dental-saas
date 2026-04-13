@@ -428,7 +428,7 @@ exports.upgradeSubscription = async (req, res) => {
         // Access-type-aware response message
         const message =
             result.accessType === "promo"
-                ? `Grace Access activated — ${result.graceDays ?? graceDays} days of free access.`
+                ? `Grace Access activated — ${result.promoDays ?? graceDays} days of free access.`
                 : result.accessType === "trial"
                 ? "Trial contract activated. No invoice generated."
                 : "Contract created. Invoice issued and awaiting payment to activate.";

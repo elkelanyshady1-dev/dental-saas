@@ -222,6 +222,22 @@ const orgContractSchema = new mongoose.Schema(
             default: null
         },
 
+        // ── Promo Access Terms ────────────────────────────────────────────────
+        // Tracks grace/promo access duration for accessType === "promo".
+        // DISTINCT from gracePeriodDays which is dunning-only (billing retry window).
+        promoDays: {
+            type: Number,
+            default: 0
+        },
+        promoStartDate: {
+            type: Date,
+            default: null
+        },
+        promoEndDate: {
+            type: Date,
+            default: null
+        },
+
         // ── Locked Commercial Terms ───────────────────────────────────────────
         // The price locked at signing — regardless of plan template changes
         lockedPrice: {
@@ -447,6 +463,9 @@ orgContractSchema.index({ organizationId: 1, effectiveFrom: 1, effectiveTo: 1 })
 // TDS: Trial activation job scan — O(log n) for daily cron
 // Covers: { contractStatus: "active", trialDays: { $gt: 0 }, trialEndDate: { $lte: now } }
 orgContractSchema.index({ contractStatus: 1, trialDays: 1, trialEndDate: 1 });
+// Promo expiry scan — O(log n) for daily cron
+// Covers: { contractStatus: "active", accessType: "promo", promoEndDate: { $lte: now } }
+orgContractSchema.index({ contractStatus: 1, accessType: 1, promoEndDate: 1 });
 
 // Sprint 8.1: Contract Chain Debugging API — O(log n) forward/backward traversal
 // Required by GET /contracts/:contractId/chain

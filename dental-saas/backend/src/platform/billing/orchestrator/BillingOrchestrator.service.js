@@ -562,6 +562,18 @@ const BillingOrchestrator = {
         if (accessType !== "paid") {
             log("nonBillable.fastPath", { accessType, finalPrice, planCode: pv.templateCode });
 
+            // ── Compute promo dates for grace access contracts ────────────────
+            let promoDays = 0;
+            let promoStartDate = null;
+            let promoEndDate = null;
+            if (accessType === "promo" && graceDays) {
+                promoDays = Number(graceDays);
+                promoStartDate = resolvedEffectiveFrom;
+                promoEndDate = new Date(resolvedEffectiveFrom);
+                promoEndDate.setDate(promoEndDate.getDate() + promoDays);
+                log("promo.dates", { promoDays, promoStartDate, promoEndDate });
+            }
+
             const session = await mongoose.startSession();
             session.startTransaction();
             let contract;
@@ -574,10 +586,14 @@ const BillingOrchestrator = {
                     lockedPrice: finalPrice,
                     currency: pricing.currency,
                     effectiveFrom: resolvedEffectiveFrom,
-                    effectiveTo: contractEndDate ? new Date(contractEndDate) : null,
+                    effectiveTo: promoEndDate || (contractEndDate ? new Date(contractEndDate) : null),
                     autoRenew,
                     trialDays: resolvedTrialDays,
                     accessType,
+                    // Promo access fields — stored as first-class schema fields
+                    promoDays,
+                    promoStartDate,
+                    promoEndDate,
                     pricingSnapshot: pricing.snapshot,
                     source: normalizeSource("platform_admin"),
                     paymentProvider: paymentMethod || "manual",
@@ -587,7 +603,6 @@ const BillingOrchestrator = {
                         ["initiatedByRole", "superadmin"],
                         ["requestId", requestId || null],
                         ["accessType", accessType],
-                        ["graceDays", graceDays != null ? String(graceDays) : null],
                         ["entitlementOverrides", entitlementOverrides ? JSON.stringify(entitlementOverrides) : null],
                     ]),
                 }, actorId, { session });
@@ -647,7 +662,9 @@ const BillingOrchestrator = {
                 contractId: String(contract._id),
                 status: "activated",
                 accessType,
-                graceDays: accessType === "promo" ? (graceDays ?? null) : undefined,
+                promoDays: accessType === "promo" ? promoDays : undefined,
+                promoStartDate: accessType === "promo" && promoStartDate ? promoStartDate.toISOString() : undefined,
+                promoEndDate: accessType === "promo" && promoEndDate ? promoEndDate.toISOString() : undefined,
                 invoiceId: null,
                 amountDue: 0,
                 currency: pricing.currency,

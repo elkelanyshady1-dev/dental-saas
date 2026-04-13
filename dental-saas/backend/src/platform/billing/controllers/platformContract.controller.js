@@ -872,7 +872,7 @@ exports.cancelContract = async (req, res) => {
     try {
         const { id } = req.params;
         const actorId = req.platformUser?._id;
-        const { cancellationReason = null } = req.body;
+        const { cancellationReason = null } = req.body || {};
 
         const contract = await OrgContract.findById(id);
         if (!contract) {
@@ -893,6 +893,13 @@ exports.cancelContract = async (req, res) => {
         contract.terminationReason = cancellationReason || "customer_cancellation";
 
         await contract.save();
+
+        // Clear org.currentContractId if it still points to this (now canceled) contract.
+        // Prevents ORG_CURRENT_CONTRACT_POINTER_INTEGRITY violation on next Guardian run.
+        await Organization.updateOne(
+            { _id: contract.organizationId, currentContractId: contract._id },
+            { $set: { currentContractId: null } }
+        );
 
         setImmediate(async () => {
             try {
@@ -922,8 +929,12 @@ exports.cancelContract = async (req, res) => {
         });
 
     } catch (err) {
-        logger.error({ err }, "[ContractController] cancelContract failed");
-        return res.status(500).json({ success: false, error: "Internal server error" });
+        logger.error({ err, stack: err.stack }, "[ContractController] cancelContract failed");
+        return res.status(500).json({
+            success: false,
+            error: "Internal server error",
+            ...(process.env.NODE_ENV !== "production" && { detail: err.message })
+        });
     }
 };
 

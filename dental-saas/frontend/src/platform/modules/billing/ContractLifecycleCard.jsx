@@ -225,11 +225,19 @@ export default function ContractLifecycleCard({ contract, pendingContract, onTog
         trialEndDate,
         autoRenew,
         salesManaged,
+        accessType,
+        promoDays = 0,
+        promoEndDate,
         gracePeriodDays = 7,
         dunning,
         scheduledChange,
         createdAt,
     } = contract;
+
+    // Resolve display values based on access type
+    const isPromo = accessType === "promo";
+    const displayGraceDays = isPromo ? promoDays : gracePeriodDays;
+    const displayEndDate = isPromo ? promoEndDate : effectiveTo;
 
     const statusClass = CONTRACT_STATUS_MAP[contractStatus] || "bg-slate-50 text-slate-500 border-slate-200";
 
@@ -257,7 +265,7 @@ export default function ContractLifecycleCard({ contract, pendingContract, onTog
                             {contractStatus}
                         </span>
                         <RenewalCountdown
-                            effectiveTo={effectiveTo}
+                            effectiveTo={displayEndDate || effectiveTo}
                             trialDays={trialDays}
                             trialEndDate={trialEndDate}
                         />
@@ -296,8 +304,8 @@ export default function ContractLifecycleCard({ contract, pendingContract, onTog
                 <div className="px-8 pt-5">
                     <GraceWarningBanner
                         contractStatus={contractStatus}
-                        gracePeriodDays={gracePeriodDays}
-                        effectiveTo={effectiveTo}
+                        gracePeriodDays={displayGraceDays}
+                        effectiveTo={displayEndDate || effectiveTo}
                     />
                 </div>
 
@@ -371,7 +379,7 @@ export default function ContractLifecycleCard({ contract, pendingContract, onTog
                     <MetaPill icon={DollarSign} label="Locked Price" value={fmtCurrency(lockedPrice, currency)} />
                     <MetaPill icon={RefreshCw} label="Billing Interval" value={billingInterval ? billingInterval.charAt(0).toUpperCase() + billingInterval.slice(1) : "—"} />
                     <MetaPill icon={Calendar} label="Next Billing" value={fmtDate(nextBillingDate || effectiveTo)} />
-                    <MetaPill icon={Zap} label="Grace Period" value={`${gracePeriodDays} days`} />
+                    <MetaPill icon={Zap} label={isPromo ? "Promo Access" : "Grace Period"} value={`${displayGraceDays} days`} />
                 </div>
 
                 {/* Timeline */}
@@ -381,9 +389,9 @@ export default function ContractLifecycleCard({ contract, pendingContract, onTog
                     </p>
                     <TimelineBar
                         effectiveFrom={effectiveFrom}
-                        effectiveTo={effectiveTo}
+                        effectiveTo={displayEndDate || effectiveTo}
                         createdAt={createdAt}
-                        gracePeriodDays={gracePeriodDays}
+                        gracePeriodDays={isPromo ? 0 : gracePeriodDays}
                     />
                 </div>
 

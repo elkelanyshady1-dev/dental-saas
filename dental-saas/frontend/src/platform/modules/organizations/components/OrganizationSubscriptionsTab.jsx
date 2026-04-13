@@ -113,7 +113,7 @@ function ActiveContractCard({ contract, orgId, onUpgrade, onRefetch, pendingCont
         setCanceling(true);
         setActionError(null);
         try {
-            await platformApi.patch(`/contracts/${contract._id}/status`, { status: 'canceled' });
+            await platformApi.patch(`/contracts/${contract._id}/cancel`);
             onRefetch();
         } catch (err) {
             setActionError(err.response?.data?.message || 'Failed to cancel contract');
@@ -220,7 +220,7 @@ function ActiveContractCard({ contract, orgId, onUpgrade, onRefetch, pendingCont
                         { label: 'Locked Price', value: fmtMoney(contract.lockedPrice, contract.currency) },
                         { label: 'Currency', value: contract.currency },
                         { label: 'Start Date', value: fmt(contract.effectiveFrom) },
-                        { label: 'End Date', value: fmt(contract.effectiveTo) || 'Open-ended' },
+                        { label: 'End Date', value: fmt(contract.accessType === 'promo' ? contract.promoEndDate : contract.effectiveTo) || 'Open-ended' },
                         { label: 'Trial Ends', value: contract.trialDays > 0 ? fmt(contract.trialEndDate) : '--' },
                         {
                             label: 'Auto-Renew',
@@ -228,7 +228,7 @@ function ActiveContractCard({ contract, orgId, onUpgrade, onRefetch, pendingCont
                             // (which defaults to true on all contracts including trial-only)
                             value: autoRenew ? 'Yes' : 'No'
                         },
-                        { label: 'Grace Period', value: `${contract.gracePeriodDays ?? 0} days` },
+                        { label: 'Grace Period', value: contract.accessType === 'promo' ? `${contract.promoDays || 0} days` : `${contract.gracePeriodDays ?? 0} days` },
                         { label: 'Activated At', value: fmt(contract.updatedAt) },
                     ].map(({ label, value, mono, bold, truncate }) => (
                         <div key={label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">

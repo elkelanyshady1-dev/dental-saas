@@ -1268,7 +1268,7 @@ async function runStartupGuardian() {
     // Production guard: this entire block is unreachable in production.
 
     if (IS_DEV() && failures.length > 0) {
-        const { REPAIRABLE_INVARIANTS, repairVisibility, repairPricingSnapshot, repairOrgContracts, repairDeprecatedPublicPlans, repairContractTimeline, repairContractGaps, repairStrandedPendingPayment } =
+        const { REPAIRABLE_INVARIANTS, repairVisibility, repairPricingSnapshot, repairOrgContracts, repairDeprecatedPublicPlans, repairContractTimeline, repairContractGaps, repairStrandedPendingPayment, repairContractPointer, repairDuplicateActiveContracts } =
             require("./guardianAutoRepair");
 
         const repairableFailures = failures.filter(r => REPAIRABLE_INVARIANTS.has(r.name));
@@ -1384,6 +1384,36 @@ async function runStartupGuardian() {
                 }
             }
 
+            // Repair 8: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY
+            if (repairableFailures.some(r => r.name === "ORG_CURRENT_CONTRACT_POINTER_INTEGRITY")) {
+                try {
+                    const fixed = await repairContractPointer(guardianLogger);
+                    repairStats.contractPointer = fixed;
+                    guardianLogger.warn(
+                        { repaired: fixed, guardian: true, check: "ORG_CURRENT_CONTRACT_POINTER_INTEGRITY_AUTO_REPAIR" },
+                        `[Guardian] Auto-repair: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY — repointed/nulled ${fixed} stale pointer(s)`
+                    );
+                } catch (err) {
+                    repairStats.errors.push(`repairContractPointer: ${err.message}`);
+                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairContractPointer failed");
+                }
+            }
+
+            // Repair 9: UNIQUE_ACTIVE_CONTRACT_PER_ORG
+            if (repairableFailures.some(r => r.name === "UNIQUE_ACTIVE_CONTRACT_PER_ORG")) {
+                try {
+                    const fixed = await repairDuplicateActiveContracts(guardianLogger);
+                    repairStats.duplicateContracts = fixed;
+                    guardianLogger.warn(
+                        { repaired: fixed, guardian: true, check: "UNIQUE_ACTIVE_CONTRACT_PER_ORG_AUTO_REPAIR" },
+                        `[Guardian] Auto-repair: UNIQUE_ACTIVE_CONTRACT_PER_ORG — superseded ${fixed} duplicate active contract(s)`
+                    );
+                } catch (err) {
+                    repairStats.errors.push(`repairDuplicateActiveContracts: ${err.message}`);
+                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairDuplicateActiveContracts failed");
+                }
+            }
+
             // Log repair summary
             guardianLogger.info(
                 {
@@ -1414,6 +1444,10 @@ async function runStartupGuardian() {
                             return runCheck("CONTRACT_GAP_INTEGRITY", checkContractGapIntegrity);
                         case "STRANDED_PENDING_PAYMENT":
                             return runCheck("STRANDED_PENDING_PAYMENT", checkStrandedPendingPaymentContracts);
+                        case "ORG_CURRENT_CONTRACT_POINTER_INTEGRITY":
+                            return runCheck("ORG_CURRENT_CONTRACT_POINTER_INTEGRITY", checkOrgCurrentContractPointerIntegrity);
+                        case "UNIQUE_ACTIVE_CONTRACT_PER_ORG":
+                            return runCheck("UNIQUE_ACTIVE_CONTRACT_PER_ORG", checkUniqueActiveContractPerOrg);
                         default:
                             return Promise.resolve(r); // unchanged
                     }
