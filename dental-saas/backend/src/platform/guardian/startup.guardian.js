@@ -1268,8 +1268,12 @@ async function runStartupGuardian() {
     // Production guard: this entire block is unreachable in production.
 
     if (IS_DEV() && failures.length > 0) {
-        const { REPAIRABLE_INVARIANTS, repairVisibility, repairPricingSnapshot, repairOrgContracts, repairDeprecatedPublicPlans, repairContractTimeline, repairContractGaps, repairStrandedPendingPayment, repairContractPointer, repairDuplicateActiveContracts } =
-            require("./guardianAutoRepair");
+        // ── Registry-driven dispatch (v24.1) ──────────────────────────────────
+        // Replaces the manual 9-block if-chain with a loop through the repair
+        // registry. Adding a new repair = add one entry to guardianRepairRegistry.js.
+        // No changes to this file required.
+        const { REPAIRABLE_INVARIANTS } = require("./guardianAutoRepair");
+        const { runAutoRepairBatch } = require("./guardianAutoRepair.service");
 
         const repairableFailures = failures.filter(r => REPAIRABLE_INVARIANTS.has(r.name));
         const nonRepairableFailures = failures.filter(r => !REPAIRABLE_INVARIANTS.has(r.name));
@@ -1284,144 +1288,29 @@ async function runStartupGuardian() {
                 "[Guardian] Development mode — attempting auto-repair for data integrity violations"
             );
 
-            const repairStats = { visibility: 0, snapshot: 0, orgContracts: 0, errors: [] };
+            // ── PART 4: Registry-driven dispatch loop ────────────────────────
+            // runAutoRepairBatch iterates failures in order, executing the repair
+            // function registered for each check name.
+            // Each repair: log start → execute (± transaction) → log result.
+            // Individual repair failures are collected, NOT re-thrown —
+            // the repair batch continues for remaining checks.
+            const { results: repairResults, repaired, skipped, errors: repairErrors } =
+                await runAutoRepairBatch({ failingChecks: repairableFailures, logger: guardianLogger });
 
-            // Repair 1: PLAN_VERSION_VISIBILITY_ENUM
-            if (repairableFailures.some(r => r.name === "PLAN_VERSION_VISIBILITY_ENUM")) {
-                try {
-                    repairStats.visibility = await repairVisibility();
-                    guardianLogger.info(
-                        { repaired: repairStats.visibility },
-                        "[Guardian] Auto-repair: PLAN_VERSION_VISIBILITY_ENUM — set visibility='public' on missing docs"
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairVisibility: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairVisibility failed");
-                }
-            }
+            // Build compat repairStats for downstream logging
+            const repairStats = { errors: repairErrors };
 
-            // Repair 2: CONTRACT_PRICING_SNAPSHOT_PRESENT
-            if (repairableFailures.some(r => r.name === "CONTRACT_PRICING_SNAPSHOT_PRESENT")) {
-                try {
-                    repairStats.snapshot = await repairPricingSnapshot();
-                    guardianLogger.info(
-                        { repaired: repairStats.snapshot },
-                        "[Guardian] Auto-repair: CONTRACT_PRICING_SNAPSHOT_PRESENT — backfilled pricingSnapshot"
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairPricingSnapshot: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairPricingSnapshot failed");
-                }
-            }
-
-            // Repair 3: ORG_WITHOUT_ACTIVE_CONTRACT
-            if (repairableFailures.some(r => r.name === "ORG_WITHOUT_ACTIVE_CONTRACT")) {
-                try {
-                    repairStats.orgContracts = await repairOrgContracts(guardianLogger);
-                    guardianLogger.info(
-                        { repaired: repairStats.orgContracts },
-                        "[Guardian] Auto-repair: ORG_WITHOUT_ACTIVE_CONTRACT — created trial contracts"
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairOrgContracts: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairOrgContracts failed");
-                }
-            }
-
-            // Repair 4: DEPRECATED_PUBLIC_PLAN
-            if (repairableFailures.some(r => r.name === "DEPRECATED_PUBLIC_PLAN")) {
-                try {
-                    const fixed = await repairDeprecatedPublicPlans();
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "DEPRECATED_PUBLIC_PLAN_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: DEPRECATED_PUBLIC_PLAN — set visibility="sales" on ${fixed} deprecated-public plan(s)`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairDeprecatedPublicPlans: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairDeprecatedPublicPlans failed");
-                }
-            }
-
-            // Repair 5: CONTRACT_TIMELINE_INTEGRITY
-            if (repairableFailures.some(r => r.name === "CONTRACT_TIMELINE_INTEGRITY")) {
-                try {
-                    const fixed = await repairContractTimeline();
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "CONTRACT_TIMELINE_INTEGRITY_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: CONTRACT_TIMELINE_INTEGRITY — aligned effectiveTo on ${fixed} superseded contract(s)`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairContractTimeline: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairContractTimeline failed");
-                }
-            }
-
-            // Repair 6: CONTRACT_GAP_INTEGRITY
-            if (repairableFailures.some(r => r.name === "CONTRACT_GAP_INTEGRITY")) {
-                try {
-                    const fixed = await repairContractGaps();
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "CONTRACT_GAP_INTEGRITY_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: CONTRACT_GAP_INTEGRITY — closed ${fixed} gap(s) by adjusting successor effectiveFrom`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairContractGaps: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairContractGaps failed");
-                }
-            }
-
-            // Repair 7: STRANDED_PENDING_PAYMENT
-            if (repairableFailures.some(r => r.name === "STRANDED_PENDING_PAYMENT")) {
-                try {
-                    const fixed = await repairStrandedPendingPayment(guardianLogger);
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "STRANDED_PENDING_PAYMENT_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: STRANDED_PENDING_PAYMENT — activated ${fixed} stranded contract(s)`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairStrandedPendingPayment: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairStrandedPendingPayment failed");
-                }
-            }
-
-            // Repair 8: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY
-            if (repairableFailures.some(r => r.name === "ORG_CURRENT_CONTRACT_POINTER_INTEGRITY")) {
-                try {
-                    const fixed = await repairContractPointer(guardianLogger);
-                    repairStats.contractPointer = fixed;
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "ORG_CURRENT_CONTRACT_POINTER_INTEGRITY_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY — repointed/nulled ${fixed} stale pointer(s)`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairContractPointer: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairContractPointer failed");
-                }
-            }
-
-            // Repair 9: UNIQUE_ACTIVE_CONTRACT_PER_ORG
-            if (repairableFailures.some(r => r.name === "UNIQUE_ACTIVE_CONTRACT_PER_ORG")) {
-                try {
-                    const fixed = await repairDuplicateActiveContracts(guardianLogger);
-                    repairStats.duplicateContracts = fixed;
-                    guardianLogger.warn(
-                        { repaired: fixed, guardian: true, check: "UNIQUE_ACTIVE_CONTRACT_PER_ORG_AUTO_REPAIR" },
-                        `[Guardian] Auto-repair: UNIQUE_ACTIVE_CONTRACT_PER_ORG — superseded ${fixed} duplicate active contract(s)`
-                    );
-                } catch (err) {
-                    repairStats.errors.push(`repairDuplicateActiveContracts: ${err.message}`);
-                    guardianLogger.error({ err: err.message }, "[Guardian] Auto-repair: repairDuplicateActiveContracts failed");
-                }
-            }
-
-            // Log repair summary
+            // ── PART 5: Log repair summary (before re-check) ─────────────────
             guardianLogger.info(
                 {
                     mode: "development",
-                    visibilityFixed: repairStats.visibility,
-                    snapshotsFixed: repairStats.snapshot,
-                    orgContractsFixed: repairStats.orgContracts,
-                    errors: repairStats.errors
+                    totalRepaired: repaired,
+                    totalSkipped: skipped,
+                    totalErrors: repairErrors.length,
+                    errors: repairErrors,
+                    repairs: repairResults
+                        .filter(r => r.success)
+                        .map(r => ({ check: r.checkName, fixed: r.fixed, durationMs: r.durationMs })),
                 },
                 "[Guardian] Development auto-repair executed — re-running repaired checks"
             );
@@ -1463,7 +1352,11 @@ async function runStartupGuardian() {
             failures = results.filter(r => !r.pass);
             passes = results.filter(r => r.pass);
 
-            // Log re-check outcomes
+            // ── PART 5: Post-repair validation ─────────────────────────────
+            // Verify each repaired check now passes. Log success or persistent failure.
+            // Persistent failures are flagged as errors but do NOT crash the process —
+            // the guardian's existing failure handling (Phase 5, kill switch) takes over.
+            const stillFailing = [];
             recheck.forEach(r => {
                 if (r.pass) {
                     guardianLogger.info(
@@ -1471,12 +1364,28 @@ async function runStartupGuardian() {
                         `[Guardian] Auto-repair verified: ✅ ${r.name} now passes`
                     );
                 } else {
+                    // Repair ran but check still fails — log as error with structured context
                     guardianLogger.error(
-                        { check: r.name, reason: r.reason },
-                        `[Guardian] Auto-repair incomplete: ❌ ${r.name} still fails — ${r.reason}`
+                        {
+                            check: r.name,
+                            reason: r.reason,
+                            repairAttempted: true,
+                            event: "REPAIR_VERIFICATION_FAILED",
+                        },
+                        `[Guardian] Auto-repair incomplete: ❌ ${r.name} still fails after repair — ${r.reason}`
                     );
+                    stillFailing.push(r.name);
+                    repairStats.errors.push(`POST_REPAIR_VERIFY_FAILED:${r.name}`);
                 }
             });
+
+            if (stillFailing.length > 0) {
+                guardianLogger.error(
+                    { stillFailing, repairStats },
+                    `[Guardian] ${stillFailing.length} invariant(s) still failing after auto-repair: ` +
+                    stillFailing.join(", ") + " — manual investigation required"
+                );
+            }
 
         } else if (nonRepairableFailures.length > 0) {
             // Mixed: some failures are not auto-repairable — skip repair entirely
