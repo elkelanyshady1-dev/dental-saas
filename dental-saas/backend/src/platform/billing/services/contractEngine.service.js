@@ -119,6 +119,8 @@ async function createContract(data, actorId, options = {}) {
         promoDays = 0,
         promoStartDate = null,
         promoEndDate = null,
+        // v24.1: Idempotency key — set by atomicContractSwitch, prevents duplicate creation on retry
+        idempotencyKey = null,
     } = data;
 
     // Validate: org must exist
@@ -292,6 +294,8 @@ async function createContract(data, actorId, options = {}) {
         pricingSnapshot: pricingSnapshot || null,
         // metadata: if caller provides a Map pass it through; if plain object convert
         ...(metadata ? { metadata: metadata instanceof Map ? metadata : new Map(Object.entries(metadata)) } : {}),
+        // v24.1: Idempotency key — sparse unique index prevents duplicate creation on retry
+        ...(idempotencyKey ? { idempotencyKey } : {}),
     };
 
     // ── CONTRACT_TIMELINE_OVERLAP pre-creation guard ─────────────────────────

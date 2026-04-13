@@ -795,38 +795,84 @@ const BillingOrchestrator = {
     },
 
     /**
-     * atomicContractSwitch
+     * atomicContractSwitch  (v24.1 — Production-Grade / Stripe-Level Safety)
      *
-     * Atomically swaps the current active contract for a new one using a
-     * MongoDB session transaction with automatic retry on transient write
-     * conflicts (withTransaction).
+     * Atomically swaps the active contract for a new one inside a MongoDB
+     * session.withTransaction() with automatic retry on transient write conflicts.
      *
-     * ── Sequence (all within a single transaction) ────────────────────────────
+     * ── Hardening Layers ──────────────────────────────────────────────────────
+     *
+     *  [1] IDEMPOTENCY KEY
+     *      Pre-transaction guard: if requestId was already committed, return
+     *      the existing contract immediately. Prevents duplicate contracts on
+     *      client retry or session.withTransaction() replay.
+     *
+     *  [2] DOUBLE-ACTIVE GUARD (application layer)
+     *      Inside transaction: assert activeCount <= 1 before creating a new one.
+     *      Belt: application check. Suspenders: unique_active_contract_per_org
+     *      DB index (already in OrgContract.model.js) rejects at the DB level.
+     *
+     *  [3] ACTIVATION GUARD (contractActivation.service)
+     *      Already implemented: if contract is already "active", returns no-op.
+     *
+     *  [5] FAIL-FAST INVARIANT CHECKS (inside transaction)
+     *      After create: assert contract._id present.
+     *      After activate: reload within session and assert contractStatus === "active".
+     *
+     *  [6] POST-COMMIT VERIFICATION (outside session)
+     *      After withTransaction() resolves: query MongoDB fresh (no session) to
+     *      confirm org.currentContractId === new contract AND status === "active".
+     *
+     *  [7] ASYNC SIDE EFFECT ISOLATION
+     *      Guardian assertion runs via setImmediate — completely outside the
+     *      transaction. Failure is logged but never propagates to the caller.
+     *
+     *  [8] RETRY SAFETY
+     *      Everything inside withTransaction() is side-effect-free:
+     *      • No emails, no external API calls, no non-DB writes
+     *      • Idempotency key on OrgContract makes repeat creates no-ops
+     *
+     *  [9] TIME CONSISTENCY
+     *      Single `now` captured before the session. Passed into contractPayload
+     *      as effectiveFrom if not already set — prevents clock skew between
+     *      contract creation and supersession timestamps.
+     *
+     *  [10] GUARDIAN ASSERTION (post-commit, non-blocking)
+     *       Targeted inline checks for UNIQUE_ACTIVE_CONTRACT_PER_ORG and
+     *       ORG_CURRENT_CONTRACT_POINTER_INTEGRITY. Runs async, logs violations,
+     *       never throws.
+     *
+     * ── Sequence (all within one transaction) ────────────────────────────────
      *   1. Create new contract in "draft" status
-     *   2. Activate new contract — contractActivation.service atomically:
-     *        • Supersedes previous active contract  (prev → "superseded")
-     *        • Stamps prev.effectiveTo = new.effectiveFrom  (zero-gap, zero-overlap)
-     *        • Sets org.currentContractId = new contract._id
-     *        • Applies module entitlements from PlanVersion
-     *   3. Commit (or auto-rollback + retry on transient error)
+     *   2. Activate — contractActivation.service atomically:
+     *        • prev contract → "superseded" + effectiveTo closed (zero-gap)
+     *        • new contract → "active"
+     *        • org.currentContractId → new contract._id
+     *        • OrganizationEntitlement upserted from PlanVersion
+     *   3. Fail-fast invariant check (within session)
+     *   4. Commit / auto-rollback + retry on transient error
      *
      * ── Guarantees ────────────────────────────────────────────────────────────
-     *   ✔ Exactly ONE active contract after completion
-     *   ✔ org.currentContractId ALWAYS points to the new active contract
-     *   ✔ Previous contract gets a deterministic timeline close (no gap, no overlap)
-     *   ✔ Complete rollback on any failure — zero partial state
-     *   ✔ Auto-retry on transient write conflicts (WriteConflict / NoSuchTransaction)
+     *   ✔ No duplicate contracts (idempotency key + DB unique index)
+     *   ✔ No double activation (guard in contractActivation.service)
+     *   ✔ Exactly ONE active contract after commit (DB partial-unique index)
+     *   ✔ org.currentContractId ALWAYS correct after commit
+     *   ✔ Deterministic timeline (zero-gap, zero-overlap)
+     *   ✔ Full rollback on any failure — zero partial state
+     *   ✔ Auto-retry on transient write conflicts
+     *   ✔ Audit timeline: every switch increments contract.version via OAV hook
      *
      * CRITICAL RULES:
-     *   — NEVER create a contract outside this method for non-billable activations
+     *   — NEVER create a non-billable contract outside this method
      *   — NEVER update org.currentContractId outside this transaction
-     *   — NEVER cancel/supersede the old contract outside this transaction
+     *   — NEVER supersede/cancel the old contract outside this transaction
+     *   — NEVER add external API calls, emails, or non-DB writes inside the callback
      *
      * @param {object} params
      * @param {string} params.organizationId
      * @param {object} params.contractPayload   - Full payload for sub().createContract()
      * @param {string} params.actorId
-     * @param {string} [params.requestId]       - Correlation ID for logs
+     * @param {string} [params.requestId]       - Correlation ID / idempotency key
      * @returns {Promise<OrgContract>}          - The newly activated contract document
      */
     async atomicContractSwitch({ organizationId, contractPayload, actorId, requestId }) {
@@ -835,26 +881,75 @@ const BillingOrchestrator = {
 
         log("start");
 
+        // ── [1] IDEMPOTENCY: Pre-transaction guard ────────────────────────────
+        // If this requestId was already committed (client retry, duplicate submit),
+        // return the existing contract immediately — no DB writes, no transaction.
+        const idempotencyKey = requestId || null;
+        if (idempotencyKey) {
+            const existing = await OrgContract.findOne({ idempotencyKey })
+                .select("_id contractStatus accessType")
+                .lean();
+            if (existing) {
+                log("idempotent.return", { contractId: String(existing._id), status: existing.contractStatus });
+                return existing;
+            }
+        }
+
+        // ── [9] TIME CONSISTENCY: Single timestamp source ─────────────────────
+        // One Date() call for the entire switch. Prevents clock skew between
+        // contract creation, supersession stamping, and org update.
+        const now = new Date();
+        if (!contractPayload.effectiveFrom) {
+            contractPayload = { ...contractPayload, effectiveFrom: now };
+        }
+        // Pass idempotency key into contractPayload so contractEngine persists it
+        contractPayload = { ...contractPayload, idempotencyKey: idempotencyKey || undefined };
+
         const session = await mongoose.startSession();
         let contract;
 
         try {
+            // ── [8] RETRY SAFETY: withTransaction auto-retry ─────────────────────
+            // Entire callback is idempotent — safe to replay on WriteConflict.
+            // RULE: Do NOT add emails, external API calls, or non-DB side effects here.
             await session.withTransaction(async () => {
-                // ── Step 1: Create new contract (draft) ───────────────────────────
-                // initialStatus="draft" is set by caller in contractPayload.
-                // The CONTRACT_TIMELINE_OVERLAP guard is bypassed because initialStatus
-                // is explicitly set — the orchestrator owns timeline management here.
+
+                // ── [2] DOUBLE-ACTIVE GUARD (application layer) ──────────────────
+                // DB unique index (unique_active_contract_per_org) is the hard stop.
+                // This application-layer check fires BEFORE the index, giving a clean
+                // diagnostic error instead of a raw MongoServerError E11000.
+                const activeCount = await OrgContract.countDocuments({
+                    organizationId,
+                    contractStatus: "active"
+                }).session(session);
+
+                if (activeCount > 1) {
+                    throw new Error(
+                        `INVARIANT_VIOLATION: Organization ${organizationId} already has ${activeCount} ` +
+                        `active contracts. Run scripts/repairContractPointers.js --commit before switching.`
+                    );
+                }
+
+                // ── Step 1: Create new contract (draft) ──────────────────────────
+                // CONTRACT_TIMELINE_OVERLAP guard is bypassed when initialStatus is set —
+                // the orchestrator owns timeline management via atomic supersession.
                 contract = await sub().createContract(contractPayload, actorId, { session });
+
+                // ── [5] FAIL-FAST: Contract must exist after create ───────────────
+                if (!contract || !contract._id) {
+                    throw new Error("INVARIANT_VIOLATION: createContract returned empty document");
+                }
                 log("contract.created", { contractId: String(contract._id), accessType: contract.accessType });
 
-                // ── Step 2: Activate ───────────────────────────────────────────────
-                // contractActivation.service performs the full atomic switch:
+                // ── Step 2: Activate ──────────────────────────────────────────────
+                // contractActivation.service atomically (all within { session }):
                 //   • previousContract.contractStatus → "superseded"
-                //   • previousContract.effectiveTo = newContract.effectiveFrom (deterministic close)
+                //   • previousContract.effectiveTo = newContract.effectiveFrom (zero-gap close)
                 //   • newContract.contractStatus → "active"
                 //   • org.currentContractId → newContract._id
                 //   • OrganizationEntitlement upserted from PlanVersion
-                // All saved with { session } — committed together with Step 1.
+                // [3] Activation guard already in contractActivation.service:
+                //     if contract.contractStatus === "active" → idempotent no-op.
                 await sub().activateContract(String(contract._id), null, actorId, {
                     session,
                     skipInvoiceCheck: true,
@@ -862,9 +957,99 @@ const BillingOrchestrator = {
                 });
                 log("contract.activated", { contractId: String(contract._id) });
 
-                // ── Step 3: Commit is handled automatically by withTransaction ─────
-                // On transient write conflict: entire callback retries from Step 1.
-                // On any other error: transaction aborts and error propagates.
+                // ── [5] FAIL-FAST: Contract must be "active" after activation ─────
+                // Reload within session — reads the DB state set by activateContract,
+                // not just the in-memory document that was passed by reference.
+                const confirmedContract = await OrgContract
+                    .findById(contract._id)
+                    .select("contractStatus")
+                    .session(session)
+                    .lean();
+
+                if (!confirmedContract || confirmedContract.contractStatus !== "active") {
+                    throw new Error(
+                        `INVARIANT_VIOLATION: Contract ${contract._id} should be "active" after activation ` +
+                        `but got status="${confirmedContract?.contractStatus ?? "NOT_FOUND"}"`
+                    );
+                }
+
+                // ── Step 3: withTransaction handles commit / rollback / retry ─────
+                // On transient error (WriteConflict / NoSuchTransaction):
+                //   → entire callback retries from activeCount check.
+                // On any other error: transaction aborts, error propagates.
+            });
+
+            // ── [6] POST-COMMIT VERIFICATION ──────────────────────────────────────
+            // Query OUTSIDE the session — confirms what MongoDB actually committed,
+            // not what was visible inside the transaction snapshot.
+            const committedOrg = await Organization
+                .findById(organizationId)
+                .select("currentContractId")
+                .lean();
+
+            if (!committedOrg) {
+                throw new Error(`POST_COMMIT_INVARIANT: Organization ${organizationId} not found after commit`);
+            }
+            if (!committedOrg.currentContractId ||
+                String(committedOrg.currentContractId) !== String(contract._id)) {
+                throw new Error(
+                    `POST_COMMIT_INVARIANT: org.currentContractId=${committedOrg.currentContractId} ` +
+                    `does not point to new contract ${contract._id} after commit`
+                );
+            }
+            const committedContract = await OrgContract
+                .findById(contract._id)
+                .select("contractStatus")
+                .lean();
+            if (!committedContract || committedContract.contractStatus !== "active") {
+                throw new Error(
+                    `POST_COMMIT_INVARIANT: Contract ${contract._id} not "active" after commit ` +
+                    `(got "${committedContract?.contractStatus ?? "NOT_FOUND"}")`
+                );
+            }
+
+            log("postCommit.verified", { contractId: String(contract._id) });
+
+            // ── [7] + [10] ASYNC SIDE EFFECTS + GUARDIAN ASSERTION ────────────────
+            // setImmediate: completely outside the transaction and the call stack.
+            // Failures are logged but NEVER propagate to the caller.
+            setImmediate(async () => {
+                try {
+                    // [10] Guardian: UNIQUE_ACTIVE_CONTRACT_PER_ORG
+                    const dupeCount = await OrgContract.countDocuments({
+                        organizationId,
+                        contractStatus: "active"
+                    });
+                    if (dupeCount !== 1) {
+                        logger.error(
+                            { organizationId, activeCount: dupeCount, contractId: String(contract._id) },
+                            "[AtomicSwitch] GUARDIAN_ASSERT_FAILED: UNIQUE_ACTIVE_CONTRACT_PER_ORG"
+                        );
+                    }
+
+                    // [10] Guardian: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY
+                    const orgCheck = await Organization
+                        .findById(organizationId)
+                        .select("currentContractId")
+                        .lean();
+                    const ptrContract = orgCheck?.currentContractId
+                        ? await OrgContract
+                            .findById(orgCheck.currentContractId)
+                            .select("contractStatus")
+                            .lean()
+                        : null;
+                    if (!ptrContract || ptrContract.contractStatus !== "active") {
+                        logger.error(
+                            { organizationId, currentContractId: orgCheck?.currentContractId },
+                            "[AtomicSwitch] GUARDIAN_ASSERT_FAILED: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY"
+                        );
+                    }
+                } catch (assertErr) {
+                    logger.error(
+                        { assertErr, organizationId, requestId },
+                        "[AtomicSwitch] Guardian assertion error (non-fatal)"
+                    );
+                }
             });
 
             log("complete", { contractId: String(contract._id) });

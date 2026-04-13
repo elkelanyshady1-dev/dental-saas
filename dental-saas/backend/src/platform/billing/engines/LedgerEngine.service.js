@@ -74,7 +74,28 @@ async function writeLedgerEntry(entry, session = null, options = {}) {
             return { written: false, hash: null, skipped: true, reason: "ZERO_VALUE" };
         }
 
-        // ── PART 7: Duplicate event protection ──────────────────────────────
+        // ── PART 4: Idempotency key guard (strong — key-based, retry-safe) ────
+        // Checked FIRST — if a key is present and already used, return immediately.
+        // This is stronger than the time-window check below: it guarantees exactly-once
+        // semantics regardless of timing (covers retries hours/days later).
+        if (entry.idempotencyKey) {
+            const keyMatch = await BillingLedger.findOne({ idempotencyKey: entry.idempotencyKey })
+                .select("_id eventType")
+                .lean();
+            if (keyMatch) {
+                logger.info({
+                    event: "LEDGER_IDEMPOTENT_RETURN",
+                    idempotencyKey: entry.idempotencyKey,
+                    existingEntryId: String(keyMatch._id),
+                    eventType: entry.eventType,
+                }, "[LedgerEngine] Idempotent write — returning existing entry");
+                return { written: false, hash: null, idempotent: true, existingId: String(keyMatch._id) };
+            }
+        }
+
+        // ── PART 7: Time-window duplicate protection (soft — heuristic fallback) ──
+        // Catches duplicates within 60 s for events without an idempotency key.
+        // Belt-and-suspenders: the key guard above handles keyed callers precisely.
         if (entry.organizationId && entry.eventType) {
             const dupeWindow = new Date(Date.now() - 60000);
             const dupeQuery = {
@@ -98,7 +119,7 @@ async function writeLedgerEntry(entry, session = null, options = {}) {
                     invoiceId: entry.invoiceId || null,
                     existingEntryId: String(existing._id),
                     existingCreatedAt: existing.createdAt,
-                }, "[LedgerEngine] Duplicate ledger event blocked — idempotency guard");
+                }, "[LedgerEngine] Duplicate ledger event blocked — time-window guard");
                 return { written: false, hash: null, duplicate: true };
             }
         }
@@ -138,6 +159,8 @@ async function writeLedgerEntry(entry, session = null, options = {}) {
             source: entry.source,
             actorType: entry.actorType || "system",
             metadata: entry.metadata || {},
+            // v24.1: Idempotency key — enables exactly-once semantics on retry
+            idempotencyKey: entry.idempotencyKey || null,
             previousHash: previousHash,
             hash: null
         };

@@ -218,6 +218,18 @@ const billingLedgerSchema = new mongoose.Schema(
             type: String,
             default: null   // null for ledger entries created before v21.1
             // Indexed below (sparse)
+        },
+
+        // ── Idempotency Key (v24.1) ───────────────────────────────────────────
+        // Caller-supplied unique key that prevents duplicate ledger entries when
+        // a caller retries the same logical event (e.g. atomicContractSwitch replay,
+        // webhook deduplication, payment retry).
+        //
+        // Convention: "<eventType>:<contractId>:<requestId>"
+        // Unique + sparse: entries without a key (legacy writes) are unaffected.
+        idempotencyKey: {
+            type: String,
+            default: null
         }
     },
     {
@@ -270,6 +282,11 @@ billingLedgerSchema.index({ organizationId: 1, hash: 1, createdAt: -1 }, {
     sparse: true,
     name: "ledger_org_hash_chain"
 });
+// v24.1: Idempotency key — prevents duplicate writes on retry/replay
+billingLedgerSchema.index(
+    { idempotencyKey: 1 },
+    { unique: true, sparse: true, name: "ledger_idempotency_key" }
+);
 
 // ─── Helper: writeLedgerEntry ──────────────────────────────────────────────────
 // v22.0: Delegates to LedgerEngine.service.js

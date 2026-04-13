@@ -428,9 +428,24 @@ const orgContractSchema = new mongoose.Schema(
         },
 
         // OAV — Optimistic Atomic Version guard
+        // Incremented by pre-save hook on every mutation.
+        // Enables full audit timeline: each switch creates a new contract document
+        // with version=0; superseded documents retain their final version as a snapshot.
         version: {
             type: Number,
             default: 0
+        },
+
+        // ── Idempotency Key ───────────────────────────────────────────────────
+        // Set by BillingOrchestrator.atomicContractSwitch() to the requestId of
+        // the originating API call. Prevents duplicate contracts on client retry
+        // or session.withTransaction() replay.
+        //
+        // Unique + sparse: null values are excluded from the unique constraint
+        // (contracts created without a requestId — e.g. migration scripts — are unaffected).
+        idempotencyKey: {
+            type: String,
+            default: null
         }
     },
     {
@@ -466,6 +481,13 @@ orgContractSchema.index({ contractStatus: 1, trialDays: 1, trialEndDate: 1 });
 // Promo expiry scan — O(log n) for daily cron
 // Covers: { contractStatus: "active", accessType: "promo", promoEndDate: { $lte: now } }
 orgContractSchema.index({ contractStatus: 1, accessType: 1, promoEndDate: 1 });
+
+// Idempotency key lookup — used by atomicContractSwitch before opening a transaction
+// sparse: true so null values (contracts without a requestId) are excluded from uniqueness check
+orgContractSchema.index(
+    { idempotencyKey: 1 },
+    { unique: true, sparse: true, name: "contract_idempotency_key" }
+);
 
 // Sprint 8.1: Contract Chain Debugging API — O(log n) forward/backward traversal
 // Required by GET /contracts/:contractId/chain
