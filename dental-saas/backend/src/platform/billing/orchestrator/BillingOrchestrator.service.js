@@ -574,11 +574,10 @@ const BillingOrchestrator = {
                 log("promo.dates", { promoDays, promoStartDate, promoEndDate });
             }
 
-            const session = await mongoose.startSession();
-            session.startTransaction();
-            let contract;
-            try {
-                contract = await sub().createContract({
+            // ── Atomic contract switch (withTransaction — auto-retry on write conflicts) ──
+            const contract = await this.atomicContractSwitch({
+                organizationId,
+                contractPayload: {
                     organizationId,
                     planVersionId,
                     planCode: pv.templateCode,
@@ -605,26 +604,10 @@ const BillingOrchestrator = {
                         ["accessType", accessType],
                         ["entitlementOverrides", entitlementOverrides ? JSON.stringify(entitlementOverrides) : null],
                     ]),
-                }, actorId, { session });
-
-                // Activate directly — no invoice needed for non-billable contracts
-                await sub().activateContract(String(contract._id), null, actorId, {
-                    session,
-                    skipInvoiceCheck: true,   // backward compat — activation now also checks accessType
-                    correlationId: requestId,
-                });
-
-                await session.commitTransaction();
-            } catch (err) {
-                try { await session.abortTransaction(); } catch (_) { /* swallow */ }
-                logger.error(
-                    { err, organizationId, planVersionId, requestId, accessType },
-                    "[Orchestrator] upgrade.nonBillable.ABORTED"
-                );
-                throw err;
-            } finally {
-                session.endSession();
-            }
+                },
+                actorId,
+                requestId,
+            });
 
             // Post-commit: ledger entry for contract activation.
             // RULE: promo contracts MUST NOT generate ledger entries (§6).
@@ -809,6 +792,93 @@ const BillingOrchestrator = {
             effectiveFrom: resolvedEffectiveFrom.toISOString(),
             paymentMethod: paymentMethod || "manual",
         };
+    },
+
+    /**
+     * atomicContractSwitch
+     *
+     * Atomically swaps the current active contract for a new one using a
+     * MongoDB session transaction with automatic retry on transient write
+     * conflicts (withTransaction).
+     *
+     * ── Sequence (all within a single transaction) ────────────────────────────
+     *   1. Create new contract in "draft" status
+     *   2. Activate new contract — contractActivation.service atomically:
+     *        • Supersedes previous active contract  (prev → "superseded")
+     *        • Stamps prev.effectiveTo = new.effectiveFrom  (zero-gap, zero-overlap)
+     *        • Sets org.currentContractId = new contract._id
+     *        • Applies module entitlements from PlanVersion
+     *   3. Commit (or auto-rollback + retry on transient error)
+     *
+     * ── Guarantees ────────────────────────────────────────────────────────────
+     *   ✔ Exactly ONE active contract after completion
+     *   ✔ org.currentContractId ALWAYS points to the new active contract
+     *   ✔ Previous contract gets a deterministic timeline close (no gap, no overlap)
+     *   ✔ Complete rollback on any failure — zero partial state
+     *   ✔ Auto-retry on transient write conflicts (WriteConflict / NoSuchTransaction)
+     *
+     * CRITICAL RULES:
+     *   — NEVER create a contract outside this method for non-billable activations
+     *   — NEVER update org.currentContractId outside this transaction
+     *   — NEVER cancel/supersede the old contract outside this transaction
+     *
+     * @param {object} params
+     * @param {string} params.organizationId
+     * @param {object} params.contractPayload   - Full payload for sub().createContract()
+     * @param {string} params.actorId
+     * @param {string} [params.requestId]       - Correlation ID for logs
+     * @returns {Promise<OrgContract>}          - The newly activated contract document
+     */
+    async atomicContractSwitch({ organizationId, contractPayload, actorId, requestId }) {
+        const log = (msg, extra = {}) =>
+            logger.info({ organizationId, actorId, requestId, ...extra }, `[Orchestrator] atomicSwitch.${msg}`);
+
+        log("start");
+
+        const session = await mongoose.startSession();
+        let contract;
+
+        try {
+            await session.withTransaction(async () => {
+                // ── Step 1: Create new contract (draft) ───────────────────────────
+                // initialStatus="draft" is set by caller in contractPayload.
+                // The CONTRACT_TIMELINE_OVERLAP guard is bypassed because initialStatus
+                // is explicitly set — the orchestrator owns timeline management here.
+                contract = await sub().createContract(contractPayload, actorId, { session });
+                log("contract.created", { contractId: String(contract._id), accessType: contract.accessType });
+
+                // ── Step 2: Activate ───────────────────────────────────────────────
+                // contractActivation.service performs the full atomic switch:
+                //   • previousContract.contractStatus → "superseded"
+                //   • previousContract.effectiveTo = newContract.effectiveFrom (deterministic close)
+                //   • newContract.contractStatus → "active"
+                //   • org.currentContractId → newContract._id
+                //   • OrganizationEntitlement upserted from PlanVersion
+                // All saved with { session } — committed together with Step 1.
+                await sub().activateContract(String(contract._id), null, actorId, {
+                    session,
+                    skipInvoiceCheck: true,
+                    correlationId: requestId,
+                });
+                log("contract.activated", { contractId: String(contract._id) });
+
+                // ── Step 3: Commit is handled automatically by withTransaction ─────
+                // On transient write conflict: entire callback retries from Step 1.
+                // On any other error: transaction aborts and error propagates.
+            });
+
+            log("complete", { contractId: String(contract._id) });
+            return contract;
+
+        } catch (err) {
+            logger.error(
+                { err, organizationId, requestId, contractId: contract ? String(contract._id) : null },
+                "[Orchestrator] atomicSwitch.FAILED"
+            );
+            throw err;
+        } finally {
+            session.endSession();
+        }
     },
 
     async renewSubscription({ contractId, amount, currency, method = "manual", provider = "internal",
