@@ -23,7 +23,6 @@
 "use strict";
 
 const { MODULE_REGISTRY, listModuleKeys } = require("../platform/featureRegistry");
-const { getRole } = require("@utils/auth/getRole");
 
 // ─── Action definitions per route context ─────────────────────────────────────
 // This mirrors the frontend actionRegistry.js but evaluated server-side.
@@ -99,7 +98,8 @@ const CONTEXT_ACTION_DEFINITIONS = Object.freeze({
  * @returns {boolean}
  */
 function userHasPermission(req, perm) {
-    // Platform-level bypass
+    // Platform-level bypass (cross-plane escalation for platform admins
+    // assisting orgs — intentional and documented).
     if (
         req.user.platformRole === "superadmin" ||
         req.user.platformRole === "platform_admin"
@@ -107,11 +107,9 @@ function userHasPermission(req, perm) {
         return true;
     }
 
-    // org_admin role: full access within org
-    const roleName = getRole(req);
-    if (roleName === "org_admin") return true;
-
-    // Standard RBAC via req.context.permissions — Phase 8 FINAL
+    // RBAC SSOT: capability is determined solely by the permission Set built
+    // from the JWT. org_admin naturally passes because ORG_ROLE_PERMISSIONS
+    // grants it every permission — no inline role-name shortcut needed.
     return req.context?.permissions?.has(perm) ?? false;
 }
 

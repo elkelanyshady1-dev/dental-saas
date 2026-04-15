@@ -51,16 +51,15 @@ class AuthorizationController {
 
     /**
      * GET /org/me/visibility-debug
-     * Detailed resolution trace for debugging (Org Owner only).
+     * Detailed resolution trace for debugging.
+     *
+     * AUTHORIZATION: Gated upstream at the route layer by
+     *   requireOrgPermission(P.STAFF_MANAGE) + policyMiddleware.
+     * No inline role checks here — RBAC is the single source of truth.
      */
     async getVisibilityDebug(req, res) {
         try {
             const user = req.user;
-
-            // v4.7 Security: org_owner Only
-            if (user.role !== "org_owner") {
-                return errorResponse(res, "Forbidden: Org Owner access only", "AUTH_FORBIDDEN", 403);
-            }
 
             const permissions = resolvePermissions(user);
 

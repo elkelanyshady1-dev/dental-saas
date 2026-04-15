@@ -3,24 +3,26 @@
  *
  * SECURITY CONTRACT:
  *   A user can mutate a case ONLY IF one of the following is true:
- *     1. They are org_admin              → always bypasses ownership
- *     2. They are the case owner         → ownerId matches req.context.userId
- *     3. The case is shared with them    → userId in sharedWith[]
- *     4. Legacy case: ownerId is null    → backward-compat until backfill runs
+ *     1. They hold P.STAFF_MANAGE          → always bypasses ownership
+ *     2. They are the case owner           → ownerId matches req.context.userId
+ *     3. The case is shared with them      → userId in sharedWith[]
+ *     4. Legacy case: ownerId is null      → backward-compat until backfill runs
  *
  * ENFORCEMENT ORDER (short-circuit):
- *   admin bypass → owner match → shared match → legacy fallback → DENY
+ *   STAFF_MANAGE bypass → owner match → shared match → legacy fallback → DENY
  *
  * AUDIT: Every denial is logged with structured fields for medical audit trail.
  *
  * PLANE: Org only.
  * DEPENDENCY: req.context is populated by authMiddleware (JWT SSOT).
+ *   req.context.permissions is a Set<string> of permission keys.
  */
 
 "use strict";
 
 const mongoose = require("mongoose");
 const logger   = require("@utils/logger");
+const { P }    = require("@rbac/orgPermissions");
 const OrthodonticCaseDef   = require("../models/orthodonticCase.model");
 const getModelFromConn     = require("../../../core/db/getModel");
 const enforceDbIsolation   = require("../../../core/db/dbIsolation.guard");
@@ -48,19 +50,25 @@ async function checkCaseOwnership(req, caseId) {
         throw err;
     }
 
-    const userId = req.context.userId?.toString();
-    const role   = req.context.roleName;
-    const orgId  = req.context.organizationId;
+    const userId      = req.context.userId?.toString();
+    const role        = req.context.roleName;
+    const orgId       = req.context.organizationId;
+    const permissions = req.context.permissions; // Set<string>
 
-    // ── 2. Admin Bypass (early exit — no DB query needed) ────────────────────
-    if (role === "org_admin") {
+    // ── 2. Staff-manage Bypass (early exit — no DB query needed) ─────────────
+    // RBAC SSOT: bypass is governed by P.STAFF_MANAGE, not by role name.
+    // Preserves prior "org_admin always passes" semantics since STAFF_MANAGE
+    // is exclusive to org_admin in the system-role seed, while keeping the
+    // gate compatible with any future custom role that holds STAFF_MANAGE.
+    if (permissions && typeof permissions.has === "function" && permissions.has(P.STAFF_MANAGE)) {
         logger.debug({
-            event:  "OWNERSHIP_BYPASS_ADMIN",
+            event:  "OWNERSHIP_BYPASS_STAFF_MANAGE",
             caseId,
             userId,
             orgId:  orgId?.toString(),
-        }, "[ownership.guard] Admin bypass granted");
-        return { ownerId: null, sharedWith: [] }; // admin always passes
+            roleName: role,
+        }, "[ownership.guard] STAFF_MANAGE bypass granted");
+        return { ownerId: null, sharedWith: [] };
     }
 
     // ── 3. Fetch Case (org-scoped, minimal projection) ───────────────────────

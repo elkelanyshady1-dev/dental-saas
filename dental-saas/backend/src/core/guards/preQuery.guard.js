@@ -12,21 +12,13 @@
 
 // ─── Ownership Scoping ──────────────────────────────────────────────────────
 
-/**
- * Scope query to the current doctor's patients only.
- * Admins (hasFullBranchAccess) bypass this filter.
- *
- * @returns {Function} Pre-query guard
- */
-function scopeToDoctor() {
-    return (query, { user }) => {
-        if (user.hasFullBranchAccess) return query;
-        if (user.role === "doctor" || user.roleName === "doctor") {
-            return { ...query, doctorId: user._id };
-        }
-        return query;
-    };
-}
+// NOTE: a previous `scopeToDoctor()` helper was removed here. It was dead code
+// (zero real call sites) and contained an inline role-name check that violated
+// the RBAC SSOT rule. If doctor-level patient scoping is reintroduced later,
+// build it against an explicit permission pair (e.g. P.PATIENTS_READ_OWN vs
+// P.PATIENTS_READ_ALL) driven by req.context.permissions — never a role name —
+// and pick the scoping field from the actual call site instead of hardcoding
+// `doctorId`.
 
 /**
  * Scope query to resources owned by or assigned to the current user.
@@ -119,7 +111,6 @@ function scopeToActive(field = "isActive") {
 }
 
 module.exports = {
-    scopeToDoctor,
     scopeToOwner,
     scopeToField,
     scopeToBranch,

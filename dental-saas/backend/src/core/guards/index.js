@@ -8,12 +8,12 @@
  *
  * Usage:
  *   const { guardedRoute } = require("@core/guards");
- *   const { scopeToDoctor, scopeToBranch } = require("@core/guards/preQuery.guard");
+ *   const { scopeToBranch, scopeToOwner } = require("@core/guards/preQuery.guard");
  *   const { assertOwnership } = require("@core/guards/postQuery.guard");
  *   const { restrictFields } = require("@core/guards/field.guard");
  *
  *   router.get("/patients", guardedRoute(
- *     { pre: [scopeToDoctor()], field: [restrictFields("patient")] },
+ *     { pre: [scopeToBranch()], field: [restrictFields("patient")] },
  *     async (req, res) => { ... }
  *   ));
  */

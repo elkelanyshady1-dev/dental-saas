@@ -38,10 +38,15 @@ const logger = require("@utils/logger");
  * @param {string} [params.path] — request path
  * @returns {{ allowed: boolean, reason: string, effect: string }}
  */
-function checkAccess({ user, permission, resource = null, branchId = null, organizationId = null, method = null, path = null }) {
+function checkAccess({ user, permission, resource = null, branchId = null, organizationId = null, method = null, path = null, permissions = null }) {
     // Build evaluation context
     const ctx = {
         user,
+        // RBAC SSOT: the permission Set from req.context.permissions. Policy
+        // conditions that need to check a capability MUST read this, never a
+        // role name. Falls back to user.permissions for callers that forgot
+        // to plumb the Set, so legacy call sites still work.
+        permissions: permissions || user?.permissions || null,
         resource,
         branchId,
         organizationId: organizationId || user?.organizationId,

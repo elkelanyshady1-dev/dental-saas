@@ -142,6 +142,9 @@ function policyMiddleware(permission, getResource, options = {}) {
             const decision = checkAccess({
                 user: req.user,
                 permission,
+                // Plumb the authoritative permission Set from req.context so
+                // policy conditions can consult capabilities directly.
+                permissions: req.context?.permissions || null,
                 resource,
                 branchId: req.branchId || req.activeBranchId || null,
                 organizationId: req.organizationId || req.user?.organizationId,
