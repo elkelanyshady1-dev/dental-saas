@@ -32,6 +32,16 @@ const roleSchema = new mongoose.Schema(
         name: {
             type: String,
             required: true,
+            trim: true,
+            lowercase: true, // normalize at write — uniqueness is case-insensitive
+        },
+
+        // Admin-editable metadata for custom roles. System roles ignore this
+        // field (they are immutable — see roles.service.js I1).
+        description: {
+            type: String,
+            trim: true,
+            maxlength: 200,
         },
 
         // Per-org DB mode: kept for reference/audit but NOT required.
@@ -58,6 +68,11 @@ const roleSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+// Case-insensitive uniqueness is enforced by (a) `lowercase: true` on the
+// name field and (b) this unique index. Per-org DB isolation means this is
+// already org-scoped — no compound key needed.
+roleSchema.index({ name: 1 }, { unique: true });
 
 const modelName = "Role";
 

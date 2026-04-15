@@ -815,6 +815,25 @@ const FEATURE_REGISTRY = Object.freeze({
         routeFactory:  () => require("../modules/orthodontics/routes/visitSession.routes"),
     }),
 
+    // ─── Safeguard — Phase 9 Clinical State Integrity ────────────────────────
+    "safeguard": Object.freeze({
+        label:     "Clinical Safeguard",
+        module:    "orthodontics",
+        schemaKey: "orthodonticsAdv",
+        isCore:    false,
+        plans:     ["pro", "enterprise"],
+        features: {
+            read:  { permission: "orthodontics.read" },
+            write: { permission: "orthodontics.full" },
+        },
+        basePath:      "safeguard",
+        category:      "clinical",
+        selfContained: true,
+        dependencies:  ["orthodontics", "clinical-snapshots", "clinical-actions"],
+        description:   "Clinical Safeguard — Phase 9: state consistency verification, invariant checks, pre-commit validation, replay parity",
+        routeFactory:  () => require("../modules/orthodontics/routes/safeguard.routes"),
+    }),
+
     invoices: Object.freeze({
         label: "Invoices",
         module: "finance",
@@ -888,6 +907,25 @@ const FEATURE_REGISTRY = Object.freeze({
         dependencies: [],
         description: "Authentication & Authorization — permission introspection",
         routeFactory: () => require("../modules/authorization/authorization.routes"),
+    }),
+
+    // Phase B — Role Management CRUD (org-plane RBAC governance UI backend)
+    // Mounted at /api/v1/org/roles. Gated by P.STAFF_MANAGE on every route;
+    // the assign endpoint additionally requires P.USERS_UPDATE. See
+    // modules/authorization/roles/roles.routes.js for the full route table.
+    roles: Object.freeze({
+        label: "Role Management",
+        module: "patients",          // Core governance — always available
+        schemaKey: "patients",
+        isCore: true,
+        plans: ["basic", "pro", "enterprise"],
+        features: {},
+        basePath: "roles",
+        category: "core",
+        selfContained: false,
+        dependencies: [],
+        description: "Org role management — list, create, update, delete, assign",
+        routeFactory: () => require("../modules/authorization/roles/roles.routes"),
     }),
 
     // ✅ AUDIT-003 — Document Engine exposed via HTTP

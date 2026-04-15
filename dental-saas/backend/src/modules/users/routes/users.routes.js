@@ -30,6 +30,7 @@ const UserDef = require("../../../shared/models/User");
 const getModel = require("../../../core/db/getModel");
 
 const profileController = require("../controllers/profile.controller");
+const rolesController = require("../../authorization/roles/roles.controller");
 
 // ─── Auth guard (idempotent with parent orgV1Routes — required for standalone module mounting) ──
 router.use(orgProtect);
@@ -396,6 +397,28 @@ const staffPhotoUpload = multer({
         }
     },
 });
+
+/**
+ * POST /api/v1/org/users/:userId/role
+ *
+ * Assign a role to a user. REST-canonical counterpart of the UI-convenience
+ * endpoint POST /api/v1/org/roles/assign. Same controller family, same
+ * validator, same service — the only difference is that this route sources
+ * `userId` from req.params (unambiguous) while the roles-router variant
+ * sources it from req.body.
+ *
+ * Security: requires BOTH STAFF_MANAGE (role governance) AND USERS_UPDATE
+ * (because it mutates User.roleId + User.tokenVersion). Double-gated with
+ * RBAC + PBAC per CLAUDE.md §3.
+ */
+router.post(
+    "/:userId/role",
+    requireOrgPermission(P.STAFF_MANAGE),
+    requireOrgPermission(P.USERS_UPDATE),
+    policyMiddleware(P.STAFF_MANAGE),
+    policyMiddleware(P.USERS_UPDATE),
+    rolesController.assignRoleByUserParam,
+);
 
 /**
  * POST /api/v1/org/users/:id/avatar
