@@ -172,6 +172,23 @@ exports.getUserById = asyncHandler(async (req, res) => {
  * Update a user.
  */
 exports.updateUser = asyncHandler(async (req, res) => {
+    // ── RBAC BYPASS GUARD ─────────────────────────────────────────────────
+    // Role assignment MUST flow through POST /users/:id/role — that path
+    // runs the STAFF_MANAGE lockout + tokenVersion bump + audit in a single
+    // transaction. Accepting `roleId` on the generic PATCH would bypass
+    // those invariants. Fail closed.
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, "roleId")) {
+        return res.status(400).json({
+            success: false,
+            error: {
+                errorCode: "ROLE_ASSIGNMENT_VIA_USERS_ENDPOINT_FORBIDDEN",
+                message:
+                    "Role changes must be sent to POST /users/:id/role, not PATCH /users/:id",
+                statusCode: 400,
+            },
+        });
+    }
+
     const { error } = validateUpdateUser(req.body);
     if (error) {
         return res.status(400).json({
