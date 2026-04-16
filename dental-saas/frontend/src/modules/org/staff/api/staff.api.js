@@ -31,6 +31,36 @@ export const staffApi = {
     /** List all org roles (for dropdowns and permission matrix) */
     getRoles: () => api.get(ROLES_BASE),
 
+    /** Get a single role with userCount */
+    getRole: (id) => api.get(`${ROLES_BASE}/${id}`),
+
+    /**
+     * Create a custom role.
+     * Payload: { name, description?, permissions: { "<module>.<action>": boolean } }
+     * Backend enforces: STAFF_MANAGE gate, unique name, at-least-one grant.
+     */
+    createRole: (data) => api.post(ROLES_BASE, data),
+
+    /**
+     * Update a custom role (PATCH — partial; at least one field required).
+     * Payload: { name?, description?, permissions? }
+     * Backend enforces: I1 system-role immutability, I2 uniqueness,
+     * I3 STAFF_MANAGE lockout, I4 tokenVersion bump on perms/name change.
+     */
+    updateRole: (id, patch) => api.patch(`${ROLES_BASE}/${id}`, patch),
+
+    /** Delete a custom role. Backend rejects if users still assigned. */
+    deleteRole: (id) => api.delete(`${ROLES_BASE}/${id}`),
+
+    /**
+     * Assign a role to a user (REST-canonical: userId in path).
+     * Returns meta.forceRefresh=true when the actor reassigns themselves —
+     * caller MUST call logout() to obtain a fresh JWT with the new
+     * permission snapshot.
+     */
+    assignUserRole: (userId, roleId) =>
+        api.post(`${BASE}/${userId}/role`, { roleId }),
+
     // ─── Branches ──────────────────────────────────────────────────────────────
     /** List all org branches (for multi-select in staff form) */
     getBranches: () => api.get(BRANCHES_BASE),
@@ -50,7 +80,6 @@ export const staffApi = {
     getPractitioners: () => api.get(`${BASE}/practitioners`),
 
     // ─── Branch access (targeted updates) ─────────────────────────────────────
-    updateRole: (id, roleId) => api.patch(`${BASE}/${id}/role`, { roleId }),
     updateBranchAccess: (id, branchIds) =>
         api.patch(`${BASE}/${id}/branch-access`, { branchIds }),
 

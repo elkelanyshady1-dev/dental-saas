@@ -11,8 +11,10 @@ import { useState } from "react";
 import { formatRoleName, getRoleColor } from "../utils/roleFormatter";
 import { useUpdateStaff } from "../hooks/useUpdateStaff";
 import { useDeactivateStaff } from "../hooks/useDeactivateStaff";
+import { useAssignRole } from "../hooks/useRoleMutations";
 import StaffFormModal from "./StaffFormModal";
 import AppModal from "@/components/ui/AppModal";
+import { useAuth } from "@/context/AuthContext";
 
 // ── Permission chip (read-only display)
 function PermChip({ label }) {
@@ -41,6 +43,8 @@ export default function StaffProfileModal({ staff, roles = [], onClose }) {
 
     const updateStaff = useUpdateStaff();
     const deactivateStaff = useDeactivateStaff();
+    const assignRole = useAssignRole();
+    const { logout } = useAuth();
 
     // ── Derived values
     const roleName = staff.roleId?.name || staff.role || "";
@@ -69,10 +73,55 @@ export default function StaffProfileModal({ staff, roles = [], onClose }) {
     };
 
     // ── Save from edit modal
+    //
+    // Role assignment is split from the generic staff update so it flows
+    // through the dedicated /users/:id/role endpoint (which runs the
+    // STAFF_MANAGE invariant checks + last-admin lockout + tokenVersion bump
+    // in a single transaction).
+    //
+    // If the actor reassigns THEMSELVES to a role with different permissions,
+    // the backend returns meta.forceRefresh=true. The old JWT still carries
+    // the stale permissions snapshot, so we must logout() to fetch a fresh
+    // one — the user is bounced to /login and re-authenticates.
     const handleSave = async (formData) => {
-        await updateStaff.mutateAsync({ id: staff._id, data: formData });
-        setShowEditModal(false);
-        onClose();
+        const currentRoleId = staff.roleId?._id || staff.roleId || null;
+        const nextRoleId = formData.roleId || null;
+        const roleChanged = nextRoleId && nextRoleId !== currentRoleId;
+
+        // Send everything EXCEPT roleId through the generic update. roleId is
+        // routed to assignUserRole so the backend uses the gated path.
+        // eslint-disable-next-line no-unused-vars
+        const { roleId: _omit, ...rest } = formData;
+
+        try {
+            await updateStaff.mutateAsync({ id: staff._id, data: rest });
+
+            if (roleChanged) {
+                const result = await assignRole.mutateAsync({
+                    userId: staff._id,
+                    roleId: nextRoleId,
+                });
+                // Actor reassigned themselves AND permissions actually
+                // changed → old JWT is stale; bounce to /login. `noop`
+                // short-circuits the backend before tokenVersion bump, so
+                // only force-refresh on a real change.
+                if (!result.noop && result.forceRefresh) {
+                    logout();
+                    return;
+                }
+            }
+
+            setShowEditModal(false);
+            onClose();
+        } catch (err) {
+            // Re-throw so StaffFormModal's own catch populates its apiError
+            // banner with the exact error message (controller-shaped envelope
+            // handled there). If updateStaff threw, the role was NEVER
+            // reassigned — good. If assignRole threw, the profile edits are
+            // already persisted; the modal stays open so the user can retry
+            // just the role change.
+            throw err;
+        }
     };
 
     // Show edit modal on top
