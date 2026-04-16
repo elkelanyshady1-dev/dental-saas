@@ -3,11 +3,14 @@
  * React Query SSOT. No useState for server data.
  * Clicking card → StaffProfileModal. Add Staff → StaffFormModal.
  */
-import { useState, useDeferredValue } from "react";
+import { useState, useDeferredValue, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCapability } from "@/hooks/useCapability";
 import { P } from "@/generated/permissionKeys";
 import { useAuth } from "@/context/AuthContext";
+import { useStaffChannelListener } from "@/lib/realtime/staffChannel";
 
+import { STAFF_KEYS } from "../constants/queryKeys";
 import { useStaff } from "../hooks/useStaff";
 import { useRoles } from "../hooks/useRoles";
 import { useCreateStaff } from "../hooks/useCreateStaff";
@@ -216,9 +219,17 @@ function FilterBar({ roles, filters, onChange }) {
 
 // ── Main page
 export default function StaffPage() {
+    const qc = useQueryClient();
     const canCreate = useCapability(P.USERS_CREATE);
     const canUpdate = useCapability(P.USERS_UPDATE);
     const { user } = useAuth();
+
+    // Cross-tab sync: another tab changed a role — staff list shows role
+    // names per user, so invalidate the staff list to pick up renames.
+    const onBroadcast = useCallback(() => {
+        qc.invalidateQueries({ queryKey: STAFF_KEYS.all });
+    }, [qc]);
+    useStaffChannelListener(onBroadcast);
     // orgSlug sourced from auth profile (organization.slug) — SSOT
     const orgSlug = user?.organization?.slug || "";
 
