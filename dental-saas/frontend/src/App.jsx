@@ -38,6 +38,8 @@ import SharedCaseView from "./pages/SharedCaseView";
    Org Auth & Layout
 ========================= */
 import LoginPage from "./app/LoginPage";
+import ForgotPasswordPage from "./app/ForgotPasswordPage";
+import ResetPasswordPage from "./app/ResetPasswordPage";
 import OrgLayout from "./layouts/org/OrgLayout";
 import RequireOrgPermission from "./org/guards/RequireOrgPermission";
 import Dashboard from "./pages/org/Dashboard";
@@ -85,6 +87,8 @@ import BillingPage from "./modules/org/settings/pages/BillingPage";
 import SupportPage from "./modules/org/settings/pages/SupportPage";
 import BrandingPage from "./modules/org/settings/pages/BrandingPage";
 import OrganizationPage from "./modules/org/settings/pages/OrganizationPage";
+import ClinicBillingSettingsPage from "./modules/org/settings/pages/ClinicBillingSettingsPage";
+import SupportConfigPage from "./modules/org/settings/pages/SupportConfigPage";
 
 /* =========================
    Finance Phase 5
@@ -284,8 +288,10 @@ export default function App() {
         ========================== */}
         <Route element={<OrgShell />}>
 
-          {/* Org Login */}
+          {/* Org Login + Password Recovery */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           {/* ── Profile Completion (outside OrgLayout — no sidebar) ── */}
@@ -329,7 +335,9 @@ export default function App() {
             <Route path="settings/branches" element={<RequireOrgPermission permission="branches.read"><BranchesPage /></RequireOrgPermission>} />
             <Route path="settings/roles" element={<RequireOrgPermission permission="users.read"><StaffRolesPage /></RequireOrgPermission>} />
             <Route path="settings/billing" element={<RequireOrgPermission permission="billing.read"><BillingPage /></RequireOrgPermission>} />
+            <Route path="settings/clinic-billing" element={<RequireOrgPermission permission="billing_settings.read"><ClinicBillingSettingsPage /></RequireOrgPermission>} />
             <Route path="settings/support" element={<RequireOrgPermission permission="support.read"><SupportPage /></RequireOrgPermission>} />
+            <Route path="settings/support-config" element={<RequireOrgPermission permission="support.read"><SupportConfigPage /></RequireOrgPermission>} />
 
             {/* ── Settings Hub — Security & Features (Phase H.2) ──────────── */}
             <Route path="settings/security"
