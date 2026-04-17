@@ -37,7 +37,6 @@ const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const verificationEngine = require("@core/auth/verificationEngine.service");
 const { extractCountryFromPhone } = require("@core/geo/phoneCountryExtractor");
 const { resolveRegionCode } = require("@billing/pricing/pricingRegionResolver");
-const { sendCommunication } = require("@services/communicationService");
 const logger = require("@utils/logger");
 const { DEV_AUTH_MODE } = require("@config/authConfig");
 
@@ -336,7 +335,7 @@ exports.verifyOtp = async (req, res) => {
                     const bcryptDev = require("bcryptjs");
                     // @rls-public-plane — pre-signup public endpoint, no org context exists yet
                     const VerificationToken = require("@shared/models/VerificationToken.model").default;
-                    const { sendCommunication: sendComm } = require("@services/communicationService");
+                    const { dispatch: sendComm } = require("@infra/communication/communication.dispatcher");
 
                     const emailOtp = crypto.randomInt(100000, 999999).toString();
                     const emailOtpHash = await bcryptDev.hash(emailOtp, 10);
@@ -450,7 +449,7 @@ exports.verifyOtp = async (req, res) => {
                 const bcryptEmail = require("bcryptjs");
                 // @rls-public-plane — pre-signup public endpoint, no org context exists yet
                 const VerificationToken = require("@shared/models/VerificationToken.model").default;
-                const { sendCommunication: sendComm } = require("@services/communicationService");
+                const { dispatch: sendComm } = require("@infra/communication/communication.dispatcher");
 
                 const emailOtp = crypto.randomInt(100000, 999999).toString();
                 const emailOtpHash = await bcryptEmail.hash(emailOtp, 10);
@@ -693,7 +692,7 @@ exports.resendEmailOtpPublic = async (req, res) => {
         const bcryptLib = require("bcryptjs");
         // @rls-public-plane — pre-signup public endpoint, no org context exists yet
         const VerificationToken = require("@shared/models/VerificationToken.model").default;
-        const { sendCommunication: sendComm } = require("@services/communicationService");
+        const { dispatch: sendComm } = require("@infra/communication/communication.dispatcher");
 
         if (!email) {
             return res.status(400).json({ success: false, message: "Email is required." });

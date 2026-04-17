@@ -21,6 +21,10 @@
 const { EventEmitter } = require("events");
 const eventBus = require("@core/eventBus");
 const { sendCommunication } = require("@services/communicationService");
+const {
+    dispatch: dispatchCommunication,
+    SYNC_TYPES,
+} = require("@infra/communication/communication.dispatcher");
 const logger = require("@utils/logger");
 
 // ─── Message builders per purpose ─────────────────────────────────────────────
@@ -129,11 +133,21 @@ async function handleVerificationCreated(data) {
         try {
             const payload = dispatch.builder(data);
 
-            await sendCommunication({
-                channel,
-                type: dispatch.type,
-                payload,
-            });
+            if (SYNC_TYPES.has(dispatch.type)) {
+                // User-waiting flows (OTP / magic-link / password-reset) must
+                // block until the provider ACKs so the caller knows the code
+                // was actually dispatched before returning.
+                await dispatchCommunication(
+                    { channel, type: dispatch.type, payload },
+                    { hint: "sync" }
+                );
+            } else {
+                await sendCommunication({
+                    channel,
+                    type: dispatch.type,
+                    payload,
+                });
+            }
 
             delivered = true;
             deliveredVia = channel;
