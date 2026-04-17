@@ -35,6 +35,18 @@ if (process.env.NODE_ENV === "production" && process.env.ALLOW_SUPERADMIN_DEV_BY
     process.exit(1);
 }
 
+// ── Phase 2 — Communication worker/queue consistency interlock ──────────────
+// In production, running with ENABLE_QUEUE=true but ENABLE_WORKERS=false would
+// silently strand every queued message (nothing would drain BullMQ). Fail fast.
+const { ENABLE_QUEUE, ENABLE_WORKERS } = require("./src/config/communication.config");
+if (process.env.NODE_ENV === "production" && ENABLE_QUEUE && !ENABLE_WORKERS) {
+    logger.error(
+        { service: "server", action: "startup_abort", ENABLE_QUEUE, ENABLE_WORKERS },
+        "CRITICAL: ENABLE_QUEUE=true with ENABLE_WORKERS=false in production would strand jobs. Aborting startup."
+    );
+    process.exit(1);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Phase X.2: Boot validators moved to CI-only (npm run validate:*)
 // These add boot latency for checks that should only run in CI/staging.
@@ -96,9 +108,25 @@ function safeLoadWorker(path, name) {
     }
 }
 
-const emailWorker    = safeLoadWorker("./src/infrastructure/workers/emailWorker", "emailWorker");
-const smsWorker      = safeLoadWorker("./src/infrastructure/workers/smsWorker", "smsWorker");
-const whatsappWorker = safeLoadWorker("./src/infrastructure/workers/whatsappWorker", "whatsappWorker");
+// Phase 2 — Disabled-worker stub used when ENABLE_WORKERS=false.
+// Matches the shape returned by safeLoadWorker so shutdown + callers remain safe.
+function _disabledWorker(name) {
+    console.log(`[Worker] ${name} skipped (ENABLE_WORKERS=false)`);
+    return { close: async () => {}, startWorker: () => {} };
+}
+
+// Communication workers are gated by ENABLE_WORKERS.
+// auditWorker and caseLinkWorker are unrelated to the hybrid-comm refactor and
+// stay always-on (Redis is still their transport).
+const emailWorker    = ENABLE_WORKERS
+    ? safeLoadWorker("./src/infrastructure/workers/emailWorker", "emailWorker")
+    : _disabledWorker("emailWorker");
+const smsWorker      = ENABLE_WORKERS
+    ? safeLoadWorker("./src/infrastructure/workers/smsWorker", "smsWorker")
+    : _disabledWorker("smsWorker");
+const whatsappWorker = ENABLE_WORKERS
+    ? safeLoadWorker("./src/infrastructure/workers/whatsappWorker", "whatsappWorker")
+    : _disabledWorker("whatsappWorker");
 const auditWorker    = safeLoadWorker("./src/infrastructure/workers/auditWorker", "auditWorker");
 // ── Clinical Case Engine: Reliable Appointment→Case Linking (Phase 3.1) ──────
 // Starts immediately on require(). Uses bullConnection from redisClient.js.

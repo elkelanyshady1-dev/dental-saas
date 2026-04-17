@@ -20,6 +20,19 @@ function _bool(name, fallback) {
     return String(v).toLowerCase() === "true";
 }
 
+/**
+ * Flag with explicit prod/non-prod defaults.
+ * Explicit "true"/"false" in the env always wins. Otherwise defaults to
+ * `prodDefault` in production and `devDefault` elsewhere.
+ */
+function _flag(name, { prodDefault, devDefault }) {
+    const raw = process.env[name];
+    if (raw != null && raw !== "") {
+        return String(raw).toLowerCase() === "true";
+    }
+    return process.env.NODE_ENV === "production" ? prodDefault : devDefault;
+}
+
 module.exports = {
     // SYNC retry policy
     SYNC_MAX_RETRIES: _int("COMM_SYNC_MAX_RETRIES", 2),       // total attempts = retries + 1
@@ -31,4 +44,12 @@ module.exports = {
 
     // Test / diagnostic hook — DO NOT enable in production
     SIMULATE_PROVIDER_FAILURE: _bool("COMM_SIMULATE_PROVIDER_FAILURE", false),
+
+    // Phase 2 — Hybrid Execution gates
+    // ENABLE_QUEUE=false  → ASYNC sends transparently fall back to SYNC delivery
+    //                       (no BullMQ enqueue, no Redis polling cost)
+    // ENABLE_WORKERS=false → server.js skips booting comm workers entirely
+    // Prod defaults keep existing behavior; dev defaults remove always-on cost.
+    ENABLE_QUEUE:   _flag("ENABLE_QUEUE",   { prodDefault: true, devDefault: false }),
+    ENABLE_WORKERS: _flag("ENABLE_WORKERS", { prodDefault: true, devDefault: false }),
 };
