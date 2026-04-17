@@ -10,6 +10,7 @@
   "dependencies": {
     "@bull-board/api": "^6.20.3",
     "@bull-board/express": "^6.20.3",
+    "@upstash/qstash": "^2.10.1",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "bcryptjs": "^3.0.3",

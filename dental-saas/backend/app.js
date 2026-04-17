@@ -62,6 +62,18 @@ app.use(edgeRouter);
 // MUST be mounted before express.json()
 app.use("/api/public/stripe/webhook", express.raw({ type: "application/json" }));
 
+// ─── Phase 4: QStash Communication Webhook ────────────────────────────────────
+// Raw body is required so the Upstash signature verifier sees the exact bytes
+// QStash signed. Route-scoped mount — the raw parser ONLY runs on this one
+// POST, which guarantees no earlier global body parser can touch the bytes.
+// Mounted BEFORE express.json() below for defense-in-depth.
+const { handleCommunicationJob } = require("./src/jobs/controllers/job.controller");
+app.post(
+    "/api/public/qstash/comm",
+    express.raw({ type: "application/json", limit: "1mb" }),
+    handleCommunicationJob
+);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(mongoSanitize); // v30.0 — Express 5-safe NoSQL injection prevention (custom middleware)
