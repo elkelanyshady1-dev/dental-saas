@@ -20,7 +20,9 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const PatientUser = require("../../patientDomain/access/patientUser.model");
 const PortalInvite = require("../../patientDomain/access/portalInvite.model");
-const { enqueueEmail } = require("../../../infrastructure/queues/emailQueue");
+const {
+    dispatch: dispatchCommunication,
+} = require("../../../infrastructure/communication/communication.dispatcher");
 const logger = require("@utils/logger");
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -112,11 +114,29 @@ class PortalAuthService {
             expiresAt
         });
 
-        await enqueueEmail("MAGIC_LINK", {
-            email: patientUser.email,
-            magicLink: `${process.env.PORTAL_URL || "http://localhost:3001"}/auth/magic?token=${rawToken}&org=${req.organizationId}`,
-            patientName: email
-        });
+        // Auth-critical: patient is waiting. Dispatch synchronously so the
+        // provider ACKs before we return. Errors are logged but NOT propagated —
+        // we still return { sent: true } to avoid leaking delivery state
+        // (user-enumeration hardening).
+        try {
+            await dispatchCommunication(
+                {
+                    channel: "email",
+                    type: "MAGIC_LINK",
+                    payload: {
+                        email: patientUser.email,
+                        magicLink: `${process.env.PORTAL_URL || "http://localhost:3001"}/auth/magic?token=${rawToken}&org=${req.organizationId}`,
+                        patientName: email,
+                    },
+                },
+                { hint: "sync" }
+            );
+        } catch (err) {
+            logger.error(
+                { organizationId: req.organizationId, err: err.message },
+                "[PortalAuth] Magic link dispatch failed"
+            );
+        }
 
         logger.info({ organizationId: req.organizationId }, "[PortalAuth] Magic link sent");
         return { sent: true };
@@ -234,11 +254,28 @@ class PortalAuthService {
             expiresAt: otpExpiresAt
         }, req);
 
-        await enqueueEmail("EMAIL_OTP", {
-            email: patientUser.email,
-            otp,
-            expiresInMinutes: 10
-        });
+        // Auth-critical: patient is waiting. Dispatch synchronously so the
+        // provider ACKs before we return. Errors are logged but NOT propagated —
+        // we still return { sent: true } to avoid leaking delivery state.
+        try {
+            await dispatchCommunication(
+                {
+                    channel: "email",
+                    type: "EMAIL_OTP",
+                    payload: {
+                        email: patientUser.email,
+                        otp,
+                        expiresInMinutes: 10,
+                    },
+                },
+                { hint: "sync" }
+            );
+        } catch (err) {
+            logger.error(
+                { organizationId: req.organizationId, err: err.message },
+                "[PortalAuth] OTP dispatch failed"
+            );
+        }
 
         logger.info({ organizationId: req.organizationId }, "[PortalAuth] OTP sent");
         return { sent: true };

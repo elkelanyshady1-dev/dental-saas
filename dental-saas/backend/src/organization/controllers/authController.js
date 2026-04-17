@@ -592,7 +592,7 @@ exports.resendEmailOtp = asyncHandler(async (req, res) => {
     const { email, clinicCode } = req.body;
     const bcryptLib = require("bcryptjs");
     const crypto = require("crypto");
-    const { sendCommunication } = require("@services/communicationService");
+    const { dispatch: dispatchCommunication } = require("@infra/communication/communication.dispatcher");
 
     if (!email) {
         return res.status(400).json({ success: false, message: "Email is required." });
@@ -686,17 +686,30 @@ exports.resendEmailOtp = asyncHandler(async (req, res) => {
         metadata: { name: user.name, userId: String(user._id) },
     });
 
-    // Send via email queue
-    await sendCommunication({
-        channel: "email",
-        type: "EMAIL_OTP",
-        payload: {
-            email: normalizedEmail,
-            otp,
-            name: user.name,
-            subject: "Verify Your Email — DentalSaaS",
-        },
-    });
+    // Auth-critical: user is waiting on the code. Dispatch synchronously so
+    // the provider ACKs before we respond. Errors are logged but NOT
+    // propagated — we still return a success-shaped response to avoid leaking
+    // delivery state (same user-enumeration stance used above).
+    try {
+        await dispatchCommunication(
+            {
+                channel: "email",
+                type: "EMAIL_OTP",
+                payload: {
+                    email: normalizedEmail,
+                    otp,
+                    name: user.name,
+                    subject: "Verify Your Email — DentalSaaS",
+                },
+            },
+            { hint: "sync" }
+        );
+    } catch (err) {
+        logger.error(
+            { userId: user._id, email: normalizedEmail.slice(0, 4) + "****", err: err.message },
+            "[Auth] Email OTP dispatch failed"
+        );
+    }
 
     logger.info(
         { userId: user._id, email: normalizedEmail.slice(0, 4) + "****" },
