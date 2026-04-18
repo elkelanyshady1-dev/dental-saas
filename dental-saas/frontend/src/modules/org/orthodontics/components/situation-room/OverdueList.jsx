@@ -4,39 +4,52 @@ import { useNavigate } from "react-router-dom";
 function OverdueList({ cases, loading }) {
     const navigate = useNavigate();
     const rows = cases || [];
+
     return (
-        <section className="rounded-md border border-slate-800/70 bg-slate-950/40 p-4">
-            <header className="mb-3 flex items-center justify-between">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
-                    Overdue Cases
-                </h2>
-                <span className="font-mono text-[10px] text-slate-500">
-                    no visit ≥ 21d · top 10
-                </span>
+        <section className="bg-white rounded-xl shadow-sm p-6">
+            <header className="mb-4 flex items-end justify-between">
+                <div>
+                    <h3 className="text-base font-bold text-slate-900 font-headline">Overdue Cases</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">No visit in 21+ days</p>
+                </div>
+                {rows.length > 0 && (
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 tabular-nums">
+                        {rows.length}
+                    </span>
+                )}
             </header>
 
             {loading ? (
                 <ul className="space-y-2">
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <li key={i} className="h-8 animate-pulse rounded bg-slate-800/40" />
+                        <li key={i} className="h-10 rounded-lg bg-slate-100 animate-pulse" />
                     ))}
                 </ul>
             ) : rows.length === 0 ? (
-                <div className="py-4 text-center text-xs uppercase tracking-widest text-slate-600">
-                    No overdue cases
+                <div className="py-8 text-center">
+                    <span className="material-symbols-outlined text-emerald-500 text-3xl">schedule</span>
+                    <p className="text-sm font-semibold text-slate-700 mt-2">All cases current</p>
                 </div>
             ) : (
                 <ul className="space-y-1.5">
                     {rows.map((c) => {
-                        const tone = c.daysSinceLastVisit > 45 ? "text-red-300" : "text-amber-300";
+                        const severe = c.daysSinceLastVisit > 45;
+                        const chipCls = severe
+                            ? "bg-red-50 text-red-600"
+                            : "bg-amber-50 text-amber-700";
                         return (
                             <li
                                 key={c.caseId}
-                                className="group flex cursor-pointer items-center justify-between rounded border border-slate-800/60 bg-slate-950/40 px-2.5 py-1.5 transition hover:border-amber-500/40"
+                                className="group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-slate-50 transition"
                                 onClick={() => navigate(`/org/orthodontics/${c.caseId}`)}
                             >
-                                <span className="truncate text-xs text-slate-300">{c.patientName}</span>
-                                <span className={`font-mono text-[11px] tabular-nums ${tone}`}>
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="material-symbols-outlined text-slate-300 text-[18px] group-hover:text-indigo-500">person</span>
+                                    <span className="truncate text-sm text-slate-700 group-hover:text-indigo-600 font-medium">
+                                        {c.patientName}
+                                    </span>
+                                </div>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums ${chipCls}`}>
                                     {c.daysSinceLastVisit}d
                                 </span>
                             </li>

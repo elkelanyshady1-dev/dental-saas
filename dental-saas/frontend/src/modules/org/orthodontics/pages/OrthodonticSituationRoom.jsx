@@ -1,15 +1,14 @@
 /**
- * OrthodonticSituationRoom.jsx — Command-center dashboard for orthodontists.
+ * OrthodonticSituationRoom.jsx — Orthodontic dashboard for the org plane.
  *
  * Route:  /org/orthodontics
- * RBAC:   orthodontics.read  (scope auto-widens to "organization" if caller
- *                             also has orthodontics.full; otherwise "owner")
+ * RBAC:   orthodontics.read  (scope widens to "organization" if caller also
+ *                             has orthodontics.full; otherwise "owner")
  *
- * Data:   single React Query hook backed by
+ * Data:   single useOrthoDashboard() hook →
  *         GET /api/v1/org/orthodontic-cases/dashboard
- *         Invalidation is debounced by useOrthoDashboard() (2–5s window).
+ *         Realtime invalidation is debounced inside the hook (2–5s window).
  */
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useOrthoDashboard } from "../hooks/useOrthodontics";
 import KpiRow from "../components/situation-room/KpiRow";
@@ -19,62 +18,48 @@ import DoctorWorkload from "../components/situation-room/DoctorWorkload";
 import Inventory from "../components/situation-room/Inventory";
 import AlertsFeed from "../components/situation-room/AlertsFeed";
 import OverdueList from "../components/situation-room/OverdueList";
-import CriticalTicker from "../components/situation-room/CriticalTicker";
+import StatusFooter from "../components/situation-room/CriticalTicker";
 
-function useLiveClock() {
-    const [now, setNow] = useState(() => new Date());
-    useEffect(() => {
-        const id = setInterval(() => setNow(new Date()), 1000);
-        return () => clearInterval(id);
-    }, []);
-    return now;
-}
-
-function TopBar({ scope, generatedAt, isFetching }) {
-    const now = useLiveClock();
-    const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-    const updatedLabel = generatedAt
-        ? `updated ${new Date(generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-        : "—";
+function WelcomeBanner({ scope, isFetching }) {
+    const scopeLabel = scope === "organization" ? "clinic-wide" : "your cases";
     return (
-        <header className="flex items-center justify-between border-b border-slate-800/70 bg-slate-950/60 px-6 py-3">
-            <div className="flex items-center gap-4">
-                <span className="inline-flex items-center gap-2 rounded border border-cyan-700/50 bg-cyan-950/30 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
-                    Situation Room
-                </span>
-                <h1 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-300">
-                    Orthodontics
-                </h1>
-                <span className="hidden rounded border border-slate-700/70 bg-slate-900/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 md:inline">
-                    scope · {scope || "owner"}
-                </span>
+        <section className="bg-white rounded-xl p-8 shadow-[0px_1px_12px_rgba(77,68,227,0.06)] relative overflow-hidden">
+            <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-1 font-headline">
+                        Orthodontic Dashboard
+                    </h2>
+                    <p className="text-slate-500 text-sm">
+                        Live snapshot of treatment load · viewing <span className="font-semibold text-slate-700">{scopeLabel}</span>
+                        {isFetching && <span className="ml-2 text-indigo-500">· syncing…</span>}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Link
+                        to="/org/orthodontics/cases"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-sm font-semibold transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">list</span>
+                        Case List
+                    </Link>
+                </div>
             </div>
-
-            <div className="flex items-center gap-4">
-                <span className="font-mono text-sm tabular-nums text-slate-300">{time}</span>
-                <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 md:inline">
-                    {isFetching ? "syncing…" : updatedLabel}
-                </span>
-                <Link
-                    to="/org/orthodontics/cases"
-                    className="rounded border border-slate-700/70 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-cyan-500/40 hover:text-cyan-300"
-                >
-                    Case List ›
-                </Link>
-            </div>
-        </header>
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+        </section>
     );
 }
 
 function ErrorBanner({ error }) {
     if (!error) return null;
     return (
-        <div className="mx-4 mt-4 flex items-center gap-3 rounded border border-red-700/60 bg-red-950/40 px-4 py-2 font-mono text-[12px] text-red-300">
-            <span className="font-semibold uppercase tracking-[0.18em]">Link Lost</span>
-            <span className="truncate text-red-300/80">
-                {error?.message || "Dashboard feed temporarily unavailable."}
-            </span>
+        <div className="rounded-2xl px-5 py-4 flex items-center gap-3 border bg-red-50 border-red-200 text-red-700">
+            <span className="material-symbols-outlined">error</span>
+            <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm">Dashboard feed unavailable</p>
+                <p className="text-xs opacity-75 mt-0.5 truncate">
+                    {error?.message || "Try refreshing in a moment."}
+                </p>
+            </div>
         </div>
     );
 }
@@ -96,56 +81,37 @@ export default function OrthodonticSituationRoom() {
     };
 
     return (
-        <div className="-m-6 flex min-h-[calc(100vh-56px)] flex-col bg-[#06090F] text-slate-200">
-            <TopBar
-                scope={payload.scope}
-                generatedAt={payload.generatedAt}
-                isFetching={isFetching}
-            />
-
+        <div className="p-8 max-w-[1600px] mx-auto w-full space-y-6">
             <ErrorBanner error={error} />
+            <WelcomeBanner scope={payload.scope} isFetching={isFetching && !isLoading} />
+            <KpiRow kpis={payload.kpis} loading={isLoading} />
 
-            <main className="flex flex-1 flex-col gap-4 p-4">
-                {/* KPI Row */}
-                <KpiRow kpis={payload.kpis} loading={isLoading} />
-
-                {/* Main grid: left rail · center · right rail */}
-                <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-12">
-                    {/* LEFT RAIL */}
-                    <div className="flex flex-col gap-4 lg:col-span-3">
-                        <AlertsFeed alerts={payload.criticalAlerts} loading={isLoading} />
-                        <OverdueList cases={payload.overdueCases} loading={isLoading} />
-                    </div>
-
-                    {/* CENTER */}
-                    <div className="flex flex-col gap-4 lg:col-span-6">
-                        <CaseFlow
-                            stageDistribution={payload.stageDistribution}
-                            loading={isLoading}
-                        />
-                        <DurationVariance
-                            durationVariance={payload.durationVariance}
-                            loading={isLoading}
-                        />
-                    </div>
-
-                    {/* RIGHT RAIL */}
-                    <div className="flex flex-col gap-4 lg:col-span-3">
-                        <DoctorWorkload
-                            doctorWorkload={payload.doctorWorkload}
-                            loading={isLoading}
-                        />
-                        <Inventory
-                            applianceInventory={payload.applianceInventory}
-                            photoCoverage={payload.photoCoverage}
-                            loading={isLoading}
-                        />
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                {/* Main (70%) */}
+                <div className="lg:col-span-7 space-y-6">
+                    <CaseFlow stageDistribution={payload.stageDistribution} loading={isLoading} />
+                    <DurationVariance durationVariance={payload.durationVariance} loading={isLoading} />
+                    <DoctorWorkload doctorWorkload={payload.doctorWorkload} loading={isLoading} />
                 </div>
 
-                {/* Bottom ticker */}
-                <CriticalTicker alerts={payload.criticalAlerts} />
-            </main>
+                {/* Side (30%) */}
+                <div className="lg:col-span-3 space-y-6">
+                    <AlertsFeed alerts={payload.criticalAlerts} loading={isLoading} />
+                    <OverdueList cases={payload.overdueCases} loading={isLoading} />
+                    <Inventory
+                        applianceInventory={payload.applianceInventory}
+                        photoCoverage={payload.photoCoverage}
+                        loading={isLoading}
+                    />
+                </div>
+            </div>
+
+            <StatusFooter
+                generatedAt={payload.generatedAt}
+                scope={payload.scope}
+                totalCritical={payload.criticalAlerts?.length || 0}
+                totalOverdue={payload.overdueCases?.length || 0}
+            />
         </div>
     );
 }
