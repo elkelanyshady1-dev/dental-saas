@@ -13,9 +13,11 @@
  * Query keys: @/lib/query/queryKeys (QK.orthodontics)
  * Architecture: org-plane only, organizationId derived from JWT.
  */
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orthodonticsApi } from '../api/orthodontics.api';
 import { QK, useOptimisticMutation } from '@/lib/query';
+import { useSocket } from '@/context/SocketContext';
 
 // Re-export keys for backward compatibility
 export const orthoKeys = QK.orthodontics;
@@ -158,6 +160,59 @@ export function useUpdateAlignerPlan() {
             qc.invalidateQueries({ queryKey: QK.orthodontics.detail(variables.caseId) });
         },
     });
+}
+
+// ── Situation Room Dashboard ──────────────────────────────────────────────
+// Single aggregation endpoint. Scope is derived from JWT (owner vs organization).
+// Realtime invalidation is debounced 3s (inside the 2–5s TDS window) and
+// gated to an allow-list of event types to avoid spam refetches.
+
+const DASHBOARD_INVALIDATE_EVENTS = [
+    'clinical.event.created',
+    'clinical.event.critical',
+    'ortho.stage.changed',
+    'ortho.visit.recorded',
+    'ortho.aligner.progress',
+];
+const DASHBOARD_INVALIDATE_DEBOUNCE_MS = 3000;
+
+export function useOrthoDashboard() {
+    const qc = useQueryClient();
+    const socket = useSocket?.();
+
+    const query = useQuery({
+        queryKey: QK.orthodontics.dashboard(),
+        queryFn: async () => {
+            const res = await orthodonticsApi.getDashboard();
+            return res.data?.data || res.data;
+        },
+        staleTime: 30_000,
+        refetchOnWindowFocus: false,
+        placeholderData: (prev) => prev,
+    });
+
+    // Debounced WS invalidation — one refetch per burst instead of per event.
+    const timerRef = useRef(null);
+    useEffect(() => {
+        if (!socket || typeof socket.on !== 'function') return;
+        const schedule = () => {
+            if (timerRef.current) return;
+            timerRef.current = setTimeout(() => {
+                timerRef.current = null;
+                qc.invalidateQueries({ queryKey: QK.orthodontics.dashboard() });
+            }, DASHBOARD_INVALIDATE_DEBOUNCE_MS);
+        };
+        DASHBOARD_INVALIDATE_EVENTS.forEach((evt) => socket.on(evt, schedule));
+        return () => {
+            DASHBOARD_INVALIDATE_EVENTS.forEach((evt) => socket.off?.(evt, schedule));
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [socket, qc]);
+
+    return query;
 }
 
 // ── Add Case Note ─────────────────────────────────────────────────────────

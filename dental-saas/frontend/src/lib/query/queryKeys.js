@@ -84,12 +84,15 @@ const accounting = {
 // ── Orthodontics ──────────────────────────────────────────────────────────
 
 const orthodontics = {
-    all:     ['orthodontic-cases'],
-    lists:   ()        => [...orthodontics.all, 'list'],
-    list:    (filters) => [...orthodontics.lists(), filters],
-    details: ()        => [...orthodontics.all, 'detail'],
-    detail:  (id)      => [...orthodontics.details(), id],
-    scans:   (caseId)  => [...orthodontics.detail(caseId), 'scans'],
+    all:       ['orthodontic-cases'],
+    lists:     ()        => [...orthodontics.all, 'list'],
+    list:      (filters) => [...orthodontics.lists(), filters],
+    details:   ()        => [...orthodontics.all, 'detail'],
+    detail:    (id)      => [...orthodontics.details(), id],
+    scans:     (caseId)  => [...orthodontics.detail(caseId), 'scans'],
+    // Situation Room — single aggregation key. Parameterless: the backend
+    // derives scope from JWT, so the cache is per-user automatically.
+    dashboard: ()        => [...orthodontics.all, 'dashboard'],
 };
 
 // ── Settings Hub: Billing ─────────────────────────────────────────────────

@@ -50,6 +50,8 @@ import NewPatientPage from "./org/modules/patients/NewPatientPage";
 import CalendarPage from "./modules/org/calendar/pages/CalendarPage";
 import CalendarSettingsPage from "./modules/org/calendar/pages/CalendarSettingsPage";
 import Appointments from "./pages/org/Appointments";
+import RecallCenterPage from "./modules/org/recalls/pages/RecallCenterPage";
+import DoctorsPage from "./modules/org/doctors/pages/DoctorsPage";
 import Finance from "./pages/org/Finance";
 import Inventory from "./pages/org/Inventory";
 import Analytics from "./pages/org/Analytics";
@@ -87,8 +89,6 @@ import BillingPage from "./modules/org/settings/pages/BillingPage";
 import SupportPage from "./modules/org/settings/pages/SupportPage";
 import BrandingPage from "./modules/org/settings/pages/BrandingPage";
 import OrganizationPage from "./modules/org/settings/pages/OrganizationPage";
-import ClinicBillingSettingsPage from "./modules/org/settings/pages/ClinicBillingSettingsPage";
-import SupportConfigPage from "./modules/org/settings/pages/SupportConfigPage";
 
 /* =========================
    Finance Phase 5
@@ -99,7 +99,22 @@ import OrgInvoicesPage from "./modules/org/finance/pages/InvoicesPage";
    Orthodontics Phase 6
 ========================= */
 import OrthodonticCasesPage from "./modules/org/orthodontics/pages/OrthodonticCasesPage";
+import OrthodonticSituationRoom from "./modules/org/orthodontics/pages/OrthodonticSituationRoom";
 import OrthodonticCasePage from "./modules/org/orthodontics/pages/OrthodonticCasePage";
+
+/* =========================
+   Lab Domain
+========================= */
+import LabDashboard     from "./modules/org/lab/pages/LabDashboard";
+import LabKanban        from "./modules/org/lab/pages/LabKanban";
+import LabDirectory     from "./modules/org/lab/pages/LabDirectory";
+import LabClaims        from "./modules/org/lab/pages/LabClaims";
+import LabCaseDetail    from "./modules/org/lab/pages/LabCaseDetail";
+import LabCaseCreate    from "./modules/org/lab/pages/LabCaseCreate";
+import LabCaseEdit      from "./modules/org/lab/pages/LabCaseEdit";
+import LabPartnerCreate from "./modules/org/lab/pages/LabPartnerCreate";
+import LabPartnerEdit   from "./modules/org/lab/pages/LabPartnerEdit";
+import LabClaimCreate   from "./modules/org/lab/pages/LabClaimCreate";
 
 /* =========================
    Patient Internal (v2)
@@ -322,9 +337,25 @@ export default function App() {
             <Route path="calendar/settings" element={<RequireOrgPermission permission="appointments.read"><CalendarSettingsPage /></RequireOrgPermission>} />
             <Route path="treatments" element={<FeatureGate module="clinical" fallback={<UpgradePlanBanner feature="clinical" />}><RequireOrgPermission permission="treatments.read"><TreatmentsPage /></RequireOrgPermission></FeatureGate>} />
             <Route path="invoices" element={<FeatureGate module="finance" fallback={<UpgradePlanBanner feature="finance" />}><RequireOrgPermission permission="accounting.read"><OrgInvoicesPage /></RequireOrgPermission></FeatureGate>} />
-            <Route path="orthodontics" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticCasesPage /></RequireOrgPermission></FeatureGate>} />
+            <Route path="orthodontics" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticSituationRoom /></RequireOrgPermission></FeatureGate>} />
+            {/* Case list moved off the root so the Situation Room can take `/orthodontics`. Specific `/cases` route MUST precede `/:caseId`. */}
+            <Route path="orthodontics/cases" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticCasesPage /></RequireOrgPermission></FeatureGate>} />
             <Route path="orthodontics/:caseId" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticCasePage /></RequireOrgPermission></FeatureGate>} />
+
+            {/* ── Lab Domain ───────────────────────────────────────────── */}
+            <Route path="lab"                    element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.read"><LabDashboard /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/kanban"             element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.read"><LabKanban /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/directory"          element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.read"><LabDirectory /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/directory/new"      element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.create"><LabPartnerCreate /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/directory/:id/edit" element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.update"><LabPartnerEdit /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/claims"             element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.read"><LabClaims /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab/claims/new"         element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.create"><LabClaimCreate /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab-cases/new"          element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.create"><LabCaseCreate /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab-cases/:id"          element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.read"><LabCaseDetail /></RequireOrgPermission></FeatureGate>} />
+            <Route path="lab-cases/:id/edit"     element={<FeatureGate module="lab" fallback={<UpgradePlanBanner feature="lab" />}><RequireOrgPermission permission="lab.update"><LabCaseEdit /></RequireOrgPermission></FeatureGate>} />
             <Route path="appointments" element={<RequireOrgPermission permission="appointments.read"><Appointments /></RequireOrgPermission>} />
+            <Route path="recalls" element={<RequireOrgPermission permission="recalls.read"><RecallCenterPage /></RequireOrgPermission>} />
+            <Route path="doctors" element={<RequireOrgPermission permission="users.read"><DoctorsPage /></RequireOrgPermission>} />
             <Route path="finance" element={<FeatureGate module="finance" fallback={<UpgradePlanBanner feature="finance" />}><RequireOrgPermission permission="accounting.read"><Finance /></RequireOrgPermission></FeatureGate>} />
             <Route path="inventory" element={<FeatureGate module="inventory" fallback={<UpgradePlanBanner feature="inventory" />}><RequireOrgPermission permission="inventory.read"><Inventory /></RequireOrgPermission></FeatureGate>} />
             <Route path="analytics" element={<FeatureGate module="analytics" fallback={<UpgradePlanBanner feature="analytics" />}><RequireOrgPermission permission="analytics.read"><Analytics /></RequireOrgPermission></FeatureGate>} />
@@ -335,9 +366,7 @@ export default function App() {
             <Route path="settings/branches" element={<RequireOrgPermission permission="branches.read"><BranchesPage /></RequireOrgPermission>} />
             <Route path="settings/roles" element={<RequireOrgPermission permission="users.read"><StaffRolesPage /></RequireOrgPermission>} />
             <Route path="settings/billing" element={<RequireOrgPermission permission="billing.read"><BillingPage /></RequireOrgPermission>} />
-            <Route path="settings/clinic-billing" element={<RequireOrgPermission permission="billing_settings.read"><ClinicBillingSettingsPage /></RequireOrgPermission>} />
             <Route path="settings/support" element={<RequireOrgPermission permission="support.read"><SupportPage /></RequireOrgPermission>} />
-            <Route path="settings/support-config" element={<RequireOrgPermission permission="support.read"><SupportConfigPage /></RequireOrgPermission>} />
 
             {/* ── Settings Hub — Security & Features (Phase H.2) ──────────── */}
             <Route path="settings/security"

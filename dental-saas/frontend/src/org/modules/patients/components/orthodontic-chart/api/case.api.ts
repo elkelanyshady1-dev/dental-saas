@@ -179,6 +179,59 @@ export const updateAlignerPlan = (
 export const addNote = (id: string, content: string) =>
   api.patch(`${BASE}/${id}`, { note: { content } });
 
+// ─── Situation Room Dashboard ────────────────────────────────────────────────
+
+export interface DashboardKpis {
+  activeCount: number;
+  inTreatmentCount: number;
+  overdueAdjustments: number;
+  avgAlignerProgress: number;
+  criticalEventsToday: number;
+  todayVisits: number;
+}
+
+export interface DashboardDTO {
+  kpis: DashboardKpis;
+  stageDistribution: Array<{ stage: string; count: number }>;
+  durationVariance: Array<{ bucket: string; count: number }>;
+  doctorWorkload: Array<{
+    doctorId: string;
+    doctorName: string;
+    activeCases: number;
+    visitsThisWeek: number;
+  }>;
+  applianceInventory: {
+    activeBrackets: number;
+    activeTads: number;
+    bracketsDebondedThisMonth: number;
+  };
+  photoCoverage: {
+    casesWithBaseline: number;
+    casesWithProgress: number;
+    totalActive: number;
+  };
+  overdueCases: Array<{
+    caseId: string;
+    patientName: string;
+    daysSinceLastVisit: number;
+    lastVisitAt: string | null;
+  }>;
+  criticalAlerts: Array<{
+    eventId: string;
+    caseId: string | null;
+    patientName: string;
+    severity: string;
+    type: string;
+    at: string | null;
+  }>;
+  generatedAt: string;
+  scope: 'organization' | 'owner';
+}
+
+/** GET /orthodontic-cases/dashboard — Situation Room aggregated payload */
+export const getDashboard = () =>
+  api.get<{ success: boolean; data: DashboardDTO }>(`${BASE}/dashboard`);
+
 // ─── File Uploads ─────────────────────────────────────────────────────────────
 
 /** POST /orthodontic-cases/uploads/photo */
@@ -207,6 +260,94 @@ export const uploadAudio = (blob: Blob, filename = 'voice-note.webm') => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+// ─── Image Pool (Bulk upload + per-recordSet assignment) ─────────────────────
+
+export interface PoolImageDTO {
+  id: string;
+  recordSetId: string | null;
+  url: string | null;
+  originalName: string | null;
+  mimeType: string | null;
+  sizeBytes: number;
+  assignedView: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface BulkUploadResponse {
+  uploaded: PoolImageDTO[];
+  rejected: Array<{ originalName: string; reason: string }>;
+  recordSetId: string;
+}
+
+export interface BulkUploadOptions {
+  compressed?: boolean;
+  onUploadProgress?: (e: ProgressEvent) => void;
+  /**
+   * UUID v4 generated ONCE per user-initiated batch (see BulkPhotoUploadModal's
+   * idempotencyKeyRef). Retries of a partially-completed batch MUST reuse the
+   * same key so the backend replays the cached response and the fingerprint-dedup
+   * layer de-duplicates any already-uploaded files.
+   */
+  idempotencyKey?: string;
+}
+
+/** POST /:caseId/record-sets/:recordSetId/photos/batch — bulk upload into pool (max 30). */
+export const bulkUploadPhotos = (
+  caseId: string,
+  recordSetId: string,
+  files: File[],
+  { compressed, onUploadProgress, idempotencyKey }: BulkUploadOptions = {}
+) => {
+  const formData = new FormData();
+  files.forEach((f) => formData.append('files', f, f.name));
+  if (typeof compressed === 'boolean') formData.append('compressed', String(compressed));
+  const headers: Record<string, string> = { 'Content-Type': 'multipart/form-data' };
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+  return api.post(
+    `${BASE}/${caseId}/record-sets/${recordSetId}/photos/batch`,
+    formData,
+    {
+      headers,
+      onUploadProgress,
+    }
+  );
+};
+
+/** GET /:caseId/record-sets/:recordSetId/photos/pool */
+export const listPool = (caseId: string, recordSetId: string) =>
+  api.get(`${BASE}/${caseId}/record-sets/${recordSetId}/photos/pool`);
+
+/** POST /:caseId/record-sets/:recordSetId/photos/:photoId/assign */
+export const assignPoolPhoto = (
+  caseId: string,
+  recordSetId: string,
+  photoId: string,
+  view: string
+) =>
+  api.post(
+    `${BASE}/${caseId}/record-sets/${recordSetId}/photos/${photoId}/assign`,
+    { view }
+  );
+
+/** POST /:caseId/record-sets/:recordSetId/photos/:photoId/unassign */
+export const unassignPoolPhoto = (
+  caseId: string,
+  recordSetId: string,
+  photoId: string
+) =>
+  api.post(
+    `${BASE}/${caseId}/record-sets/${recordSetId}/photos/${photoId}/unassign`
+  );
+
+/** DELETE /:caseId/record-sets/:recordSetId/photos/:photoId */
+export const deletePoolPhoto = (
+  caseId: string,
+  recordSetId: string,
+  photoId: string
+) =>
+  api.delete(`${BASE}/${caseId}/record-sets/${recordSetId}/photos/${photoId}`);
 
 // ─── Unified export (namespace) ───────────────────────────────────────────────
 
@@ -247,4 +388,12 @@ export const caseApi = {
   uploadPhoto,
   uploadStl,
   uploadAudio,
+  // Image Pool
+  bulkUploadPhotos,
+  listPool,
+  assignPoolPhoto,
+  unassignPoolPhoto,
+  deletePoolPhoto,
+  // Situation Room
+  getDashboard,
 };
