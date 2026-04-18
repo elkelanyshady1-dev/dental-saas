@@ -13,9 +13,18 @@ const fileMetaFields = {
     originalName:    { type: String, default: null },
     storageProvider: {
         type: String,
-        enum: ["local", "s3", "gcs"],
+        enum: ["local", "s3", "gcs", "r2"],
         default: "local"
     },
+    // storageKey: provider-side object key (e.g. "org/<orgId>/orthodontics/photos/<caseId>/<rsId>/<file>")
+    // Required for delete to locate the blob; hidden from DTO layer.
+    storageKey:      { type: String, default: null },
+    // fingerprint: sha256(originalname + size + mimetype). Per-file dedup key
+    // for bulk upload; controller rejects re-upload of a file already in the pool.
+    fingerprint:     { type: String, default: null, index: true },
+    // Uploader observability — cross-reference with request logs by traceId.
+    uploadedBy:      { type: String, default: null },
+    uploadTraceId:   { type: String, default: null },
 };
 
 const cephAnalysisSchema = new mongoose.Schema({
@@ -45,7 +54,13 @@ const photoRecordSchema = new mongoose.Schema({
     flipV:       { type: Boolean, default: false },
     crop:        { type: mongoose.Schema.Types.Mixed, default: null },
     analysis:    { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Pool fields: when a photo lives in imagePool, assignedView is null.
+    // When assigned to a canvas slot, assignedView = slot id (e.g. "front-rest").
+    assignedView: { type: String, default: null },
     createdAt:   { type: Date, default: Date.now },
+    updatedAt:   { type: Date, default: Date.now },
+    // Soft delete for pool photos; excluded from list/assign queries.
+    deletedAt:   { type: Date, default: null },
     ...fileMetaFields,
 }, { _id: false });
 
@@ -70,6 +85,10 @@ const recordSetSchema = new mongoose.Schema({
     photos:         { type: [photoRecordSchema], default: [] },
     records:        { type: [photoRecordSchema], default: [] },
     stlFiles:       { type: [stlRecordSchema], default: [] },
+    // imagePool: bulk-uploaded photos awaiting assignment to a slot in records[].
+    // Isolation is per-recordSet: a pool photo can ONLY be assigned to a slot
+    // inside the same recordSet that owns it. Enforced by controller query shape.
+    imagePool:      { type: [photoRecordSchema], default: [] },
     problemList:    { type: mongoose.Schema.Types.Mixed, default: null },
     treatmentPlan:  { type: mongoose.Schema.Types.Mixed, default: null },
     version:        { type: Number, default: 1 },
@@ -278,6 +297,38 @@ orthodonticCaseSchema.index(
 // Soft delete filter (compound with organizationId for efficient queries)
 orthodonticCaseSchema.index(
     { organizationId: 1, isDeleted: 1 }
+);
+
+// ── Situation Room dashboard index coverage ────────────────────────────────
+// Supports:
+//   - Doctor workload aggregation: group by ownerId filtered by status
+//   - PBAC scoping: $or: [{ ownerId }, { sharedWith }] on every dashboard query
+//   - Stage distribution group by status
+orthodonticCaseSchema.index({ organizationId: 1, ownerId: 1, status: 1 });
+// Supports sharedWith leg of the PBAC $or (multikey on array)
+orthodonticCaseSchema.index({ organizationId: 1, sharedWith: 1 });
+// Supports overdue scan: status='active' sorted by updatedAt ascending
+orthodonticCaseSchema.index({ organizationId: 1, status: 1, updatedAt: 1 });
+
+// ── Invariant: ONE active case per patient per org (Phase 5.1 hardening) ────
+// Replaces the BullMQ-backed serialization that previously prevented duplicate
+// case creation. Now enforced at the DB level via a partial unique index.
+// Partial filter matches findActiveByPatient()'s definition of "active":
+//   status ∈ [draft, diagnosis, treatment_planning, active]
+// Completed / cancelled cases are EXCLUDED from the uniqueness constraint, so
+// a patient can start a new treatment cycle after a case closes.
+// Concurrent case.service.findOrCreateOrthoCase() calls that both race past the
+// findActiveByPatient() check will now surface as E11000 duplicate key errors,
+// which the service catches and resolves by returning the winner.
+orthodonticCaseSchema.index(
+    { organizationId: 1, patientId: 1 },
+    {
+        unique: true,
+        name: "uniq_active_case_per_patient_per_org",
+        partialFilterExpression: {
+            status: { $in: ["draft", "diagnosis", "treatment_planning", "active"] },
+        },
+    }
 );
 
 const modelName = "OrthodonticCase";

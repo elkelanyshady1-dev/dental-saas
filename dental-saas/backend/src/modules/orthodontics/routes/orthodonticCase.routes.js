@@ -23,6 +23,7 @@ const requireOrgPermission = require("@middleware/requireOrgPermission");
 const { P } = require("@rbac/orgPermissions");
 
 const ctrl = require("../controllers/orthodonticCase.controller");
+const dashboardCtrl = require("../controllers/orthodonticDashboard.controller");
 const { photoUpload, stlUpload, audioUpload } = require("@shared/middleware/multerMemory");
 const quotaGuard = require("@core/storage/middleware/quotaGuard");
 const { fieldFilterMiddleware } = require("@rbac/fieldFilter");
@@ -70,6 +71,41 @@ router.use(orgProtect, organizationContext, requireEntitlement("orthodontics"), 
  *         description: Paginated case list
  */
 router.get("/", requireOrgPermission(P.ORTHO_READ), fieldFilterMiddleware("orthodonticCase"), ctrl.listCases);
+
+/**
+ * @swagger
+ * /orthodontic-cases/dashboard:
+ *   get:
+ *     summary: Orthodontic Situation Room — aggregated dashboard payload
+ *     description: |
+ *       Read-only aggregation for the Situation Room UI. Returns KPIs, stage
+ *       distribution, duration variance, doctor workload, appliance inventory,
+ *       photo coverage, overdue cases (top 10), and critical alerts (top 20).
+ *
+ *       Scoping:
+ *       - Callers with `orthodontics.full` see org-wide data (scope = "organization").
+ *       - Other callers see only cases they own or co-own (scope = "owner").
+ *     tags: [OrthodonticCases]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard DTO
+ *   Route order matters — this must precede `/:id`.
+ */
+// Note on FLS: the Situation Room payload is aggregate counts plus two short
+// lists that carry `patientName`. Access is already gated by ORTHO_READ (RBAC)
+// and narrowed to owner/shared cases (PBAC) inside the service. A generic
+// fieldFilter pass would only strip top-level keys (it does not descend into
+// `overdueCases[].patientName` or `criticalAlerts[].patientName`), so it
+// provides no real protection here and would cause data loss for roles
+// missing from the registry. We therefore skip fieldFilterMiddleware and keep
+// the authoritative DTO contract stable.
+router.get(
+    "/dashboard",
+    requireOrgPermission(P.ORTHO_READ),
+    dashboardCtrl.getDashboard
+);
 
 /**
  * @swagger
@@ -448,7 +484,6 @@ router.get("/aligner-plans/:id", requireOrgPermission(P.ORTHO_READ), ctrl.getAli
  *         description: Record set updated
  */
 router.put("/:caseId/record-sets/:recordSetId", requireOrgPermission(P.ORTHO_FULL), policyMiddleware(P.ORTHO_FULL, async (req) => getModel(req.dbConnection, OrthodonticCaseDef).findById(req.params.caseId)), fieldWriteGuardMiddleware("orthodonticCase"), ctrl.updateRecordSet);
-
 
 /**
  * @swagger
