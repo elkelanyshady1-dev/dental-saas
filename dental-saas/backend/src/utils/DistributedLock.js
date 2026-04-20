@@ -264,6 +264,12 @@ async function publish(channel, payload) {
  * Polls for the next event on `channel` published AFTER this call started.
  * Resolves with the payload of the first matching row, or null on timeout.
  *
+ * ⚠️ ONE-SHOT ONLY. This is NOT a queue or a stream — it returns the FIRST
+ * matching event and stops. Do NOT use as a continuous consumer; looping on
+ * it in a setInterval would duplicate every event back as many times as
+ * instances subscribed. If you need durable multi-event fan-out, write to
+ * the outbox and subscribe on eventBus instead.
+ *
  * Intentionally NOT returning all matching events — this preserves the
  * single-message semantics of the old Redis subscriber, so callers like
  * platformSubscriptionService.waitForMutation get exactly the same shape
@@ -314,6 +320,14 @@ async function subscribeWithTimeout(channel, timeoutMs = 10000) {
         await _sleep(Math.min(SUBSCRIBE_POLL_INTERVAL_MS, remaining));
     }
 
+    // Visibility: timeouts are a legitimate path (callers treat null as "fall
+    // through to direct DB read"), but a sudden spike in timeouts usually
+    // means a publisher crashed or a channel name typo — log at debug so ops
+    // can correlate without drowning normal traffic.
+    logger.debug(
+        { event: "DIST_EVENT_TIMEOUT", channel, timeoutMs, instanceId: _instanceId() },
+        "[DistributedLock] subscribeWithTimeout timed out"
+    );
     return null;
 }
 
