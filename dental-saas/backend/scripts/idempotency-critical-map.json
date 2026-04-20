@@ -44,13 +44,20 @@
   ],
 
   "_grandfatheredNotes": {
-    "src/modules/billingDomain/refunds/refund.routes.js": "TODO: mount Idempotency-Key middleware on POST /refunds when request-level middleware is committed.",
-    "src/modules/billingDomain/refunds/refund.service.js": "TODO: wrap refund execution in ensureIdempotent() keyed on the refund's idempotencyKey field.",
-    "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": "TODO: settings writes should use upsert + conditional update to be naturally idempotent, or wrap in ensureIdempotent.",
-    "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js": "TODO: ledger writes MUST be idempotent — critical financial path.",
-    "src/modules/billingDomain/organizationFinance/services/invoice.service.js": "TODO: invoice create/update needs idempotency to prevent duplicate invoices on retry.",
-    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "TODO: CRITICAL — orchestrates ledger writes; any duplicate is a financial correctness bug. Also owns the invoice status transitions (pending → paid); those writes should use conditional {_id, status: <from>} filters.",
-    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js": "TODO: quotation create/convert needs idempotency keyed on the quotation idempotencyKey.",
-    "src/jobs/controllers/job.controller.js": "TODO: currently uses per-process Map dedup (line 44, processedMessages) — migrate to distributed IdempotencyKey for multi-instance safety. See comment at line 41 acknowledging the known gap."
+    "src/modules/billingDomain/refunds/refund.routes.js": "Mount Idempotency-Key middleware on POST /refunds. BLOCKER: the middleware file (src/middleware/idempotency.middleware.js) lives only as uncommitted prior WIP — route would break if mounted before that file is committed. Wait on middleware commit, then mount.",
+
+    "src/modules/billingDomain/refunds/refund.service.js": "processRefund({organizationId, paymentId, amount, reason, processedByUserId}, req) — no idempotencyKey / externalRef in signature. Mutations at L180 (Refund.create) + L202 (FinancialLedger.create). Transaction provides atomicity, not dedup. Options, all prohibited by current rules: (a) add idempotencyKey param — API change; (b) unique index on {organizationId, paymentId} — needs data audit for legit multi-refund cases; (c) runtime check 'already refunded this payment' — the invariant at L15 says this exists but is runtime-only, not schema-enforced. REAL FIX: extend the API to carry idempotencyKey from the HTTP route → thread into ensureIdempotent(Refund, key, session) at the transaction boundary.",
+
+    "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": "Untracked file (?? status, 161 lines). CANNOT commit under this work's author line — requires the original author to commit the prior WIP first, then harden separately.",
+
+    "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js": "Clean file, 82 lines, 0 mutation calls (grep for .create/.updateOne/.save → none). Likely a false-positive same as invoiceStatus.service.js — re-audit and reclassify to `exceptions` if confirmed read-only.",
+
+    "src/modules/billingDomain/organizationFinance/services/invoice.service.js": "Natural key exists: {organizationId, billingCycleStart, status: 'draft'} at L144. Current logic = findOne + (update existing OR create new) — concurrent-create race possible. Safe fix needs unique index on {organizationId, billingCycleStart} — prohibited without data audit. Caller (generateBillingInvoice) doesn't accept an idempotencyKey; adding one = API change. Per spec: SKIP until either (a) data audit clears unique-index creation, or (b) caller API is extended.",
+
+    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "CRITICAL financial path. 7 mutation sites (FinancialLedger.create × 5, PatientInvoice.updateOne × 2) inside a 630-line file. Uses referenceId: invoice._id / payment._id as domain link, NOT as dedup key. No idempotencyKey in signatures. +30 lines of uncommitted prior WIP in working tree — editing mixes WIP with fix. The two PatientInvoice.updateOne calls (L393, L514) are candidate conditional-update sites (spec's pending→paid pattern) — but verifying requires reading the full flow. Needs domain expert + clean working tree.",
+
+    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js": "Untracked file (?? status, 720 lines). Same blocker as clinicBillingSettings: cannot commit unreviewed prior WIP. Needs original author to commit + idempotency-key API thread-through.",
+
+    "src/jobs/controllers/job.controller.js": "qstashMessageId is available as a natural dedup key. File has per-process Map dedup (L44, processedMessages, TTL-bounded). +116 lines of uncommitted prior WIP in working tree — almost certainly someone's in-progress distributed-dedup migration. Shipping a fix here now risks double-work with theirs. Wait for that WIP to land, then harden if still needed."
   }
 }
