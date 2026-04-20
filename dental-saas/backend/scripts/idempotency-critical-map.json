@@ -24,19 +24,27 @@
 
   "exceptions": [
     "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js",
-    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js"
+    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js",
+    "src/modules/billingDomain/organizationFinance/services/invoice.service.js"
   ],
 
   "_exceptionNotes": {
     "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js": "Read-only service — no mutations, no idempotency needed.",
-    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js": "Read-only derivation service. Exports deriveStatusFromAmounts (pure fn) and deriveInvoiceStatus (findOne + aggregate → returns a status string). No updateOne / save / create / $set. Status writes happen in the callers (ledger.orchestrator.service.js, invoices.routes.js, reconciliation.service.js); conditional-update hardening belongs there, not here."
+    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js": "Read-only derivation service. Exports deriveStatusFromAmounts (pure fn) and deriveInvoiceStatus (findOne + aggregate → returns a status string). No updateOne / save / create / $set. Status writes happen in the callers (ledger.orchestrator.service.js, invoices.routes.js, reconciliation.service.js); conditional-update hardening belongs there, not here.",
+    "src/modules/billingDomain/organizationFinance/services/invoice.service.js": {
+      "status": "DEFERRED_CONCURRENCY_FIX",
+      "reason": "Not HTTP-invoked. Cron / webhook-driven billing generator. Function comment at L4-7: 'Called by internal cron/webhook handlers without HTTP req context. Not invoked via org-plane HTTP routes.' Signature is generateBillingInvoice(organizationId, couponCode) — no req parameter to read Idempotency-Key from.",
+      "gap": "Concurrent cron firings for the same (organizationId, billingCycleStart) can both findOne({status:'draft'}) → both get null → both BillingInvoice.create() → duplicate draft invoices.",
+      "correctFix": "Convert the create branch at L190 to atomic findOneAndUpdate with upsert + $setOnInsert on {organizationId, billingCycleStart, status:'draft'}.",
+      "blocker": "Atomic upsert requires a unique index on {organizationId, billingCycleStart} (scoped to draft state). Adding an index is prohibited without a data audit for existing multi-draft tenants.",
+      "nextStep": "Audit PlatformInvoice / BillingInvoice collection for legit multi-draft rows per (org, cycle). If none exist: add sparse unique index + switch create to atomic upsert in a single cohesive commit."
+    }
   },
 
   "grandfatheredGaps": [
     "src/modules/billingDomain/refunds/refund.routes.js",
     "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js",
     "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js",
-    "src/modules/billingDomain/organizationFinance/services/invoice.service.js",
     "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js",
     "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js",
     "src/jobs/controllers/job.controller.js"
@@ -48,8 +56,6 @@
     "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": "Untracked file (?? status, 161 lines). CANNOT commit under this work's author line — requires the original author to commit the prior WIP first, then harden separately.",
 
     "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js": "Clean file, 82 lines, 0 mutation calls (grep for .create/.updateOne/.save → none). Likely a false-positive same as invoiceStatus.service.js — re-audit and reclassify to `exceptions` if confirmed read-only.",
-
-    "src/modules/billingDomain/organizationFinance/services/invoice.service.js": "Natural key exists: {organizationId, billingCycleStart, status: 'draft'} at L144. Current logic = findOne + (update existing OR create new) — concurrent-create race possible. Safe fix needs unique index on {organizationId, billingCycleStart} — prohibited without data audit. Caller (generateBillingInvoice) doesn't accept an idempotencyKey; adding one = API change. Per spec: SKIP until either (a) data audit clears unique-index creation, or (b) caller API is extended.",
 
     "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "CRITICAL financial path. 7 mutation sites (FinancialLedger.create × 5, PatientInvoice.updateOne × 2) inside a 630-line file. Uses referenceId: invoice._id / payment._id as domain link, NOT as dedup key. No idempotencyKey in signatures. +30 lines of uncommitted prior WIP in working tree — editing mixes WIP with fix. The two PatientInvoice.updateOne calls (L393, L514) are candidate conditional-update sites (spec's pending→paid pattern) — but verifying requires reading the full flow. Needs domain expert + clean working tree.",
 
