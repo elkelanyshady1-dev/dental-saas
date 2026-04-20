@@ -112,6 +112,117 @@ function _sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Change Stream (Phase C upgrade) ─────────────────────────────────────────
+// Mongo Change Streams deliver inserts in near-real-time, replacing the 200ms
+// polling cadence with push-based fan-out. Requires a replica set topology
+// (Atlas: yes; local standalone mongod: no). Failure to open a stream falls
+// back to polling transparently — same API, same contract.
+
+// One shared ChangeStream per process. Every subscribeWithTimeout caller
+// attaches a `change` listener to this single stream and detaches on
+// timeout/match. Creating a stream per call would leak cursors and blow
+// through Mongo's open-cursor budget.
+let _changeStream = null;
+
+// One-time topology check. If this process is connected to a non-replica-set
+// (dev-local mongod), stream creation will fail every time — disable once
+// rather than trying-and-failing on every subscribe call.
+let _replicaSetChecked = false;
+let _replicaSetSupported = null;
+
+// Warn ONCE per process if concurrent subscribers pile up. A healthy system
+// has maybe a handful of waitForMutation calls at a time. If this fires, a
+// caller is almost certainly leaking listeners (forgot to cleanup) or using
+// subscribeWithTimeout as a consumer loop (see the one-shot warning on the
+// public function).
+const HIGH_LISTENER_THRESHOLD = 1000;
+let _highListenerWarned = false;
+
+function _checkReplicaSet() {
+    if (_replicaSetChecked) return _replicaSetSupported;
+
+    try {
+        const topology = mongoose.connection?.client?.topology?.description?.type;
+        // Topology types that support change streams:
+        //   ReplicaSetWithPrimary, ReplicaSetNoPrimary (streams reconnect
+        //   once a primary returns), Sharded (Atlas M0 shared tier).
+        _replicaSetSupported =
+            typeof topology === "string" &&
+            (topology.includes("Replica") || topology.includes("Sharded"));
+
+        if (!_replicaSetSupported) {
+            logger.warn(
+                { event: "CHANGE_STREAM_DISABLED", reason: "NOT_REPLICA_SET", topology },
+                "[DistributedLock] Change streams unavailable — subscribeWithTimeout will use polling fallback"
+            );
+        }
+    } catch (err) {
+        // Best-effort — if topology isn't introspectable, assume no streams.
+        _replicaSetSupported = false;
+        logger.warn(
+            { event: "CHANGE_STREAM_TOPOLOGY_CHECK_FAILED", err: err.message },
+            "[DistributedLock] topology check failed — falling back to polling"
+        );
+    }
+
+    _replicaSetChecked = true;
+    return _replicaSetSupported;
+}
+
+function _getChangeStream() {
+    if (!_checkReplicaSet()) return null;
+
+    // Reuse healthy singleton. A `close` event clears _changeStream so the
+    // next call re-creates — handles Atlas failovers without a permanent
+    // degrade to polling.
+    if (_changeStream) return _changeStream;
+
+    try {
+        // $match for inserts only — publish() is the only writer, so this
+        // filters out every non-insert change Mongo would otherwise send
+        // (deletes from TTL, any future updates). Cuts event volume to
+        // exactly one change per publish().
+        const stream = DistributedEventModel.watch(
+            [{ $match: { operationType: "insert" } }],
+            // fullDocument default is "default" which for inserts is the
+            // inserted doc itself — no need for "updateLookup" (that costs
+            // an extra read per event and only matters for updates).
+            {}
+        );
+
+        stream.on("error", (err) => {
+            // Transient errors: clear the singleton so the next subscribe
+            // call re-creates. Atlas primary failover, network blips, etc.
+            logger.warn(
+                { event: "CHANGE_STREAM_ERROR", err: err.message },
+                "[DistributedLock] change stream errored — will re-create on next subscribe"
+            );
+            _changeStream = null;
+        });
+
+        stream.on("close", () => {
+            logger.debug(
+                { event: "CHANGE_STREAM_CLOSED" },
+                "[DistributedLock] change stream closed"
+            );
+            _changeStream = null;
+        });
+
+        _changeStream = stream;
+        logger.info(
+            { event: "CHANGE_STREAM_STARTED", instanceId: _instanceId() },
+            "[DistributedLock] change stream opened — real-time pub/sub active"
+        );
+        return stream;
+    } catch (err) {
+        logger.warn(
+            { event: "CHANGE_STREAM_INIT_FAILED", err: err.message },
+            "[DistributedLock] change stream init failed — falling back to polling"
+        );
+        return null;
+    }
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -261,7 +372,7 @@ async function publish(channel, payload) {
 
 /**
  * subscribeWithTimeout
- * Polls for the next event on `channel` published AFTER this call started.
+ * Waits for the next event on `channel` published AFTER this call started.
  * Resolves with the payload of the first matching row, or null on timeout.
  *
  * ⚠️ ONE-SHOT ONLY. This is NOT a queue or a stream — it returns the FIRST
@@ -270,16 +381,101 @@ async function publish(channel, payload) {
  * instances subscribed. If you need durable multi-event fan-out, write to
  * the outbox and subscribe on eventBus instead.
  *
- * Intentionally NOT returning all matching events — this preserves the
- * single-message semantics of the old Redis subscriber, so callers like
- * platformSubscriptionService.waitForMutation get exactly the same shape
- * of result (payload-or-null).
+ * Implementation (Phase C):
+ *   1. Try to attach to the shared Mongo Change Stream → near-instant
+ *      delivery via push, ~zero DB load under normal conditions.
+ *   2. If streams are unavailable (non-replica-set, or stream init/error),
+ *      fall through to _fallbackPolling transparently. Same contract.
+ *
+ * Race caveat (unchanged from the polling version):
+ *   Events published BEFORE this call started are not visible — stream
+ *   listeners only see future inserts, and the polling fallback filters
+ *   `createdAt >= startTime`. Callers like platformSubscriptionService
+ *   already treat a null-timeout as "fall through to direct DB read",
+ *   which covers the published-just-before-wait race.
  *
  * @param   {string} channel
  * @param   {number} [timeoutMs=10000]
  * @returns {Promise<any|null>} payload on match, null on timeout
  */
 async function subscribeWithTimeout(channel, timeoutMs = 10000) {
+    const stream = _getChangeStream();
+    if (!stream) {
+        return _fallbackPolling(channel, timeoutMs);
+    }
+
+    return new Promise((resolve) => {
+        let settled = false;
+
+        const onChange = (change) => {
+            if (settled) return;
+            // $match pipeline already filters to insert-only, but guard
+            // defensively in case the pipeline changes. fullDocument may be
+            // absent under rare reconnect-with-resume-token paths.
+            const doc = change && change.fullDocument;
+            if (!doc || doc.channel !== channel) return;
+
+            settled = true;
+            cleanup();
+            logger.debug(
+                { event: "DIST_EVENT_RECEIVED", channel, instanceId: _instanceId() },
+                "[DistributedLock] consumed via change stream"
+            );
+            resolve(doc.payload);
+        };
+
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            logger.debug(
+                {
+                    event: "DIST_EVENT_TIMEOUT",
+                    channel,
+                    timeoutMs,
+                    instanceId: _instanceId(),
+                },
+                "[DistributedLock] subscribeWithTimeout timed out"
+            );
+            resolve(null);
+        }, timeoutMs);
+
+        function cleanup() {
+            clearTimeout(timer);
+            stream.removeListener("change", onChange);
+        }
+
+        stream.on("change", onChange);
+
+        // Resource safety: subscribeWithTimeout is one-shot, so a healthy
+        // system has O(concurrent-mutations) listeners. If this spikes, a
+        // caller is leaking (forgot cleanup) or misusing it as a consumer.
+        // Once-per-process warning to avoid log flood during an incident.
+        if (
+            !_highListenerWarned &&
+            stream.listenerCount("change") > HIGH_LISTENER_THRESHOLD
+        ) {
+            _highListenerWarned = true;
+            logger.warn(
+                {
+                    event: "CHANGE_STREAM_HIGH_LISTENERS",
+                    count: stream.listenerCount("change"),
+                    threshold: HIGH_LISTENER_THRESHOLD,
+                },
+                "[DistributedLock] change stream has many listeners — possible leak"
+            );
+        }
+    });
+}
+
+/**
+ * _fallbackPolling
+ * Internal: the original Phase B polling implementation. Used when the
+ * Change Stream path is unavailable (non-replica-set, or init failed).
+ * Exact same behavior as the pre-Phase-C subscribeWithTimeout — identical
+ * contract, identical return shape.
+ */
+async function _fallbackPolling(channel, timeoutMs) {
     const startTime = new Date();
     const deadline = Date.now() + timeoutMs;
 
@@ -298,35 +494,34 @@ async function subscribeWithTimeout(channel, timeoutMs = 10000) {
                     {
                         event: "DIST_EVENT_CONSUME",
                         channel,
+                        mode: "polling-fallback",
                         instanceId: _instanceId(),
                     },
-                    "[DistributedLock] consumed"
+                    "[DistributedLock] consumed via polling fallback"
                 );
                 return event.payload;
             }
         } catch (err) {
-            // Swallow transient DB errors and keep polling until the deadline
-            // — matches the old Redis version which resolved null on any
-            // subscribe error rather than rejecting.
             logger.warn(
                 { event: "DIST_EVENT_POLL_FAILED", channel, err: err.message },
-                "[DistributedLock] subscribeWithTimeout poll error"
+                "[DistributedLock] polling fallback poll error"
             );
         }
 
-        // Sleep unless we'd overshoot the deadline.
         const remaining = deadline - Date.now();
         if (remaining <= 0) break;
         await _sleep(Math.min(SUBSCRIBE_POLL_INTERVAL_MS, remaining));
     }
 
-    // Visibility: timeouts are a legitimate path (callers treat null as "fall
-    // through to direct DB read"), but a sudden spike in timeouts usually
-    // means a publisher crashed or a channel name typo — log at debug so ops
-    // can correlate without drowning normal traffic.
     logger.debug(
-        { event: "DIST_EVENT_TIMEOUT", channel, timeoutMs, instanceId: _instanceId() },
-        "[DistributedLock] subscribeWithTimeout timed out"
+        {
+            event: "DIST_EVENT_TIMEOUT",
+            channel,
+            timeoutMs,
+            mode: "polling-fallback",
+            instanceId: _instanceId(),
+        },
+        "[DistributedLock] polling fallback timed out"
     );
     return null;
 }
