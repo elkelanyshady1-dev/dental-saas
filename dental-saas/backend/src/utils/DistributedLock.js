@@ -201,7 +201,10 @@ function _getChangeStream() {
         });
 
         stream.on("close", () => {
-            logger.debug(
+            // info-level because a mid-runtime close (Atlas failover, network
+            // blip, or mongoose.disconnect during shutdown) is worth seeing
+            // in the operator feed — not an error, but not routine either.
+            logger.info(
                 { event: "CHANGE_STREAM_CLOSED" },
                 "[DistributedLock] change stream closed"
             );
@@ -417,8 +420,12 @@ async function subscribeWithTimeout(channel, timeoutMs = 10000) {
 
             settled = true;
             cleanup();
+            // Unified consume log — same event name + mode tag as the polling
+            // fallback path so dashboards can aggregate under one key and
+            // filter/facet by mode. (Spec wanted this visibility via the
+            // return value — doing it in logs instead keeps the API stable.)
             logger.debug(
-                { event: "DIST_EVENT_RECEIVED", channel, instanceId: _instanceId() },
+                { event: "DIST_EVENT_CONSUME", mode: "stream", channel, instanceId: _instanceId() },
                 "[DistributedLock] consumed via change stream"
             );
             resolve(doc.payload);
@@ -433,6 +440,7 @@ async function subscribeWithTimeout(channel, timeoutMs = 10000) {
                     event: "DIST_EVENT_TIMEOUT",
                     channel,
                     timeoutMs,
+                    mode: "stream",
                     instanceId: _instanceId(),
                 },
                 "[DistributedLock] subscribeWithTimeout timed out"
