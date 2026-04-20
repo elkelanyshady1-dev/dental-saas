@@ -42,12 +42,36 @@ const outboxService = require("@core/outbox/outbox.service");
 
 const Money = require("@utils/money");
 const logger = require("@utils/logger");
+// Phase D: centralized request-idempotency store. Lives on the platform DB;
+// key/scope/org-scoped. Refund.schema stays untouched — transport-level
+// idempotency should not be a domain concern.
+const IdempotencyKey = require("@core/IdempotencyKey.model").default;
 const { v4: uuidv4 } = require("uuid");
 
 // ─── Strict Per-Org Model Resolvers (Phase 3.3) ─────────────────────────────
 function _getSecure(connection, def) {
     if (!connection) throw new Error("[RefundService] connection is REQUIRED — per-org mode does not allow fallback");
     return getModel(connection, def);
+}
+
+// ─── Idempotency key helper ─────────────────────────────────────────────────
+// Reads the HTTP Idempotency-Key header if present and syntactically valid.
+// Returns null for: no req / no header / empty / malformed keys. A null
+// return means "no idempotency" — the refund proceeds as if the client
+// didn't opt in. This preserves 100% backward compatibility for callers
+// that never send the header.
+//
+// Validation pattern (8-128 chars of [A-Za-z0-9_-]) matches the existing
+// idempotency middleware so both paths produce the same client contract.
+function _readIdempotencyKey(req) {
+    if (!req || typeof req !== "object") return null;
+    const headers = req.headers || {};
+    const raw = headers["idempotency-key"];
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    if (!/^[A-Za-z0-9_-]{8,128}$/.test(trimmed)) return null;
+    return trimmed;
 }
 
 
@@ -65,6 +89,86 @@ function _getSecure(connection, def) {
  * @returns {Promise<Object>} — created Refund document
  */
 async function processRefund({ organizationId, paymentId, amount, reason, processedByUserId }, req) {
+    // ─── Phase D: opt-in request idempotency ───────────────────────────────
+    // Clients that send `Idempotency-Key: <key>` get safe retry behavior:
+    // the exact same response is returned on replay, and concurrent duplicate
+    // requests see 409 REQUEST_ALREADY_IN_PROGRESS. Clients that don't send
+    // the header pass through unchanged — zero behavior change.
+    //
+    // The key lives on the centralized IdempotencyKey collection, NOT on the
+    // Refund schema. That keeps transport retries decoupled from domain
+    // records and lets the same mechanism cover invoice / ledger / job paths
+    // later without per-schema pollution.
+    const idempotencyKey = _readIdempotencyKey(req);
+    const orgIdStr = String(organizationId);
+    let claimedKey = null; // non-null once we own the in-flight row
+
+    if (idempotencyKey) {
+        // Fast replay path: completed key → return cached response. Scoped to
+        // (key, organizationId, scope:"refund") so a cross-scope key reuse
+        // can't return a wrong-operation response.
+        const existing = await IdempotencyKey.findOne({
+            key: idempotencyKey,
+            organizationId: orgIdStr,
+            scope: "refund",
+        }).lean();
+
+        if (existing?.status === "completed") {
+            logger.info(
+                { event: "REFUND_IDEMPOTENCY_REPLAY", key: idempotencyKey, organizationId: orgIdStr },
+                "[RefundService] replay — returning cached refund"
+            );
+            return existing.response?.body ?? existing.response ?? null;
+        }
+        if (existing?.status === "in-flight") {
+            const err = new Error("REQUEST_ALREADY_IN_PROGRESS");
+            err.statusCode = 409;
+            err.idempotencyKey = idempotencyKey;
+            throw err;
+        }
+
+        // Claim the key. Unique index on `key` serializes concurrent claims;
+        // exactly one caller wins the insert, the rest get E11000.
+        try {
+            await IdempotencyKey.create({
+                key: idempotencyKey,
+                organizationId: orgIdStr,
+                scope: "refund",
+                userId: processedByUserId ? String(processedByUserId) : null,
+                status: "in-flight",
+            });
+            claimedKey = idempotencyKey;
+            logger.info(
+                { event: "REFUND_IDEMPOTENCY_CLAIMED", key: idempotencyKey, organizationId: orgIdStr },
+                "[RefundService] idempotency key claimed"
+            );
+        } catch (err) {
+            if (err.code === 11000) {
+                // Lost the race. Re-check the winner's state under the same
+                // scope. If they completed → return cached response.
+                // Anything else (still in-flight, or a stale "failed" row)
+                // → 409 so the client backs off.
+                const winner = await IdempotencyKey.findOne({
+                    key: idempotencyKey,
+                    organizationId: orgIdStr,
+                    scope: "refund",
+                }).lean();
+                if (winner?.status === "completed") {
+                    logger.info(
+                        { event: "REFUND_IDEMPOTENCY_REPLAY", key: idempotencyKey, organizationId: orgIdStr, source: "race-loser" },
+                        "[RefundService] race-loser replay"
+                    );
+                    return winner.response?.body ?? winner.response ?? null;
+                }
+                const raceErr = new Error("REQUEST_ALREADY_IN_PROGRESS");
+                raceErr.statusCode = 409;
+                raceErr.idempotencyKey = idempotencyKey;
+                throw raceErr;
+            }
+            throw err;
+        }
+    }
+
     const currency = "AED";
 
     // Circuit breaker: block refund writes if financial integrity is compromised
@@ -285,10 +389,58 @@ async function processRefund({ organizationId, paymentId, amount, reason, proces
             "[RefundService] ✅ Refund processed successfully"
         );
 
+        if (claimedKey) {
+            // Cache the response for replay. Best-effort — if this update
+            // fails, the refund itself has already committed successfully;
+            // the in-flight row stays until its 24h TTL clears, at which
+            // point retries can proceed again. Don't let a cache-write
+            // failure mask a real refund success.
+            try {
+                await IdempotencyKey.updateOne(
+                    { key: claimedKey, organizationId: orgIdStr, scope: "refund" },
+                    {
+                        $set: {
+                            status: "completed",
+                            "response.body": typeof refund.toObject === "function" ? refund.toObject() : refund,
+                        },
+                    }
+                );
+                logger.debug(
+                    { event: "REFUND_IDEMPOTENCY_STORED", key: claimedKey, refundId: refund._id },
+                    "[RefundService] response cached on idempotency key"
+                );
+            } catch (storeErr) {
+                logger.error(
+                    { event: "REFUND_IDEMPOTENCY_STORE_FAILED", key: claimedKey, err: storeErr.message },
+                    "[RefundService] failed to cache idempotency response — non-fatal, refund succeeded"
+                );
+            }
+        }
+
         return refund;
     } catch (error) {
         if (session.inTransaction()) {
             await session.abortTransaction();
+        }
+        if (claimedKey) {
+            // Delete the in-flight row so a retry with the same key can
+            // proceed immediately. NOT marking "failed" because a failed
+            // row blocks retries on the unique-key index until TTL (24h).
+            // Deletion lets the client fix whatever caused the failure and
+            // retry with the same key.
+            try {
+                await IdempotencyKey.deleteOne({
+                    key: claimedKey,
+                    organizationId: orgIdStr,
+                    scope: "refund",
+                    status: "in-flight",
+                });
+            } catch (cleanupErr) {
+                logger.error(
+                    { event: "REFUND_IDEMPOTENCY_CLEANUP_FAILED", key: claimedKey, err: cleanupErr.message },
+                    "[RefundService] failed to release in-flight row — will expire via TTL"
+                );
+            }
         }
         throw error;
     } finally {
