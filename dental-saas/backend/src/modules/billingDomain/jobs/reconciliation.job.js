@@ -105,6 +105,7 @@ function start() {
     );
 
     // Don't run immediately on boot — wait for first interval
+    // ALLOWED_POLLING: SCHEDULER
     jobTimer = setInterval(runReconciliation, RECONCILIATION_INTERVAL_MS);
 }
 

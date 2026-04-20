@@ -105,6 +105,7 @@ function getSuppressionStats() {
 
 // ── Periodic Cleanup ──────────────────────────────────────────
 // Prevents unbounded Map growth from dead org+event combos.
+// ALLOWED_POLLING: CLEANUP
 const _cleanupInterval = setInterval(() => {
     const now = Date.now();
     let cleaned = 0;

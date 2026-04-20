@@ -67,6 +67,8 @@
     "test:backend": "jest --runInBand",
     "lint": "npx eslint src/",
     "lint:indexes": "node scripts/checkDuplicateIndexes.js",
+    "check:polling": "node scripts/check-polling-annotations.js",
+    "check:async-drift": "node scripts/check-async-usage.js",
     "db:audit": "node scripts/dbAudit.js",
     "db:consistency-audit": "node scripts/dbConsistencyAudit.js",
     "audit:permissions": "node scripts/auditPermissions.js",

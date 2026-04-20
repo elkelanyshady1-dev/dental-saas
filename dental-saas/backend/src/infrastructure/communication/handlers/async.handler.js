@@ -33,6 +33,7 @@ function _getClient() {
     if (_qstashClient) return _qstashClient;
     const token = process.env.QSTASH_TOKEN;
     if (!token) return null;
+    // eslint-disable-next-line no-restricted-modules -- sanctioned QStash publisher entry point
     const { Client } = require("@upstash/qstash");
     _qstashClient = new Client({ token });
     return _qstashClient;

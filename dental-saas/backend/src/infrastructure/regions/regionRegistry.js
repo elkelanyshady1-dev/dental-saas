@@ -164,6 +164,7 @@ function startRegistryRefresh(intervalMs = 300_000) {
     if (refreshInterval) {
         clearInterval(refreshInterval);
     }
+    // ALLOWED_POLLING: SCHEDULER
     refreshInterval = setInterval(refreshRegionRegistry, intervalMs);
     // Unref so the interval doesn't prevent graceful shutdown
     refreshInterval.unref();

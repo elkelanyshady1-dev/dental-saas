@@ -840,6 +840,7 @@ function evictEntry(key, reason) {
 function startEvictionSweep() {
     if (evictionTimer) return;
 
+    // ALLOWED_POLLING: CLEANUP
     evictionTimer = setInterval(() => {
         try {
             evictExpired();
@@ -877,6 +878,7 @@ function startEvictionSweep() {
 function startHealthChecks() {
     if (healthCheckTimer) return;
 
+    // ALLOWED_POLLING: HEALTH
     healthCheckTimer = setInterval(() => {
         try {
             runHealthChecks();

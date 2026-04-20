@@ -43,6 +43,7 @@ function _gcIdempotency() {
         if (exp <= now) _idempotencyCache.delete(k);
     }
 }
+// ALLOWED_POLLING: CLEANUP
 const _gcTimer = setInterval(_gcIdempotency, 60_000);
 if (_gcTimer.unref) _gcTimer.unref();
 

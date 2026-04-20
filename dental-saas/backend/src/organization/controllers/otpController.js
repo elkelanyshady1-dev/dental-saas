@@ -80,6 +80,7 @@ try {
 
 // In-memory fallback (only used when Redis is down)
 const _memFallback = new Map();
+// ALLOWED_POLLING: CLEANUP
 const _memCleanup = setInterval(() => {
     const now = Date.now();
     for (const [token, data] of _memFallback) {

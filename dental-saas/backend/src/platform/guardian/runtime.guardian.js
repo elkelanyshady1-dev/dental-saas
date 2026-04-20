@@ -279,6 +279,7 @@ function startRuntimeGuardian(intervalMs = 5 * 60 * 1000) {
     }, 5000);
 
     // Then on interval
+    // ALLOWED_POLLING: HEALTH
     _guardianTimer = setInterval(() => {
         runRuntimeChecks().catch(err => {
             guardianLogger.error({ err: err.message }, "Runtime Guardian interval error (non-fatal)");

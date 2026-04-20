@@ -284,6 +284,7 @@ function start() {
 
     // Run immediately on start, then poll
     pollCycle();
+    // ALLOWED_POLLING: OUTBOX
     workerTimer = setInterval(pollCycle, POLL_INTERVAL_MS);
 }
 

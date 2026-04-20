@@ -33,6 +33,7 @@ function _getReceiver() {
     const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
     const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY;
     if (!currentSigningKey || !nextSigningKey) return null;
+    // eslint-disable-next-line no-restricted-modules -- sanctioned QStash receiver entry point
     const { Receiver } = require("@upstash/qstash");
     _receiver = new Receiver({ currentSigningKey, nextSigningKey });
     return _receiver;

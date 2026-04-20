@@ -153,6 +153,7 @@ function start() {
     );
 
     pollCycle();
+    // ALLOWED_POLLING: OUTBOX
     workerTimer = setInterval(pollCycle, POLL_INTERVAL_MS);
 }
 

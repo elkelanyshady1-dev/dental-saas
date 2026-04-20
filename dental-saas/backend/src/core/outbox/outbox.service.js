@@ -42,6 +42,23 @@ async function enqueue({ organizationId, eventType, aggregateType, aggregateId, 
         throw new Error("[Outbox] session is REQUIRED — outbox writes must be transactional.");
     }
 
+    // Shape invariant: malformed records corrupt downstream projections and the
+    // worker's metric labels (eventType is used as a label — undefined explodes).
+    if (!eventType || typeof eventType !== "string") {
+        throw new Error("[Outbox] eventType is REQUIRED and must be a non-empty string.");
+    }
+
+    // Soft check: correlationId lets operators trace an outbox row back to the
+    // originating request across the DLQ. Warn only — some legacy emitters
+    // don't thread one yet. Promote to a throw once all call sites are migrated.
+    const correlationId = payload && typeof payload === "object" ? payload.correlationId : undefined;
+    if (!correlationId) {
+        logger.warn(
+            { eventType, aggregateType, aggregateId: aggregateId?.toString() },
+            "[Outbox] event enqueued without payload.correlationId — retry/DLQ tracing will be harder"
+        );
+    }
+
     try {
         const [record] = await Outbox.create(
             [

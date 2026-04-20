@@ -197,6 +197,7 @@ function startContractExpiryScheduler({ intervalMs = 60 * 60 * 1000, runImmediat
         );
     }
 
+    // ALLOWED_POLLING: SCHEDULER
     _schedulerHandle = setInterval(() => {
         processContractExpiry().catch(err =>
             logger.error({ err }, "[ContractExpiryScheduler] Scheduled run failed")

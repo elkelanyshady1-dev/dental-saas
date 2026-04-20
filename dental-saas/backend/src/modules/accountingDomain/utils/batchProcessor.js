@@ -137,6 +137,7 @@ let _flushInterval = null;
 function startFlushInterval() {
     if (_flushInterval) return; // Already started
 
+    // ALLOWED_POLLING: SCHEDULER
     _flushInterval = setInterval(async () => {
         for (const [orgId] of _queues) {
             try {

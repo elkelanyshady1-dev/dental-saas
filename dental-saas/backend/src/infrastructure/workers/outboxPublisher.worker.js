@@ -182,6 +182,7 @@ function start() {
         "[OutboxPublisher] Worker started"
     );
 
+    // ALLOWED_POLLING: OUTBOX
     _intervalHandle = setInterval(async () => {
         try {
             await publishPendingEvents();

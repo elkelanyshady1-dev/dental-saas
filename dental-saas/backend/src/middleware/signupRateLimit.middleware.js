@@ -43,6 +43,7 @@ try {
 
 // ─── In-memory fallback ───────────────────────────────────────────────────────
 const _memCounters = new Map();
+// ALLOWED_POLLING: CLEANUP
 const _memCleanup = setInterval(() => {
     const now = Date.now();
     for (const [key, data] of _memCounters) {

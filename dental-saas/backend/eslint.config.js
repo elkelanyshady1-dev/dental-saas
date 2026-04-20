@@ -156,6 +156,14 @@ module.exports = [
             { name: "@socket.io/redis-adapter", message: "Redis was removed in Phase 6. Socket.io runs single-instance; multi-instance needs a different pub/sub backend." },
             { name: "connect-redis", message: "Redis was removed in Phase 6. Sessions use JWT + plane-isolated stores, not a server-side session cache." },
             { name: "rate-limit-redis", message: "Redis was removed in Phase 6. Rate limits are per-process via lru-cache." },
+            // QStash encapsulation: the ONLY sanctioned importers are
+            // src/infrastructure/communication/handlers/async.handler.js (Client / publishJSON)
+            // and src/jobs/controllers/job.controller.js (Receiver / signature verify).
+            // Both files carry a scoped `eslint-disable-next-line no-restricted-modules`
+            // on the require() line so the exception is reviewable at the point of use.
+            // Any new caller should route through async.handler instead of adding another
+            // disable comment.
+            { name: "@upstash/qstash", message: "QStash is encapsulated. Route async delivery through src/infrastructure/communication/handlers/async.handler.js. Signature-verify only inside src/jobs/controllers/job.controller.js." },
           ],
         },
       ],
@@ -173,6 +181,7 @@ module.exports = [
             { name: "@socket.io/redis-adapter", message: "Redis was removed in Phase 6. Socket.io runs single-instance; multi-instance needs a different pub/sub backend." },
             { name: "connect-redis", message: "Redis was removed in Phase 6. Sessions use JWT + plane-isolated stores, not a server-side session cache." },
             { name: "rate-limit-redis", message: "Redis was removed in Phase 6. Rate limits are per-process via lru-cache." },
+            { name: "@upstash/qstash", message: "QStash is encapsulated. Route async delivery through src/infrastructure/communication/handlers/async.handler.js. Signature-verify only inside src/jobs/controllers/job.controller.js." },
           ],
         },
       ],

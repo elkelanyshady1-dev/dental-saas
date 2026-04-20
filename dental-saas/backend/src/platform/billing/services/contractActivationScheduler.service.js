@@ -273,6 +273,7 @@ function startContractActivationScheduler({ intervalMs = 5 * 60 * 1000, runImmed
         );
     }
 
+    // ALLOWED_POLLING: SCHEDULER
     _schedulerHandle = setInterval(() => {
         activateScheduledContracts().catch(err =>
             logger.error({ err }, "[ContractActivationScheduler] Scheduled run failed")
