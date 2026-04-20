@@ -26,6 +26,7 @@
 
 const logger = require("@utils/logger");
 const { dispatch } = require("../../infrastructure/communication/communication.dispatcher");
+const IdempotencyKey = require("@core/IdempotencyKey.model").default;
 
 let _receiver = null;
 function _getReceiver() {
@@ -40,6 +41,9 @@ function _getReceiver() {
 }
 
 async function handleCommunicationJob(req, res) {
+    const qstashMessageId = req.get("upstash-message-id") || null;
+    const idempotencyKeyValue = qstashMessageId ? `job:${qstashMessageId}` : null;
+
     // 1. Raw body guard — refuse to process a JSON-parsed body.
     if (!Buffer.isBuffer(req.body)) {
         logger.error("[qstash.receiver] req.body is not a Buffer — raw body middleware not wired");
@@ -85,6 +89,65 @@ async function handleCommunicationJob(req, res) {
         return res.status(401).json({ error: "unauthorized" });
     }
 
+    // 3b. Distributed QStash message dedup — Mongo-backed, multi-instance safe.
+    // Replaces a per-process Map that would let two app instances each process
+    // the same messageId once.
+    //
+    // Placement: AFTER signature verification only — pre-verify, an attacker
+    // could pollute the IdempotencyKey collection with forged messageIds.
+    //
+    // Lifecycle:
+    //   claim → dispatch
+    //           ├─ 200 → mark "completed" with cached body so any retry
+    //           │        replays the same response without re-dispatching.
+    //           ├─ 400 (bad payload) → delete the claim. QStash won't retry
+    //           │        4xx by default; leaving it would lock the key for
+    //           │        the 24h TTL with no benefit.
+    //           └─ 500 (dispatch threw) → delete the claim so QStash's retry
+    //                    can re-acquire on the next attempt.
+    //
+    // If the initial insert collides (E11000) the retry already ran or is
+    // in flight: replay the completed row, otherwise 409 IN_FLIGHT (QStash
+    // retries with backoff; whichever instance finishes first wins).
+    if (idempotencyKeyValue) {
+        const existing = await IdempotencyKey.findOne({ key: idempotencyKeyValue }).lean();
+        if (existing?.status === "completed") {
+            logger.info(
+                { event: "JOB_IDEMPOTENT_REPLAY", key: idempotencyKeyValue, qstashMessageId },
+                "[qstash.receiver] replaying cached response for duplicate messageId"
+            );
+            return res
+                .status(200)
+                .json(existing.response?.body || { ok: true, duplicate: true });
+        }
+
+        try {
+            await IdempotencyKey.create({
+                key: idempotencyKeyValue,
+                scope: "job",
+                organizationId: "platform",
+                status: "in-flight",
+            });
+            logger.info(
+                { event: "JOB_IDEMPOTENT_EXECUTION", key: idempotencyKeyValue, qstashMessageId },
+                "[qstash.receiver] claimed idempotency key — proceeding to dispatch"
+            );
+        } catch (err) {
+            if (err?.code !== 11000) throw err;
+            const row = await IdempotencyKey.findOne({ key: idempotencyKeyValue }).lean();
+            if (row?.status === "completed") {
+                return res
+                    .status(200)
+                    .json(row.response?.body || { ok: true, duplicate: true });
+            }
+            logger.warn(
+                { event: "JOB_IN_FLIGHT", key: idempotencyKeyValue, qstashMessageId },
+                "[qstash.receiver] concurrent processing — returning 409"
+            );
+            return res.status(409).json({ error: "JOB_ALREADY_IN_PROGRESS" });
+        }
+    }
+
     // Observability only — not an auth check. Presence confirms the request
     // path is dispatcher → QStash → receiver and aids debugging.
     const loopMarker = req.get("x-qstash-processed");
@@ -101,12 +164,18 @@ async function handleCommunicationJob(req, res) {
         job = JSON.parse(bodyString);
     } catch (err) {
         logger.error({ err: err.message }, "[qstash.receiver] body is not valid JSON");
+        if (idempotencyKeyValue) {
+            await IdempotencyKey.deleteOne({ key: idempotencyKeyValue, status: "in-flight" });
+        }
         return res.status(400).json({ error: "invalid payload" });
     }
 
     const { channel, type, payload } = job || {};
     if (!channel || !type) {
         logger.error({ job }, "[qstash.receiver] missing channel/type");
+        if (idempotencyKeyValue) {
+            await IdempotencyKey.deleteOne({ key: idempotencyKeyValue, status: "in-flight" });
+        }
         return res.status(400).json({ error: "invalid payload" });
     }
 
@@ -114,12 +183,28 @@ async function handleCommunicationJob(req, res) {
     //    dispatcher signature is dispatch({channel,type,payload}, options).
     try {
         const result = await dispatch({ channel, type, payload }, { hint: "sync" });
-        return res.status(200).json({ ok: true, mode: result?.mode || "sync" });
+        const responseBody = { ok: true, mode: result?.mode || "sync" };
+        if (idempotencyKeyValue) {
+            await IdempotencyKey.updateOne(
+                { key: idempotencyKeyValue },
+                {
+                    $set: {
+                        status: "completed",
+                        "response.statusCode": 200,
+                        "response.body": responseBody,
+                    },
+                }
+            );
+        }
+        return res.status(200).json(responseBody);
     } catch (err) {
         logger.error(
             { channel, type, err: err.message },
             "[qstash.receiver] dispatch failed — returning 500 for QStash retry"
         );
+        if (idempotencyKeyValue) {
+            await IdempotencyKey.deleteOne({ key: idempotencyKeyValue, status: "in-flight" });
+        }
         return res.status(500).json({ error: "dispatch failed" });
     }
 }

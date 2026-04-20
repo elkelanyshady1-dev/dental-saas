@@ -60,8 +60,7 @@
   "grandfatheredGaps": [
     "src/modules/billingDomain/refunds/refund.routes.js",
     "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js",
-    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js",
-    "src/jobs/controllers/job.controller.js"
+    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js"
   ],
 
   "_grandfatheredNotes": {
@@ -87,14 +86,6 @@
       "category": "FINANCIAL_WRITE",
       "targetFix": "Original author commits the file. Then thread Idempotency-Key from quotation-create route through the service and wrap create/convert mutations with ensureIdempotent() scoped to 'quotation'.",
       "note": "Untracked file (?? status, 720 lines). Same blocker as clinicBillingSettings: cannot commit unreviewed prior WIP. Needs original author to commit + idempotency-key API thread-through."
-    },
-
-    "src/jobs/controllers/job.controller.js": {
-      "owner": "platform-async",
-      "severity": "HIGH",
-      "category": "ASYNC_JOB",
-      "targetFix": "Wait for the in-flight +116-line WIP to land (almost certainly distributed-dedup migration). Then migrate the per-process `processedMessages` Map (L44) to distributed IdempotencyKey keyed on qstashMessageId with scope:'qstash'. Preserve the Map as an in-process fast-path guard before the DB lookup.",
-      "note": "qstashMessageId is available as a natural dedup key. File has per-process Map dedup (L44, processedMessages, TTL-bounded). +116 lines of uncommitted prior WIP — almost certainly in-progress distributed-dedup migration. Shipping a fix here now risks double-work."
     }
   }
 }
