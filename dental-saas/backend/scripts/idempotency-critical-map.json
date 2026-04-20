@@ -57,14 +57,44 @@
   ],
 
   "_grandfatheredNotes": {
-    "src/modules/billingDomain/refunds/refund.routes.js": "Route now gets opt-in idempotency via refund.service.js reading the Idempotency-Key header directly. Mounting a dedicated idempotency middleware here is OPTIONAL — would add response-replay at the HTTP layer (useful for idempotent retry of non-2xx errors). Only needed if src/middleware/idempotency.middleware.js is committed.",
+    "src/modules/billingDomain/refunds/refund.routes.js": {
+      "owner": "api-layer",
+      "severity": "MEDIUM",
+      "category": "ROUTE_LAYER",
+      "targetFix": "Optionally mount Idempotency-Key middleware on POST /refunds for HTTP-level response replay (4xx/5xx included). Service layer already handles the primary dedup via refund.service.js (commit 5fff527).",
+      "note": "Route gets opt-in idempotency via refund.service.js reading the Idempotency-Key header directly. Middleware mount is OPTIONAL — would add response-replay at the HTTP layer. Only needed if src/middleware/idempotency.middleware.js is committed."
+    },
 
-    "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": "Untracked file (?? status, 161 lines). CANNOT commit under this work's author line — requires the original author to commit the prior WIP first, then harden separately.",
+    "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": {
+      "owner": "billing-core",
+      "severity": "MEDIUM",
+      "category": "FINANCIAL_WRITE",
+      "targetFix": "Original author commits the file, then wrap setting-mutation methods with ensureIdempotent() at transaction boundaries — or make the writes naturally idempotent via upsert on (organizationId, settingKey) tuples.",
+      "note": "Untracked file (?? status, 161 lines). CANNOT commit under this work's author line — requires the original author to commit the prior WIP first, then harden separately."
+    },
 
-    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "CRITICAL financial path. 7 mutation sites (FinancialLedger.create × 5, PatientInvoice.updateOne × 2) inside a 630-line file. Uses referenceId: invoice._id / payment._id as domain link, NOT as dedup key. No idempotencyKey in signatures. +30 lines of uncommitted prior WIP in working tree — editing mixes WIP with fix. The two PatientInvoice.updateOne calls (L393, L514) are candidate conditional-update sites (spec's pending→paid pattern) — but verifying requires reading the full flow. Needs domain expert + clean working tree.",
+    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": {
+      "owner": "billing-core",
+      "severity": "CRITICAL",
+      "category": "FINANCIAL_WRITE",
+      "targetFix": "Wrap FinancialLedger.create × 5 with ensureIdempotent() keyed on a stable domain identifier (refundId / paymentId / voidId). Convert PatientInvoice.updateOne × 2 at L393 + L514 to conditional updates filtered on FROM state (e.g., {_id, status:'pending'} → {status:'paid'}).",
+      "note": "CRITICAL financial path. 7 mutation sites inside a 630-line file. Uses referenceId: invoice._id / payment._id as domain link, NOT as dedup key. No idempotencyKey in signatures. +30 lines of uncommitted prior WIP in working tree — editing mixes WIP with fix. Duplicate ledger entries = irreversible financial corruption."
+    },
 
-    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js": "Untracked file (?? status, 720 lines). Same blocker as clinicBillingSettings: cannot commit unreviewed prior WIP. Needs original author to commit + idempotency-key API thread-through.",
+    "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js": {
+      "owner": "billing-core",
+      "severity": "HIGH",
+      "category": "FINANCIAL_WRITE",
+      "targetFix": "Original author commits the file. Then thread Idempotency-Key from quotation-create route through the service and wrap create/convert mutations with ensureIdempotent() scoped to 'quotation'.",
+      "note": "Untracked file (?? status, 720 lines). Same blocker as clinicBillingSettings: cannot commit unreviewed prior WIP. Needs original author to commit + idempotency-key API thread-through."
+    },
 
-    "src/jobs/controllers/job.controller.js": "qstashMessageId is available as a natural dedup key. File has per-process Map dedup (L44, processedMessages, TTL-bounded). +116 lines of uncommitted prior WIP in working tree — almost certainly someone's in-progress distributed-dedup migration. Shipping a fix here now risks double-work with theirs. Wait for that WIP to land, then harden if still needed."
+    "src/jobs/controllers/job.controller.js": {
+      "owner": "platform-async",
+      "severity": "HIGH",
+      "category": "ASYNC_JOB",
+      "targetFix": "Wait for the in-flight +116-line WIP to land (almost certainly distributed-dedup migration). Then migrate the per-process `processedMessages` Map (L44) to distributed IdempotencyKey keyed on qstashMessageId with scope:'qstash'. Preserve the Map as an in-process fast-path guard before the DB lookup.",
+      "note": "qstashMessageId is available as a natural dedup key. File has per-process Map dedup (L44, processedMessages, TTL-bounded). +116 lines of uncommitted prior WIP — almost certainly in-progress distributed-dedup migration. Shipping a fix here now risks double-work."
+    }
   }
 }

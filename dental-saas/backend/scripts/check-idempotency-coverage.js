@@ -26,6 +26,13 @@
  *                                 visible in the output. Remove entries as
  *                                 each is fixed. NEW files not in this list
  *                                 still fail CI — the enforcement floor.
+ *   - `_grandfatheredNotes`     — object keyed by file path, values are
+ *                                 structured metadata { owner, severity,
+ *                                 category, targetFix, note }. The scanner
+ *                                 uses `severity` to group warnings (CRITICAL
+ *                                 → HIGH → MEDIUM → UNKNOWN). Legacy string
+ *                                 values are accepted and treated as UNKNOWN
+ *                                 severity until migrated.
  *
  * Exit code:
  *   0 — every scanned file either references an idempotency primitive OR
@@ -62,7 +69,37 @@ const grandfathered = new Set(
     (config.grandfatheredGaps || []).map((f) => f.replace(/\\/g, "/"))
 );
 
+// _grandfatheredNotes is documentation-adjacent: the scanner uses it for
+// severity grouping + ownership display, but missing entries or missing
+// fields degrade gracefully (UNKNOWN severity, no owner shown) rather than
+// breaking the run.
+const notes = config._grandfatheredNotes || {};
+
 const excludePatterns = config.excludeFilenamePatterns || [];
+
+// Severity bucket order for grouped output. Anything not in this list lands
+// under UNKNOWN. Intentionally short — more tiers = more argument over
+// which tier each file belongs in, without making the output more useful.
+const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "UNKNOWN"];
+
+function _meta(rel) {
+    const raw = notes[rel];
+    // Back-compat: old string-format notes → UNKNOWN severity, raw note text.
+    if (typeof raw === "string") {
+        return { severity: "UNKNOWN", owner: null, category: null, targetFix: null, note: raw };
+    }
+    if (raw && typeof raw === "object") {
+        const sev = SEVERITY_ORDER.includes(raw.severity) ? raw.severity : "UNKNOWN";
+        return {
+            severity: sev,
+            owner: raw.owner || null,
+            category: raw.category || null,
+            targetFix: raw.targetFix || null,
+            note: raw.note || null,
+        };
+    }
+    return { severity: "UNKNOWN", owner: null, category: null, targetFix: null, note: null };
+}
 
 // Single regex matching any idempotency primitive. Case-insensitive because
 // comments/log messages in the codebase use mixed casing. The word-boundary
@@ -133,15 +170,37 @@ if (result.missingDirs.length > 0) {
 }
 
 if (warnings.length > 0) {
+    // Group warnings by severity for actionable output. Within a severity
+    // bucket, sort by path so output is deterministic across runs.
+    const bySev = Object.fromEntries(SEVERITY_ORDER.map((s) => [s, []]));
+    for (const w of warnings) {
+        const m = _meta(w);
+        bySev[m.severity].push({ path: w, ...m });
+    }
+
     console.warn(
-        `\u26A0\uFE0F  Grandfathered idempotency gaps (${warnings.length}) — ` +
+        `\u26A0\uFE0F  Grandfathered idempotency gaps (${warnings.length}) \u2014 ` +
         `tracked, not blocking:\n`
     );
-    for (const w of warnings) {
-        console.warn(`  ${w}`);
+
+    for (const sev of SEVERITY_ORDER) {
+        const entries = bySev[sev];
+        if (entries.length === 0) continue;
+        entries.sort((a, b) => a.path.localeCompare(b.path));
+        console.warn(`=== ${sev} (${entries.length}) ===`);
+        for (const e of entries) {
+            console.warn(`  ${e.path}`);
+            const tags = [];
+            if (e.owner) tags.push(`owner: ${e.owner}`);
+            if (e.category) tags.push(`category: ${e.category}`);
+            if (tags.length > 0) console.warn(`    ${tags.join(" | ")}`);
+            if (e.targetFix) console.warn(`    fix: ${e.targetFix}`);
+        }
+        console.warn("");
     }
+
     console.warn(
-        "\nThese files are in `grandfatheredGaps` in scripts/idempotency-critical-map.json.\n" +
+        "These files are in `grandfatheredGaps` in scripts/idempotency-critical-map.json.\n" +
         "As each is migrated to use an idempotency primitive, remove its entry from that list.\n"
     );
 }
