@@ -11,13 +11,24 @@ console.log("NODE_ENV:", process.env.NODE_ENV);
 const logger = require("./src/utils/logger");
 logger.info({ service: "server", action: "init" }, "Server file loaded");
 
+// Phase A: Instance identifier for multi-instance coordination.
+// Set before any worker/subscriber boots so they can pick it up at load time
+// via global.INSTANCE_ID. Override via env (INSTANCE_ID=inst1) when running
+// multiple replicas locally; otherwise a UUID per process is fine.
+const { randomUUID } = require("crypto");
+global.INSTANCE_ID = process.env.INSTANCE_ID || randomUUID();
+logger.info(
+    { service: "server", action: "instance_id_assigned", instanceId: global.INSTANCE_ID },
+    `[System] Instance started: ${global.INSTANCE_ID}`
+);
+
 // 🛡️ v11.0 Hardening — Startup Config Validation
+// REDIS_URL removed from required env — the system is Redis-free (Phase 6).
 const requiredEnv = [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "JWT_SECRET",
-    "MONGO_URI",
-    "REDIS_URL"
+    "MONGO_URI"
 ];
 
 const missingEnv = requiredEnv.filter(key => !process.env[key]);

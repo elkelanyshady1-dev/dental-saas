@@ -27,6 +27,38 @@
 
 const logger = require("@utils/logger");
 const { getPlatformConnection } = require("@core/db/dbResolver");
+// Phase A: reuse the existing Mongo-backed cron lock so only one instance
+// runs this scheduler per cycle. Do NOT create a parallel lock service.
+const cronLock = require("@services/cronLockService");
+
+// Leader-lock parameters. Contract expiry iterates all expiring contracts
+// and may take longer than activation; 10 min TTL covers that with margin
+// while still being well under the 60 min default interval.
+const LOCK_NAME = "contract:expiry";
+const LOCK_TTL_MS = 10 * 60 * 1000;
+
+async function _runIfLeader(fn, context) {
+    const acquired = await cronLock.acquireLock(LOCK_NAME, LOCK_TTL_MS);
+    if (!acquired) {
+        logger.debug(
+            { instanceId: global.INSTANCE_ID, lockName: LOCK_NAME, context },
+            "[ContractExpiryScheduler] Not leader \u2014 skipping this cycle"
+        );
+        return;
+    }
+    try {
+        await fn();
+    } finally {
+        try {
+            await cronLock.releaseLock(LOCK_NAME);
+        } catch (err) {
+            logger.warn(
+                { err: err.message, lockName: LOCK_NAME },
+                "[ContractExpiryScheduler] releaseLock failed (TTL will recover)"
+            );
+        }
+    }
+}
 
 // Lazy model access — avoids circular dependency issues at startup
 function getOrgContract() {
@@ -192,14 +224,14 @@ function startContractExpiryScheduler({ intervalMs = 60 * 60 * 1000, runImmediat
     );
 
     if (runImmediately) {
-        processContractExpiry().catch(err =>
+        _runIfLeader(processContractExpiry, "initial").catch(err =>
             logger.error({ err }, "[ContractExpiryScheduler] Initial run failed")
         );
     }
 
     // ALLOWED_POLLING: SCHEDULER
     _schedulerHandle = setInterval(() => {
-        processContractExpiry().catch(err =>
+        _runIfLeader(processContractExpiry, "interval").catch(err =>
             logger.error({ err }, "[ContractExpiryScheduler] Scheduled run failed")
         );
     }, intervalMs);

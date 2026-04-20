@@ -24,6 +24,42 @@
 
 const mongoose = require("mongoose");
 const logger = require("@utils/logger");
+// Phase A: reuse the existing Mongo-backed cron lock so only one instance
+// runs this scheduler per cycle. Do NOT create a parallel lock service.
+const cronLock = require("@services/cronLockService");
+
+// Leader-lock parameters. Name is stable across instances so they contend
+// for the same row. TTL > worst-case runtime + safety margin; strictly less
+// than the configured intervalMs so a crashed holder can't block the next
+// cycle. Contract activation is a short transactional pipeline — 2 min is
+// comfortable headroom.
+const LOCK_NAME = "contract:activation";
+const LOCK_TTL_MS = 2 * 60 * 1000;
+
+async function _runIfLeader(fn, context) {
+    const acquired = await cronLock.acquireLock(LOCK_NAME, LOCK_TTL_MS);
+    if (!acquired) {
+        logger.debug(
+            { instanceId: global.INSTANCE_ID, lockName: LOCK_NAME, context },
+            "[ContractActivationScheduler] Not leader \u2014 skipping this cycle"
+        );
+        return;
+    }
+    try {
+        await fn();
+    } finally {
+        // Release on success AND failure. If we crash between here and release,
+        // the TTL (LOCK_TTL_MS) naturally unblocks the next cycle.
+        try {
+            await cronLock.releaseLock(LOCK_NAME);
+        } catch (err) {
+            logger.warn(
+                { err: err.message, lockName: LOCK_NAME },
+                "[ContractActivationScheduler] releaseLock failed (TTL will recover)"
+            );
+        }
+    }
+}
 
 // ─── Lazy loaders (avoid circular deps) ──────────────────────────────────────
 
@@ -268,14 +304,14 @@ function startContractActivationScheduler({ intervalMs = 5 * 60 * 1000, runImmed
     );
 
     if (runImmediately) {
-        activateScheduledContracts().catch(err =>
+        _runIfLeader(activateScheduledContracts, "initial").catch(err =>
             logger.error({ err }, "[ContractActivationScheduler] Initial run failed")
         );
     }
 
     // ALLOWED_POLLING: SCHEDULER
     _schedulerHandle = setInterval(() => {
-        activateScheduledContracts().catch(err =>
+        _runIfLeader(activateScheduledContracts, "interval").catch(err =>
             logger.error({ err }, "[ContractActivationScheduler] Scheduled run failed")
         );
     }, intervalMs);

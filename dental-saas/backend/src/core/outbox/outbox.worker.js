@@ -21,7 +21,11 @@
 
 "use strict";
 
-const Outbox = require("./Outbox.model");
+// The model file exports { modelName, schema, default }. We need the
+// registered mongoose model — `.default` — so findOneAndUpdate / updateOne
+// exist. Requiring without `.default` returns the exports object, which
+// silently has no model methods.
+const Outbox = require("./Outbox.model").default;
 const eventBus = require("@core/eventBus");
 const logger = require("@utils/logger");
 
@@ -29,6 +33,56 @@ const logger = require("@utils/logger");
 
 const POLL_INTERVAL_MS = parseInt(process.env.OUTBOX_POLL_INTERVAL_MS || "5000", 10); // 5 seconds
 const BATCH_SIZE = 10;
+
+// Phase A (multi-instance): crash-recovery sweep window. If a worker claims a
+// record and dies before releasing it, the reclaim query flips it back to
+// "pending" after this window so another instance can retry. Must exceed the
+// longest plausible single-record processing time — too short causes false
+// duplicates, too long delays recovery. 60s is comfortable for in-process
+// EventBus handlers (typical completion < 1s).
+const VISIBILITY_TIMEOUT_MS = parseInt(process.env.OUTBOX_VISIBILITY_TIMEOUT_MS || "60000", 10);
+
+// Read at call time so boot order (server.js sets global.INSTANCE_ID at the
+// top of startup; this module may be required earlier) doesn't leave us
+// stamping null lockedBy values.
+function _instanceId() {
+    return global.INSTANCE_ID || "unknown-instance";
+}
+
+/**
+ * Crash-recovery sweep: reclaim records stuck in "processing" past the
+ * visibility timeout. Runs at the start of every poll cycle on every
+ * instance — the sweep itself is idempotent (a no-op for non-stale records),
+ * so multi-instance concurrent sweeps converge to the same result.
+ */
+async function reclaimStuckProcessing() {
+    const cutoff = new Date(Date.now() - VISIBILITY_TIMEOUT_MS);
+    const result = await Outbox.updateMany(
+        {
+            status: "processing",
+            lockedAt: { $lt: cutoff },
+        },
+        {
+            $set: {
+                status: "pending",
+                lockedBy: null,
+                lockedAt: null,
+            },
+        }
+    );
+    if (result.modifiedCount > 0) {
+        logger.warn(
+            {
+                event: "OUTBOX_RECLAIM",
+                instanceId: _instanceId(),
+                reclaimed: result.modifiedCount,
+                cutoffMs: VISIBILITY_TIMEOUT_MS,
+            },
+            `[OutboxWorker] ♻ Reclaimed ${result.modifiedCount} stuck-processing record(s)`
+        );
+    }
+    return result.modifiedCount;
+}
 
 let workerTimer = null;
 let isProcessing = false;
@@ -40,11 +94,20 @@ let isProcessing = false;
  * @returns {boolean} — true if an event was processed
  */
 async function processOne() {
+    // Phase A: atomic multi-instance claim. Flipping status to "processing"
+    // as part of the update eliminates the race where two workers both match
+    // `status: "pending"` before either finishes. A second instance's filter
+    // won't match once the first has claimed the record.
+    const instanceId = _instanceId();
+    const now = new Date();
     const record = await Outbox.findOneAndUpdate(
+        { status: "pending" },
         {
-            status: "pending",
-        },
-        {
+            $set: {
+                status: "processing",
+                lockedBy: instanceId,
+                lockedAt: now,
+            },
             $inc: { attempts: 1 },
         },
         {
@@ -59,7 +122,9 @@ async function processOne() {
         // Emit the event via the event bus
         eventBus.emit(record.eventType, record.payload);
 
-        // Mark as processed
+        // Mark as processed. Clear lock fields so stale lockedBy/lockedAt
+        // don't linger on terminal rows (and so the reclaim sweep's
+        // `status: "processing"` filter naturally excludes them).
         await Outbox.updateOne(
             { _id: record._id },
             {
@@ -67,12 +132,14 @@ async function processOne() {
                     status: "processed",
                     processedAt: new Date(),
                     lastError: null,
+                    lockedBy: null,
+                    lockedAt: null,
                 },
             }
         );
 
         logger.debug(
-            { outboxId: record._id, eventType: record.eventType },
+            { instanceId, outboxId: record._id, eventType: record.eventType },
             "[OutboxWorker] ✅ Event emitted successfully"
         );
 
@@ -86,12 +153,16 @@ async function processOne() {
                     $set: {
                         status: "failed",
                         lastError: err.message,
+                        lockedBy: null,
+                        lockedAt: null,
                     },
                 }
             );
 
             logger.error(
                 {
+                    event: "OUTBOX_DLQ",
+                    instanceId,
                     outboxId: record._id,
                     eventType: record.eventType,
                     attempts: record.attempts,
@@ -100,16 +171,30 @@ async function processOne() {
                 "[OutboxWorker] 💀 Event emission exhausted — requires investigation"
             );
         } else {
-            // Leave as pending for retry
+            // Phase A: flip status back to "pending" (from "processing") and
+            // clear the lock so the next poll cycle on any instance can
+            // claim it again.
             await Outbox.updateOne(
                 { _id: record._id },
                 {
-                    $set: { lastError: err.message },
+                    $set: {
+                        status: "pending",
+                        lastError: err.message,
+                        lockedBy: null,
+                        lockedAt: null,
+                    },
                 }
             );
 
             logger.warn(
-                { outboxId: record._id, attempt: record.attempts, err: err.message },
+                {
+                    event: "OUTBOX_RETRY",
+                    instanceId,
+                    outboxId: record._id,
+                    eventType: record.eventType,
+                    attempt: record.attempts,
+                    err: err.message,
+                },
                 "[OutboxWorker] ⚠ Event emission failed — will retry"
             );
         }
@@ -125,6 +210,16 @@ async function pollCycle() {
     isProcessing = true;
 
     try {
+        // Phase A: crash recovery runs BEFORE the claim loop so records
+        // stranded by a prior crash are visible to this cycle. Sweep is
+        // cheap (indexed on {status, lockedAt}) and only logs when it
+        // actually reclaimed something.
+        try {
+            await reclaimStuckProcessing();
+        } catch (err) {
+            logger.error({ err: err.message }, "[OutboxWorker] reclaimStuckProcessing failed (non-fatal)");
+        }
+
         let processed = 0;
         for (let i = 0; i < BATCH_SIZE; i++) {
             const didWork = await processOne();
@@ -133,7 +228,10 @@ async function pollCycle() {
         }
 
         if (processed > 0) {
-            logger.debug({ processed }, "[OutboxWorker] Poll cycle completed");
+            logger.debug(
+                { instanceId: _instanceId(), processed },
+                "[OutboxWorker] Poll cycle completed"
+            );
         }
     } catch (err) {
         logger.error({ err }, "[OutboxWorker] Poll cycle error");
@@ -170,4 +268,5 @@ module.exports = {
     stop,
     pollCycle,
     processOne,
+    reclaimStuckProcessing,
 };
