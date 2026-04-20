@@ -118,6 +118,40 @@ async function processOne() {
 
     if (!record) return false;
 
+    // Paranoia guard. The atomic claim above (flipping status → processing
+    // with lockedBy=instanceId) already guarantees ownership — if we got the
+    // record back, nobody else can claim it while status is "processing". This
+    // check exists only to surface a bug if that invariant ever breaks (e.g.
+    // a future reclaim-sweep race we haven't thought of). Never observed in
+    // practice; kept as belt-and-braces for blast-radius containment.
+    if (record.lockedBy !== instanceId) {
+        logger.error(
+            {
+                event: "OUTBOX_LOCK_VIOLATION",
+                outboxId: record._id,
+                recordLockedBy: record.lockedBy,
+                instanceId,
+            },
+            "[OutboxWorker] Claim returned a record locked by a different instance \u2014 skipping"
+        );
+        return false;
+    }
+
+    // Observability: structured claim event. Includes claim latency so ops can
+    // graph "how long events sit as pending before a worker picks them up" in
+    // Grafana. Debug level to avoid log volume under steady load.
+    logger.debug(
+        {
+            event: "OUTBOX_CLAIM",
+            instanceId,
+            outboxId: record._id,
+            eventType: record.eventType,
+            attempt: record.attempts,
+            claimLatencyMs: record.createdAt ? Date.now() - record.createdAt.getTime() : null,
+        },
+        "[OutboxWorker] Claimed outbox record"
+    );
+
     try {
         // Emit the event via the event bus
         eventBus.emit(record.eventType, record.payload);
@@ -138,9 +172,14 @@ async function processOne() {
             }
         );
 
-        logger.debug(
-            { instanceId, outboxId: record._id, eventType: record.eventType },
-            "[OutboxWorker] ✅ Event emitted successfully"
+        logger.info(
+            {
+                event: "OUTBOX_SUCCESS",
+                instanceId,
+                outboxId: record._id,
+                eventType: record.eventType,
+            },
+            "[OutboxWorker] \u2705 Event emitted successfully"
         );
 
         return true;

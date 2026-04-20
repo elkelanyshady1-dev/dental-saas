@@ -18,7 +18,7 @@ logger.info({ service: "server", action: "init" }, "Server file loaded");
 const { randomUUID } = require("crypto");
 global.INSTANCE_ID = process.env.INSTANCE_ID || randomUUID();
 logger.info(
-    { service: "server", action: "instance_id_assigned", instanceId: global.INSTANCE_ID },
+    { event: "INSTANCE_BOOT", service: "server", action: "instance_id_assigned", instanceId: global.INSTANCE_ID },
     `[System] Instance started: ${global.INSTANCE_ID}`
 );
 
