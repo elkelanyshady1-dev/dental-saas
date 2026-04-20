@@ -19,6 +19,7 @@ const policies = {
     ...require("./support.policy"),
     ...require("./recall.policy"),
     ...require("./inventory.policy"),
+    ...require("./documents.policy"),
 };
 
 module.exports = {
