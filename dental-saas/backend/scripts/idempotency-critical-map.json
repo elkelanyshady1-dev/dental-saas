@@ -23,11 +23,13 @@
   ],
 
   "exceptions": [
-    "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js"
+    "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js",
+    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js"
   ],
 
   "_exceptionNotes": {
-    "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js": "Read-only service — no mutations, no idempotency needed."
+    "src/modules/billingDomain/organizationFinance/services/quotation.read.service.js": "Read-only service — no mutations, no idempotency needed.",
+    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js": "Read-only derivation service. Exports deriveStatusFromAmounts (pure fn) and deriveInvoiceStatus (findOne + aggregate → returns a status string). No updateOne / save / create / $set. Status writes happen in the callers (ledger.orchestrator.service.js, invoices.routes.js, reconciliation.service.js); conditional-update hardening belongs there, not here."
   },
 
   "grandfatheredGaps": [
@@ -36,7 +38,6 @@
     "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js",
     "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js",
     "src/modules/billingDomain/organizationFinance/services/invoice.service.js",
-    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js",
     "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js",
     "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js",
     "src/jobs/controllers/job.controller.js"
@@ -48,8 +49,7 @@
     "src/modules/billingDomain/organizationFinance/services/clinicBillingSettings.service.js": "TODO: settings writes should use upsert + conditional update to be naturally idempotent, or wrap in ensureIdempotent.",
     "src/modules/billingDomain/organizationFinance/services/clinicLedger.service.js": "TODO: ledger writes MUST be idempotent — critical financial path.",
     "src/modules/billingDomain/organizationFinance/services/invoice.service.js": "TODO: invoice create/update needs idempotency to prevent duplicate invoices on retry.",
-    "src/modules/billingDomain/organizationFinance/services/invoiceStatus.service.js": "TODO: status transitions should use conditional update (FROM state filter) to be idempotent by construction.",
-    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "TODO: CRITICAL — orchestrates ledger writes; any duplicate is a financial correctness bug.",
+    "src/modules/billingDomain/organizationFinance/services/ledger.orchestrator.service.js": "TODO: CRITICAL — orchestrates ledger writes; any duplicate is a financial correctness bug. Also owns the invoice status transitions (pending → paid); those writes should use conditional {_id, status: <from>} filters.",
     "src/modules/billingDomain/organizationFinance/services/quotation.orchestrator.service.js": "TODO: quotation create/convert needs idempotency keyed on the quotation idempotencyKey.",
     "src/jobs/controllers/job.controller.js": "TODO: currently uses per-process Map dedup (line 44, processedMessages) — migrate to distributed IdempotencyKey for multi-instance safety. See comment at line 41 acknowledging the known gap."
   }
