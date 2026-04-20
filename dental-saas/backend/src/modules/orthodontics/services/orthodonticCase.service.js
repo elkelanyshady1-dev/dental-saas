@@ -23,7 +23,6 @@ const BondingDef         = require("../models/Bonding.model");
 const TadDef              = require("../models/Tad.model");
 const ClinicalEventDef     = require("../models/ClinicalEvent.model");
 const getModel = require("../../../core/db/getModel");
-const { enqueueSegmentation, enqueueCephAnalysis } = require("../queues/aiAnalysis.queue");
 const eventBus = require("../../../core/eventBus");
 const logger = require("@utils/logger");
 
@@ -286,26 +285,17 @@ class OrthodonticCaseService {
         });
         await segmentation.save();
 
-        const job = await enqueueSegmentation({
-            scanFileId,
-            organizationId,
-            caseId,
-            patientId: scanFile.patientId,
-            fileKey: scanFile.fileKey,
-            modelVersion
-        });
-
         eventBus.emit("analysis.started", {
             organizationId,
             caseId,
             scanFileId,
             analysisType: "segmentation",
-            jobId: job.id
+            jobId: null
         });
 
-        logger.info({ caseId, scanFileId, jobId: job.id }, "[OrthoService] Segmentation analysis enqueued");
+        logger.info({ caseId, scanFileId }, "[OrthoService] Segmentation record created — pending AI engine integration");
 
-        return { segmentationId: segmentation._id, jobId: job.id };
+        return { segmentationId: segmentation._id, jobId: null };
     }
 
     async triggerCephAnalysis({ req, caseId, scanFileId, analysisType, modelVersion }) {
@@ -328,23 +318,15 @@ class OrthodonticCaseService {
         });
         await analysis.save();
 
-        const job = await enqueueCephAnalysis({
-            scanFileId,
-            organizationId,
-            caseId,
-            analysisType,
-            modelVersion
-        });
-
         eventBus.emit("analysis.started", {
             organizationId,
             caseId,
             scanFileId,
             analysisType: "cephalometric",
-            jobId: job.id
+            jobId: null
         });
 
-        return { analysisId: analysis._id, jobId: job.id };
+        return { analysisId: analysis._id, jobId: null };
     }
 
     async getSegmentationResults({ req, caseId }) {

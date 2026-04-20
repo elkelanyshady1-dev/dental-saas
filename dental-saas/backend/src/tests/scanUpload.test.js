@@ -8,8 +8,7 @@
  * 3. CephAnalysis model schema
  * 4. AlignerPlan model schema
  * 5. Organization isolation (all 4 models)
- * 6. AI Analysis Queue contract
- * 7. Domain events
+ * 6. Domain events
  */
 
 "use strict";
@@ -256,29 +255,7 @@ describe("Orthodontic Models — Organization Isolation", () => {
     });
 });
 
-// ─── 6. AI Queue Contract ────────────────────────────────────────────────────
-
-describe("AI Analysis Queue — Contract", () => {
-    const queue = require("../modules/orthodontics/queues/aiAnalysis.queue");
-
-    test("exports aiAnalysisQueue", () => {
-        expect(queue.aiAnalysisQueue).toBeDefined();
-    });
-
-    test("exports enqueueSegmentation", () => {
-        expect(typeof queue.enqueueSegmentation).toBe("function");
-    });
-
-    test("exports enqueueCephAnalysis", () => {
-        expect(typeof queue.enqueueCephAnalysis).toBe("function");
-    });
-
-    test("exports AI_ANALYSIS_QUEUE_NAME", () => {
-        expect(queue.AI_ANALYSIS_QUEUE_NAME).toBe("aiAnalysisQueue");
-    });
-});
-
-// ─── 7. Domain Events ────────────────────────────────────────────────────────
+// ─── 6. Domain Events ────────────────────────────────────────────────────────
 
 describe("Orthodontic Domain Events — Contract", () => {
     const domainEvents = require("../core/domainEvents");

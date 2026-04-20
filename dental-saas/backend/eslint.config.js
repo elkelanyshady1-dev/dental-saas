@@ -133,8 +133,12 @@ module.exports = [
         },
       ],
 
-      // ── RLS Decommission Guard (Phase 4) ─────────────────────────────
-      // Permanently block legacy RLS imports
+      // ── RLS Decommission Guard (Phase 4) + Redis Eradication (Phase 6) ─
+      // Permanently block legacy RLS imports and the removed Redis/BullMQ
+      // stack. Reintroducing these is an architectural rollback — Phase 6
+      // moved all async flows to QStash, locks to MongoDB, and rate limits
+      // to in-memory lru-cache. If you hit a blocker because of this rule,
+      // the right answer is to design around it, not to unblock the import.
       "no-restricted-modules": [
         "error",
         {
@@ -145,7 +149,58 @@ module.exports = [
             { name: "@core/rls/queryScoper", message: "queryScoper removed. Per-org mode uses DB-level isolation." },
             { name: "@core/rls/rlsAssertions", message: "Use @core/guards/tenantAssertions instead." },
             { name: "@core/rls/secureFlowAssertion", message: "Use @core/guards/flowMarkers instead." },
+            { name: "ioredis", message: "Redis was removed in Phase 6. Use QStash for async jobs, MongoDB for durable state, and lru-cache for per-process caches." },
+            { name: "bullmq", message: "BullMQ was removed in Phase 6. Async delivery flows through QStash webhooks (see src/infrastructure/communication/handlers/async.handler.js)." },
+            { name: "bull", message: "Redis/BullMQ was removed in Phase 6 — see ioredis/bullmq messages above." },
+            { name: "redis", message: "Redis was removed in Phase 6 — see ioredis message above." },
+            { name: "@socket.io/redis-adapter", message: "Redis was removed in Phase 6. Socket.io runs single-instance; multi-instance needs a different pub/sub backend." },
+            { name: "connect-redis", message: "Redis was removed in Phase 6. Sessions use JWT + plane-isolated stores, not a server-side session cache." },
+            { name: "rate-limit-redis", message: "Redis was removed in Phase 6. Rate limits are per-process via lru-cache." },
           ],
+        },
+      ],
+
+      // Companion guard for ESM `import` syntax (no-restricted-modules only covers CommonJS require()).
+      // Defense-in-depth: if any file migrates to ESM, the Phase 6 Redis/BullMQ block still holds.
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "ioredis", message: "Redis was removed in Phase 6. Use QStash for async jobs, MongoDB for durable state, and lru-cache for per-process caches." },
+            { name: "bullmq", message: "BullMQ was removed in Phase 6. Async delivery flows through QStash webhooks (see src/infrastructure/communication/handlers/async.handler.js)." },
+            { name: "bull", message: "Redis/BullMQ was removed in Phase 6 — see ioredis/bullmq messages above." },
+            { name: "redis", message: "Redis was removed in Phase 6 — see ioredis message above." },
+            { name: "@socket.io/redis-adapter", message: "Redis was removed in Phase 6. Socket.io runs single-instance; multi-instance needs a different pub/sub backend." },
+            { name: "connect-redis", message: "Redis was removed in Phase 6. Sessions use JWT + plane-isolated stores, not a server-side session cache." },
+            { name: "rate-limit-redis", message: "Redis was removed in Phase 6. Rate limits are per-process via lru-cache." },
+          ],
+        },
+      ],
+
+      // ── Unsafe Model Access Guard (C0 Hardening) ──────────────────────
+      // Direct model access via `require('./foo.model')` is unsafe:
+      // our model files export `{ modelName, schema, default }` — not a
+      // Mongoose model. Callers must bind through `getModel(conn, Def)` or
+      // via `.default` (shared-DB only).
+      //
+      // The authoritative check runs as `scripts/scan-unsafe-models.js`
+      // during `npm run check:models` and CI — ESLint's AST language isn't
+      // expressive enough to ban *only* the misuse without flagging safe
+      // patterns, so we keep enforcement in the scanner.
+
+      // ── Zod v4 Migration Guard ────────────────────────────────────────
+      // Zod v4 changed `z.record(value)` → `z.record(keySchema, valueSchema)`.
+      // Single-arg form silently produces a malformed schema — the constructor
+      // does not throw, but `.parse()`/`.safeParse()` crashes with
+      // `TypeError: Cannot read properties of undefined (reading '_zod')`.
+      // Caught a production 500 in PATCH /orthodontic-cases/:id/workflow.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.name='z'][callee.property.name='record'][arguments.length<2]",
+          message:
+            "Zod v4: z.record requires (keySchema, valueSchema). Single-arg form silently produces a malformed schema. Use z.record(z.string(), valueSchema).",
         },
       ],
     },

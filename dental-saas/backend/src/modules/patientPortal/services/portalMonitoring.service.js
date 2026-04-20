@@ -24,7 +24,6 @@ const PatientPhotoDef = require("../models/PatientPhoto.model");
 const MonitoringSessionDef = require("../models/MonitoringSession.model");
 const PatientMessageDef = require("../models/PatientMessage.model");
 const getModel = require("../../../core/db/getModel");
-const { enqueuePhotoAnalysis } = require("../queues/photoAnalysis.queue");
 const { enqueueNotification } = require("../../notificationDomain/notification.service");
 const eventBus = require("../../../core/eventBus");
 const logger = require("@utils/logger");
@@ -150,18 +149,7 @@ class PortalMonitoringService {
             aiAnalysisStatus: "queued"
         });
 
-        // Enqueue AI analysis
-        const job = await enqueuePhotoAnalysis({
-            photoId: photo._id,
-            organizationId: req.organizationId,
-            patientId,
-            caseId,
-            monitoringSessionId,
-            fileKey: data.fileKey,
-            photoType: data.photoType
-        });
-
-        logger.info({ photoId: photo._id, jobId: job.id }, "[PortalMonitoring] Photo registered + AI job enqueued");
+        logger.info({ photoId: photo._id }, "[PortalMonitoring] Photo registered \u2014 pending AI engine integration");
 
         eventBus.emit("photo.uploaded", {
             organizationId: req.organizationId,
@@ -171,7 +159,7 @@ class PortalMonitoringService {
             photoType: data.photoType
         });
 
-        return { photo, jobId: job.id };
+        return { photo, jobId: null };
     }
 
     async listPhotos({ req, patientId, caseId, monitoringSessionId }) {

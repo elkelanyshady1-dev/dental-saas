@@ -9,8 +9,6 @@
  * 4. Photo AI analysis status FSM
  * 5. Photo storage path virtual
  * 6. Progress FSM statuses
- * 7. photoAnalysisQueue contract
- * 8. Domain events
  */
 
 "use strict";
@@ -164,23 +162,6 @@ describe("AlignerProgress — Status Enum Completeness", () => {
     });
 });
 
-// ─── 6. photoAnalysisQueue Contract ──────────────────────────────────────────
-
-describe("photoAnalysisQueue — Contract", () => {
-    const queue = require("../modules/patientPortal/queues/photoAnalysis.queue");
-
-    test("exports photoAnalysisQueue", () => {
-        expect(queue.photoAnalysisQueue).toBeDefined();
-    });
-
-    test("exports enqueuePhotoAnalysis function", () => {
-        expect(typeof queue.enqueuePhotoAnalysis).toBe("function");
-    });
-
-    test("exports PHOTO_ANALYSIS_QUEUE_NAME", () => {
-        expect(queue.PHOTO_ANALYSIS_QUEUE_NAME).toBe("photoAnalysisQueue");
-    });
-});
 
 // ─── 7. Domain Events ────────────────────────────────────────────────────────
 
