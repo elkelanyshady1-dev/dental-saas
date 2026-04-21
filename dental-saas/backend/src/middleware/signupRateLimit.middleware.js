@@ -1,11 +1,15 @@
 /**
  * signupRateLimit.middleware.js
  * Public Plane — Signup Abuse Protection
- * v24.0 — TASK-PLATFORM-RELIABILITY-HARDENING Phase 6
+ * v25.0 — Phase 6 cleanup (Redis path removed)
  *
  * PURPOSE:
  * Rate-limits signup attempts to prevent automated abuse.
- * Uses Redis counters when available, with in-memory fallback for dev.
+ * Single-instance per-process counters (in-memory Map) — Redis was
+ * removed in Phase 6. For multi-instance deployments the counter is
+ * per-process, so an attacker distributing requests across instances
+ * gets N× the limit; this is an acceptable degradation at the signup
+ * rate vs. a DB round-trip per request.
  *
  * LIMITS:
  *   - 5 signup attempts per IP per hour
@@ -13,7 +17,7 @@
  *     (already handled by VerificationEngine.verifyToken() rate limiting, this is the IP layer)
  *
  * DESIGN:
- *   - Non-blocking: Redis failures fall through (signup proceeds)
+ *   - Non-blocking: counter failures fall through (signup proceeds)
  *   - Transparent: returns 429 with human-readable message
  *   - Does not affect legitimate users (generous limits)
  *
@@ -25,23 +29,7 @@
 const logger = require("@utils/logger");
 const { normalizeIP } = require("../core/security/ipNormalizer");
 
-// ─── Redis client (optional) ──────────────────────────────────────────────────
-let redisClient;
-let _useRedis = false;
-
-try {
-    redisClient = require("@infrastructure/redis/redisClient");
-    _useRedis = redisClient && redisClient.status === "ready";
-    if (redisClient) {
-        redisClient.on("ready", () => { _useRedis = true; });
-        redisClient.on("error", () => { _useRedis = false; });
-        redisClient.on("close", () => { _useRedis = false; });
-    }
-} catch {
-    logger.warn("[SignupRateLimit] Redis unavailable — using in-memory rate limiting");
-}
-
-// ─── In-memory fallback ───────────────────────────────────────────────────────
+// ─── In-memory counter store ──────────────────────────────────────────────────
 const _memCounters = new Map();
 // ALLOWED_POLLING: CLEANUP
 const _memCleanup = setInterval(() => {
@@ -65,20 +53,6 @@ const SIGNUP_WINDOW_SECONDS = parseInt(process.env.SIGNUP_RATE_WINDOW_SECONDS, 1
  * @returns {Promise<number>} Current count after increment
  */
 async function _incrementCounter(key, ttlSeconds) {
-    if (_useRedis) {
-        try {
-            const multi = redisClient.multi();
-            multi.incr(key);
-            multi.expire(key, ttlSeconds);
-            const results = await multi.exec();
-            // results[0] = [null, count] from INCR
-            return results[0][1];
-        } catch (e) {
-            logger.warn({ err: e.message, key }, "[SignupRateLimit] Redis INCR failed — fallback");
-        }
-    }
-
-    // In-memory fallback
     const now = Date.now();
     const existing = _memCounters.get(key);
     if (existing && existing.expiresAt > now) {

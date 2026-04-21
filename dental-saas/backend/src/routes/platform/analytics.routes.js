@@ -237,19 +237,16 @@ router.get("/analytics/queue-metrics",
     platformProtect,
     authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
     async (req, res) => {
-        try {
-            const { emailQueue } = require("../../infrastructure/queues/emailQueue");
-            const counts = await emailQueue.getJobCounts(
-                "waiting", "active", "completed", "failed", "delayed", "paused"
-            );
-            return res.json({
-                queue: "emailQueue",
-                ...counts,
-                fetchedAt: new Date().toISOString()
-            });
-        } catch (err) {
-            return res.status(500).json({ message: "Failed to fetch queue metrics", error: err.message });
-        }
+        // Phase 6: BullMQ emailQueue was removed; async delivery now flows
+        // through QStash, which does not expose waiting/active/delayed
+        // counts to the app layer. Return a honest "gone" response so the
+        // frontend can render a disabled-widget state instead of a 500.
+        return res.status(501).json({
+            success: false,
+            error: "QUEUES_ERADICATED",
+            reason: "BullMQ queues removed in Phase 6. Async delivery goes through QStash (no app-layer queue counts).",
+            replacement: "infrastructure/communication/communication.dispatcher.js",
+        });
     }
 );
 
@@ -288,33 +285,18 @@ router.get("/analytics/worker-health",
     platformProtect,
     authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
     async (req, res) => {
-        try {
-            const redisClient = require("../../infrastructure/redis/redisClient");
-
-            // Check Redis connection status
-            const redisStatus = redisClient.status; // ioredis: 'ready' | 'connecting' | 'close' | 'end'
-            const redisOk = redisStatus === "ready";
-
-            // Check worker via global registry (set by emailWorker.js on load)
-            // emailWorker exports the worker instance; if it was required in server.js it is running.
-            let workerStatus = "stopped";
-            try {
-                const worker = require("../../infrastructure/workers/emailWorker");
-                // BullMQ Worker exposes .isRunning() in v5+
-                workerStatus = (worker && !worker.closing) ? "running" : "stopped";
-            } catch {
-                workerStatus = "not_loaded";
-            }
-
-            return res.json({
-                emailWorker: workerStatus,
-                redis: redisOk ? "connected" : "disconnected",
-                redisStatus,
-                checkedAt: new Date().toISOString()
-            });
-        } catch (err) {
-            return res.status(500).json({ message: "Failed to fetch worker health", error: err.message });
-        }
+        // Phase 6: Redis + BullMQ workers (emailWorker, smsWorker,
+        // notification.worker, communication.worker) were all removed.
+        // There is no in-process worker pool to health-check, and no
+        // Redis connection to ping. Return the honest "gone" state so
+        // the frontend reflects reality rather than throwing 500s.
+        return res.json({
+            emailWorker: "removed-phase-6",
+            redis: "removed-phase-6",
+            redisStatus: "n/a",
+            checkedAt: new Date().toISOString(),
+            note: "BullMQ + Redis removed in Phase 6; async delivery via QStash, sync via communication.dispatcher",
+        });
     }
 );
 

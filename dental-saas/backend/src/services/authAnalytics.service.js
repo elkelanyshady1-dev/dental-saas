@@ -32,24 +32,13 @@ const AuthTrace = require("@shared/models/AuthTrace").default;
 const { getEnforcementMode } = require("@rbac/fieldWriteGuard");
 const logger = require("@utils/logger");
 
-// ─── Redis Cache Integration (TASK-AUTH-SCALE-007) ─────────────────────────
+// ─── Cache (disabled post-Phase-6) ──────────────────────────────────────────
+// Redis-backed caching removed in Phase 6. Every analytics read now hits
+// Mongo directly. Dashboard queries are bounded by indexed date ranges,
+// so the cost is acceptable; swap _getCache/_setCache for an lru-cache
+// backing if this becomes hot.
 
-let redis;
-let _hasRedis = false;
-
-try {
-    redis = require("@infra/redis/redisClient");
-    if (redis) {
-        _hasRedis = redis.status === "ready";
-        redis.on("ready", () => { _hasRedis = true; });
-        redis.on("error", () => { _hasRedis = false; });
-        redis.on("close", () => { _hasRedis = false; });
-    }
-} catch {
-    logger.warn("[AuthAnalytics] Redis unavailable — caching disabled");
-}
-
-// ─── Cache Configuration ────────────────────────────────────────────────────
+// ─── Cache Configuration (kept as constants; unused post-cache-removal) ────
 
 const CACHE_TTL = {
     SUMMARY:            15,   // 15s — high-frequency updates
@@ -74,24 +63,14 @@ function _cacheKey(endpoint, orgId, params = {}) {
     return `authAnalytics:${endpoint}:${orgId}${paramStr ? ":" + paramStr : ""}`;
 }
 
-async function _getCache(key) {
-    if (!_hasRedis) return null;
-    try {
-        const raw = await redis.get(key);
-        return raw ? JSON.parse(raw) : null;
-    } catch (err) {
-        logger.warn({ err: err.message, key }, "[AuthAnalytics] Cache GET failed");
-        return null;
-    }
+// Always a miss — callers fall through to Mongo. Retained as functions
+// so the eventual lru-cache swap is a one-file change.
+async function _getCache(/* key */) {
+    return null;
 }
 
-async function _setCache(key, value, ttl) {
-    if (!_hasRedis) return;
-    try {
-        await redis.set(key, JSON.stringify(value), "EX", ttl);
-    } catch (err) {
-        logger.warn({ err: err.message, key }, "[AuthAnalytics] Cache SET failed");
-    }
+async function _setCache(/* key, value, ttl */) {
+    // no-op
 }
 
 // ─── Date Filter Builder ────────────────────────────────────────────────────
@@ -462,12 +441,10 @@ async function getFieldViolations(organizationId, options = {}) {
  * Get auth trace queue health metrics for the analytics dashboard.
  */
 async function getQueueHealth() {
-    try {
-        const { getQueueHealth: qHealth } = require("@infra/queues/authTrace.queue");
-        return await qHealth();
-    } catch {
-        return { name: "authTraceQueue", status: "unavailable" };
-    }
+    // Phase 6: BullMQ authTrace queue was removed. Persistence is now
+    // a direct Mongo write in authTracePersistence.service — there's
+    // no queue to report health on.
+    return { name: "authTraceQueue", status: "removed-phase-6" };
 }
 
 // ─── Legacy Combined Endpoint (backward compat) ────────────────────────────

@@ -1,5 +1,6 @@
 /**
  * authTracePersistence.service.js — Async Auth Trace Persistence
+ * v2.0 — Phase 6 cleanup (BullMQ queue removed)
  *
  * Non-blocking persistence layer for AUTH_TRACE events.
  * Writes to MongoDB asynchronously using setImmediate() so that
@@ -8,43 +9,25 @@
  * Features:
  *   - Configurable sampling rate (AUTH_TRACE_SAMPLE_RATE)
  *   - Always-store denials (AUTH_TRACE_DENY_ALWAYS)
- *   - Resource context enrichment (TASK-AUTH-INT-002)
+ *   - Resource context enrichment
  *   - Post-persist hooks for anomaly detection
- *   - Queue-based ingestion via BullMQ (Phase 20.1 TASK-AUTH-SCALE-002)
+ *
+ * v1.x routed writes through a BullMQ authTrace.queue worker; the
+ * queue + worker were removed in Phase 6. Direct setImmediate() writes
+ * were already the v1.x fallback path — now the only path.
  *
  * Environment Variables:
  *   AUTH_TRACE_SAMPLE_RATE   — float 0.0–1.0, default 1.0 (100% storage)
  *   AUTH_TRACE_DENY_ALWAYS   — "true"/"false", default "true"
  *   AUTH_TRACE_ENABLED       — "true"/"false", default "true" (kill switch)
- *   AUTH_TRACE_QUEUE_ENABLED — "true"/"false", default "true" (queue vs direct)
  *
  * PLANE: Org only.
- * Phase 20 — TASK-AUTH-INT-001
- * Phase 20.1 — TASK-AUTH-SCALE-002
  */
 
 "use strict";
 
 const AuthTrace = require("@shared/models/AuthTrace").default;
 const logger = require("@utils/logger");
-
-// ─── Queue Integration (Phase 20.1) ────────────────────────────────────────
-
-let _addTraceJob = null;
-const _queueEnabled = process.env.AUTH_TRACE_QUEUE_ENABLED !== "false";
-
-if (_queueEnabled) {
-    try {
-        const { addTraceJob } = require("@infra/queues/authTrace.queue");
-        _addTraceJob = addTraceJob;
-        logger.info("[AuthTracePersistence] Queue mode enabled");
-    } catch (err) {
-        logger.warn(
-            { err: err.message },
-            "[AuthTracePersistence] Queue unavailable — falling back to direct persistence"
-        );
-    }
-}
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -158,10 +141,8 @@ function buildTraceDocument(req) {
 /**
  * Persist an auth trace asynchronously (non-blocking).
  *
- * Phase 20.1: Routes through BullMQ queue when available,
- * falls back to direct setImmediate() write if queue is unavailable.
- *
  * Call this from the res.on("finish") handler in authTraceMiddleware.
+ * Uses setImmediate() to keep the write off the response path.
  *
  * @param {import("express").Request} req
  */
@@ -172,28 +153,11 @@ function persistTraceAsync(req) {
     // Sampling decision
     if (!shouldPersist(doc.hasDenial)) return;
 
-    // ── Phase 20.1: Queue-based ingestion ────────────────────────────────
-    if (_addTraceJob) {
-        // Non-blocking: fire-and-forget to Redis queue
-        setImmediate(() => {
-            _addTraceJob(doc).catch((err) => {
-                logger.error(
-                    { err: err.message, requestId: doc.requestId, service: "authTracePersistence" },
-                    "[AuthTracePersistence] Queue enqueue failed — attempting direct write"
-                );
-                // Fallback: direct DB write if queue fails
-                _directPersist(doc);
-            });
-        });
-        return;
-    }
-
-    // ── Fallback: Direct DB write (original Phase 20 behavior) ──────────
     _directPersist(doc);
 }
 
 /**
- * Direct MongoDB persistence (fallback when queue is unavailable).
+ * Direct MongoDB persistence via setImmediate (non-blocking).
  * @param {Object} doc
  */
 function _directPersist(doc) {

@@ -1,51 +1,42 @@
 /**
- * securityCache.js — Security Control Center Redis Cache
+ * securityCache.js — Security Control Center Cache Facade
+ * v2.0 — Phase 6 cleanup (Redis backing removed)
  *
- * Provides tiered caching for security endpoints:
- *   - overview (30s TTL — includes live audit counts)
- *   - coverage (5min TTL — rarely changes at runtime)
- *   - policies (5min TTL — only changes on deploy)
- *   - logs (10s TTL — keyed by org + page + filters)
+ * Previously a Redis cache with graceful degradation. Redis was removed
+ * in Phase 6, and no in-process cache replacement was added — every
+ * security endpoint now reads directly from Mongo on each request. The
+ * cost is acceptable because the security-dashboard endpoints are
+ * rarely hit, and the queries already project narrow indexed slices.
  *
- * Falls back gracefully when Redis is unavailable — endpoints
- * compute from DB directly (no error, just slower).
+ * This file remains as a no-op facade so callers (security controllers,
+ * policy-change listeners) don't need to rewire. Every function has the
+ * same shape as before; the implementations are pass-throughs:
+ *   - getCache()       → always returns null (miss → caller reads DB)
+ *   - setCache()       → no-op
+ *   - invalidate*()    → no-op
+ *   - on*Change()      → no-op (listeners still call these; we just
+ *                        don't need to do anything here)
+ *
+ * If caching becomes a hot-path concern again, swap the implementation
+ * for lru-cache (per-process) without touching any caller.
  *
  * PLANE: Org only (keys namespaced by organizationId).
  */
 
 "use strict";
 
-const logger = require("@utils/logger");
-
-// ─── Redis Client (lazy, non-blocking) ────────────────────────────────────────
-
-let redis;
-let _hasRedis = false;
-
-try {
-    redis = require("@infra/redis/redisClient");
-    if (redis) {
-        _hasRedis = redis.status === "ready";
-        redis.on("ready", () => { _hasRedis = true; });
-        redis.on("error", () => { _hasRedis = false; });
-        redis.on("close", () => { _hasRedis = false; });
-    }
-} catch {
-    logger.warn("[SecurityCache] Redis unavailable — caching disabled");
-}
-
-// ─── TTL Constants ──────────────────────────────────────────────────────────
+// ─── TTL Constants (kept for caller API stability) ─────────────────────────
 
 const TTL = {
-    OVERVIEW:  30,    // 30 seconds — includes live counts
-    COVERAGE:  300,   // 5 minutes — rarely changes
-    POLICIES:  300,   // 5 minutes — only changes on deploy
-    LOGS:      10,    // 10 seconds — keyed per page/filter
-    FIELDS:    300,   // 5 minutes — config-level
-    MATRIX:    300,   // 5 minutes — static structure
+    OVERVIEW:  30,
+    COVERAGE:  300,
+    POLICIES:  300,
+    LOGS:      10,
+    FIELDS:    300,
+    MATRIX:    300,
 };
 
-// ─── Key Builders ──────────────────────────────────────────────────────────
+// ─── Key Builders (kept for caller API stability) ──────────────────────────
 
 function overviewKey(orgId) { return `security:overview:${orgId}`; }
 function coverageKey(orgId) { return `security:coverage:${orgId}`; }
@@ -58,135 +49,41 @@ function logsKey(orgId, params = {}) {
     return `security:logs:${parts.join(":")}`;
 }
 
-// ─── Core Operations ───────────────────────────────────────────────────────
+// ─── Core Operations (no-ops post-Phase-6) ─────────────────────────────────
 
-/**
- * Get a cached value (JSON-parsed). Returns null on miss or Redis failure.
- */
-async function getCache(key) {
-    if (!_hasRedis) return null;
-    try {
-        const raw = await redis.get(key);
-        return raw ? JSON.parse(raw) : null;
-    } catch (err) {
-        logger.warn({ err: err.message, key }, "[SecurityCache] GET failed");
-        return null;
-    }
+// Returns null so callers fall through to their DB read path.
+async function getCache(/* key */) {
+    return null;
 }
 
-/**
- * Set a cached value with TTL. Swallows errors — never blocks the request.
- */
-async function setCache(key, value, ttl) {
-    if (!_hasRedis) return;
-    try {
-        await redis.set(key, JSON.stringify(value), "EX", ttl);
-    } catch (err) {
-        logger.warn({ err: err.message, key }, "[SecurityCache] SET failed");
-    }
+async function setCache(/* key, value, ttl */) {
+    // no-op
 }
 
-/**
- * Invalidate one or more cache keys. Fire-and-forget.
- */
-async function invalidate(...keys) {
-    if (!_hasRedis || keys.length === 0) return;
-    try {
-        await redis.del(...keys);
-    } catch (err) {
-        logger.warn({ err: err.message }, "[SecurityCache] DEL failed");
-    }
+async function invalidate(/* ...keys */) {
+    // no-op
 }
 
-/**
- * Invalidate ALL security cache keys for an organization.
- * Uses SCAN to find matching keys (safe for production — no KEYS command).
- */
-async function invalidateOrg(orgId) {
-    if (!_hasRedis) return;
-    try {
-        const pattern = `security:*${orgId}*`;
-        let cursor = "0";
-        const keysToDelete = [];
-        do {
-            const [nextCursor, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-            cursor = nextCursor;
-            keysToDelete.push(...keys);
-        } while (cursor !== "0");
-
-        // Also invalidate global keys
-        keysToDelete.push(policiesKey(), fieldsKey(), matrixKey());
-
-        if (keysToDelete.length > 0) {
-            await redis.del(...keysToDelete);
-        }
-    } catch (err) {
-        logger.warn({ err: err.message, orgId }, "[SecurityCache] invalidateOrg failed");
-    }
+async function invalidateOrg(/* orgId */) {
+    // no-op
 }
 
-// ─── Phase 3: Event-Driven Cache Invalidation ──────────────────────────────
-// Semantic invalidation hooks — services call these when data changes.
-// No need for callers to know internal cache key structures.
+// ─── Event-Driven Invalidation Hooks (kept for listener API) ──────────────
+// Services call these when underlying data changes so the cache can
+// evict stale entries. With the cache gone these are no-ops, but the
+// listeners still fire them — no caller change required.
 
-/**
- * Called when policy definitions change.
- * Invalidates: policies, coverage, overview (all orgs).
- * @param {string} [orgId] — optional org scope
- */
-async function onPolicyChange(orgId) {
-    if (!_hasRedis) return;
-    try {
-        const keysToDelete = [policiesKey(), matrixKey()];
-        if (orgId) {
-            keysToDelete.push(overviewKey(orgId), coverageKey(orgId));
-        }
-        await invalidate(...keysToDelete);
-        logger.info({ orgId }, "[SecurityCache] Policy change — cache invalidated");
-    } catch (err) {
-        logger.warn({ err: err.message }, "[SecurityCache] onPolicyChange failed");
-    }
+async function onPolicyChange(/* orgId */) {
+    // no-op
 }
 
-/**
- * Called when field access rules change.
- * Invalidates: fields, overview (field coverage is part of overview KPIs).
- * @param {string} [orgId] — optional org scope
- */
-async function onFieldChange(orgId) {
-    if (!_hasRedis) return;
-    try {
-        const keysToDelete = [fieldsKey()];
-        if (orgId) {
-            keysToDelete.push(overviewKey(orgId));
-        }
-        await invalidate(...keysToDelete);
-        logger.info({ orgId }, "[SecurityCache] Field change — cache invalidated");
-    } catch (err) {
-        logger.warn({ err: err.message }, "[SecurityCache] onFieldChange failed");
-    }
+async function onFieldChange(/* orgId */) {
+    // no-op
 }
 
-/**
- * Called when role/permission assignments change.
- * Invalidates: overview, coverage, matrix (role-permission relationships).
- * @param {string} [orgId] — optional org scope
- */
-async function onRoleChange(orgId) {
-    if (!_hasRedis) return;
-    try {
-        const keysToDelete = [matrixKey()];
-        if (orgId) {
-            keysToDelete.push(overviewKey(orgId), coverageKey(orgId));
-        }
-        await invalidate(...keysToDelete);
-        logger.info({ orgId }, "[SecurityCache] Role change — cache invalidated");
-    } catch (err) {
-        logger.warn({ err: err.message }, "[SecurityCache] onRoleChange failed");
-    }
+async function onRoleChange(/* orgId */) {
+    // no-op
 }
-
-// ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
     getCache,

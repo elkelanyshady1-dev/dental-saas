@@ -1,9 +1,13 @@
 /**
  * denialTracker.js — Policy Denial Metrics Store
+ * v2.0 — Phase 6 cleanup (Redis persistence removed)
  *
  * Tracks per-endpoint and per-permission denial statistics for the
- * Security Monitoring Dashboard. Stores both in-memory (for fast reads)
- * and in Redis (for persistence across restarts).
+ * Security Monitoring Dashboard. Storage is per-process in-memory
+ * (circular buffers + Maps) — Redis persistence across restarts was
+ * dropped when Redis was eradicated in Phase 6. For multi-instance
+ * deployments, each instance carries its own counters; aggregate via
+ * the metrics collector rather than relying on this module.
  *
  * Metrics tracked:
  *   - denied_requests_per_endpoint
@@ -17,28 +21,6 @@
 "use strict";
 
 const logger = require("@utils/logger");
-
-// ─── Redis Client ───────────────────────────────────────────────────────────
-
-let redis;
-let _hasRedis = false;
-
-try {
-    redis = require("@infra/redis/redisClient");
-    if (redis) {
-        _hasRedis = redis.status === "ready";
-        redis.on("ready", () => { _hasRedis = true; });
-        redis.on("error", () => { _hasRedis = false; });
-        redis.on("close", () => { _hasRedis = false; });
-    }
-} catch {
-    logger.warn("[DenialTracker] Redis unavailable — in-memory tracking only");
-}
-
-// ─── Constants ──────────────────────────────────────────────────────────────
-
-const REDIS_PREFIX = "security:denials";
-const REDIS_TTL = 86400; // 24 hours
 
 // ─── Denial Classification ──────────────────────────────────────────────────
 
@@ -68,7 +50,7 @@ function classifyDenial(reason) {
     return "unknown";
 }
 
-// ─── In-Memory Fallback Store ───────────────────────────────────────────────
+// ─── In-Memory Store ───────────────────────────────────────────────────────
 
 const _memoryStore = {
     byEndpoint: new Map(),
@@ -131,46 +113,6 @@ async function recordDenial(denial) {
         _memoryStore.recentDenials.shift();
     }
 
-    // ── Redis persistence (fire-and-forget) ──
-    if (_hasRedis) {
-        try {
-            const orgKey = `${REDIS_PREFIX}:${organizationId}`;
-            const pipeline = redis.pipeline();
-
-            // Increment counters
-            pipeline.hincrby(`${orgKey}:endpoints`, endpoint, 1);
-            pipeline.expire(`${orgKey}:endpoints`, REDIS_TTL);
-
-            pipeline.hincrby(`${orgKey}:permissions`, permission, 1);
-            pipeline.expire(`${orgKey}:permissions`, REDIS_TTL);
-
-            pipeline.hincrby(`${orgKey}:roles`, userRole || "unknown", 1);
-            pipeline.expire(`${orgKey}:roles`, REDIS_TTL);
-
-            // Store recent denial in sorted set (scored by timestamp)
-            // Track type breakdown
-            pipeline.hincrby(`${orgKey}:types`, type, 1);
-            pipeline.expire(`${orgKey}:types`, REDIS_TTL);
-
-            pipeline.zadd(`${orgKey}:recent`, Date.now(), JSON.stringify({
-                endpoint,
-                permission,
-                reason,
-                type,
-                userRole,
-                isShadow,
-                timestamp,
-            }));
-            // Keep only last 200 entries
-            pipeline.zremrangebyrank(`${orgKey}:recent`, 0, -201);
-            pipeline.expire(`${orgKey}:recent`, REDIS_TTL);
-
-            await pipeline.exec();
-        } catch (err) {
-            logger.warn({ err: err.message }, "[DenialTracker] Redis write failed");
-        }
-    }
-
     // ── Phase 1+2: Evaluate alerting thresholds (fire-and-forget) ──
     try {
         const alertsService = require("../organization/security/securityAlerts.service");
@@ -190,33 +132,7 @@ async function recordDenial(denial) {
  * @param {string} organizationId
  * @returns {Promise<Object>}
  */
-async function getDenialStats(organizationId) {
-    // Try Redis first
-    if (_hasRedis) {
-        try {
-            const orgKey = `${REDIS_PREFIX}:${organizationId}`;
-            const [endpoints, permissions, roles, types, recent] = await Promise.all([
-                redis.hgetall(`${orgKey}:endpoints`),
-                redis.hgetall(`${orgKey}:permissions`),
-                redis.hgetall(`${orgKey}:roles`),
-                redis.hgetall(`${orgKey}:types`),
-                redis.zrevrange(`${orgKey}:recent`, 0, 49, "WITHSCORES"),
-            ]);
-
-            return {
-                topDeniedEndpoints: _sortByCount(endpoints || {}),
-                topDeniedPermissions: _sortByCount(permissions || {}),
-                denialsByRole: roles || {},
-                denialsByType: _parseTypeCounts(types || {}),
-                recentDenials: _parseRecentFromRedis(recent || []),
-                source: "redis",
-            };
-        } catch (err) {
-            logger.warn({ err: err.message }, "[DenialTracker] Redis read failed — falling back to memory");
-        }
-    }
-
-    // Fallback to in-memory
+async function getDenialStats(/* organizationId */) {
     return {
         topDeniedEndpoints: _mapToSorted(_memoryStore.byEndpoint),
         topDeniedPermissions: _mapToSorted(_memoryStore.byPermission),
@@ -232,32 +148,14 @@ async function getDenialStats(organizationId) {
 }
 
 /**
- * Reset denial stats for an organization.
- * @param {string} organizationId
+ * Reset denial stats (for the current instance).
  */
-async function resetDenialStats(organizationId) {
-    // Clear memory
+async function resetDenialStats(/* organizationId */) {
     _memoryStore.byEndpoint.clear();
     _memoryStore.byPermission.clear();
     _memoryStore.byRole.clear();
     _memoryStore.byType.clear();
     _memoryStore.recentDenials.length = 0;
-
-    // Clear Redis
-    if (_hasRedis) {
-        try {
-            const orgKey = `${REDIS_PREFIX}:${organizationId}`;
-            await redis.del(
-                `${orgKey}:endpoints`,
-                `${orgKey}:permissions`,
-                `${orgKey}:roles`,
-                `${orgKey}:types`,
-                `${orgKey}:recent`
-            );
-        } catch (err) {
-            logger.warn({ err: err.message }, "[DenialTracker] Redis reset failed");
-        }
-    }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -271,33 +169,6 @@ function _mapToSorted(map) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20)
         .map(([name, count]) => ({ name, count }));
-}
-
-function _sortByCount(hashObj) {
-    return Object.entries(hashObj)
-        .map(([name, count]) => ({ name, count: parseInt(count, 10) }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 20);
-}
-
-function _parseRecentFromRedis(arr) {
-    const results = [];
-    for (let i = 0; i < arr.length; i += 2) {
-        try {
-            results.push(JSON.parse(arr[i]));
-        } catch {
-            // Skip malformed entries
-        }
-    }
-    return results;
-}
-
-function _parseTypeCounts(hashObj) {
-    return {
-        expected: parseInt(hashObj.expected || 0, 10),
-        critical: parseInt(hashObj.critical || 0, 10),
-        unknown: parseInt(hashObj.unknown || 0, 10),
-    };
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────

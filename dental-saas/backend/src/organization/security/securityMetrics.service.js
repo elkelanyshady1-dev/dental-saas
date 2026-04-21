@@ -1,16 +1,19 @@
 /**
- * securityMetrics.service.js — Security System Metrics (Phase 5)
+ * securityMetrics.service.js — Security System Metrics
+ * v2.0 — Phase 6 cleanup (Redis counter path removed)
  *
  * Tracks operational metrics for the security subsystem:
  *   - policyEvaluationTimeMs — avg/p50/p95/p99 of policy evaluations
- *   - cacheHitRate — Redis cache hit/miss ratio
+ *   - cacheHitRate — cache hit/miss ratio
  *   - deniedRatio — denied vs total access count
  *   - alertRate — alerts created per hour
  *
- * Storage: In-memory circular buffers + Redis counters.
- * Exposed via GET /security/metrics (controller delegates here).
+ * Storage: per-process in-memory circular buffers.
+ * Multi-instance note: each instance keeps its own buffer (there's no
+ * shared counter anymore). For aggregate telemetry, scrape each instance
+ * individually or front with a metrics collector.
  *
- * Intentionally lightweight — no external monitoring dependency.
+ * Exposed via GET /security/metrics (controller delegates here).
  *
  * PLANE: Org only.
  */
@@ -19,33 +22,8 @@
 
 const logger = require("@utils/logger");
 
-// ─── Redis Client ───────────────────────────────────────────────────────────
-
-let redis;
-let _hasRedis = false;
-
-try {
-    redis = require("@infra/redis/redisClient");
-    if (redis) {
-        _hasRedis = redis.status === "ready";
-        redis.on("ready", () => {
-            _hasRedis = true;
-        });
-        redis.on("error", () => {
-            _hasRedis = false;
-        });
-        redis.on("close", () => {
-            _hasRedis = false;
-        });
-    }
-} catch {
-    logger.warn("[SecurityMetrics] Redis unavailable — in-memory metrics only");
-}
-
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const REDIS_PREFIX = "security:metrics";
-const REDIS_TTL = 3600; // 1 hour
 const MAX_SAMPLES = 1000; // Circular buffer size for latency samples
 
 // ─── In-Memory Stores ───────────────────────────────────────────────────────
@@ -85,13 +63,6 @@ function recordPolicyEvaluation(organizationId, durationMs) {
     m.evaluationTimes.push(durationMs);
     if (m.evaluationTimes.length > MAX_SAMPLES) {
         m.evaluationTimes.shift();
-    }
-
-    // Redis counter (fire-and-forget)
-    if (_hasRedis) {
-        const key = `${REDIS_PREFIX}:${organizationId}:evalCount`;
-        redis.incr(key).catch(() => {});
-        redis.expire(key, REDIS_TTL).catch(() => {});
     }
 }
 
@@ -222,12 +193,6 @@ function getMetrics(organizationId) {
  */
 function resetMetrics(organizationId) {
     _orgMetrics.delete(organizationId);
-
-    if (_hasRedis) {
-        const pattern = `${REDIS_PREFIX}:${organizationId}:*`;
-        // Fire-and-forget cleanup
-        _scanAndDelete(pattern).catch(() => {});
-    }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -246,22 +211,6 @@ function _formatUptime(ms) {
     const hours = Math.floor(ms / 3_600_000);
     const minutes = Math.floor((ms % 3_600_000) / 60_000);
     return `${hours}h ${minutes}m`;
-}
-
-async function _scanAndDelete(pattern) {
-    if (!_hasRedis) return;
-    let cursor = "0";
-    do {
-        const [nextCursor, keys] = await redis.scan(
-            cursor,
-            "MATCH",
-            pattern,
-            "COUNT",
-            100
-        );
-        cursor = nextCursor;
-        if (keys.length > 0) await redis.del(...keys);
-    } while (cursor !== "0");
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────

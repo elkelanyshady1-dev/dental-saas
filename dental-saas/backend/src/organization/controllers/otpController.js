@@ -58,27 +58,12 @@ const MAX_OTP_ATTEMPTS = 5;
 const PRICING_TOKEN_TTL_S = 600;                // 10 minutes
 const MAX_OTP_REQUESTS_PER_PHONE = 5;           // per OTP_EXPIRY window
 
-// PHASE 4 v23.0 Redis-backed pricing token store
-// Replaces in-memory Map. Tokens auto-expire via Redis TTL.
-// Fallback: in-memory Map if Redis is unavailable (dev without Redis).
-const PRICING_TOKEN_PREFIX = "pricing_token:";
-let redisClient;
-let _useRedis = false;
-
-try {
-    redisClient = require("@infrastructure/redis/redisClient");
-    _useRedis = redisClient && redisClient.status === "ready";
-    // Re-check on reconnect
-    if (redisClient) {
-        redisClient.on("ready", () => { _useRedis = true; });
-        redisClient.on("error", () => { _useRedis = false; });
-        redisClient.on("close", () => { _useRedis = false; });
-    }
-} catch {
-    logger.warn("[OTP] Redis unavailable - using in-memory pricing token store (NOT production-safe)");
-}
-
-// In-memory fallback (only used when Redis is down)
+// v24.0 — Phase 6 cleanup (Redis backing removed).
+// Pricing tokens live in a per-process in-memory Map with a periodic
+// sweep. Multi-instance caveat: a token issued on instance A is NOT
+// visible on instance B — pricing-token exchange must hit the same
+// instance. Acceptable for the current deployment; revisit if the
+// OTP flow starts crossing load-balanced instances.
 const _memFallback = new Map();
 // ALLOWED_POLLING: CLEANUP
 const _memCleanup = setInterval(() => {
@@ -90,36 +75,14 @@ const _memCleanup = setInterval(() => {
 _memCleanup.unref();
 
 /**
- * Internal helpers for pricing token CRUD.
- * Redis primary, in-memory fallback.
+ * Internal helpers for pricing token CRUD (in-memory, TTL-swept).
  */
 async function _storePricingToken(token, data, ttlSeconds) {
-    if (_useRedis) {
-        try {
-            await redisClient.setex(
-                PRICING_TOKEN_PREFIX + token,
-                ttlSeconds,
-                JSON.stringify(data)
-            );
-            return;
-        } catch (e) {
-            logger.warn({ err: e.message }, "[OTP] Redis SET failed - falling back to memory");
-        }
-    }
     data.expiresAt = Date.now() + (ttlSeconds * 1000);
     _memFallback.set(token, data);
 }
 
 async function _getPricingToken(token) {
-    if (_useRedis) {
-        try {
-            const raw = await redisClient.get(PRICING_TOKEN_PREFIX + token);
-            if (!raw) return null;
-            return JSON.parse(raw);
-        } catch (e) {
-            logger.warn({ err: e.message }, "[OTP] Redis GET failed - falling back to memory");
-        }
-    }
     const data = _memFallback.get(token);
     if (!data) return null;
     if (data.expiresAt < Date.now()) {
@@ -130,14 +93,6 @@ async function _getPricingToken(token) {
 }
 
 async function _deletePricingToken(token) {
-    if (_useRedis) {
-        try {
-            await redisClient.del(PRICING_TOKEN_PREFIX + token);
-            return;
-        } catch (e) {
-            logger.warn({ err: e.message }, "[OTP] Redis DEL failed - falling back to memory");
-        }
-    }
     _memFallback.delete(token);
 }
 
