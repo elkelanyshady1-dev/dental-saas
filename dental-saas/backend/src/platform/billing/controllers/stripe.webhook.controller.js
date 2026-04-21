@@ -17,7 +17,7 @@ const { getRegionContext } = require("@infra/regionRouter");
 const { getProvider } = require("../providers/paymentProviderFactory");
 const { handleCanonicalEvent } = require("../domain/canonicalEventProcessor");
 const logger = require("@utils/logger");
-const redisLock = require("../../../utils/redisLock");
+const distributedLock = require("../../../utils/DistributedLock");
 const { metrics } = require("@infra/metrics/metrics");
 
 /**
@@ -67,9 +67,14 @@ exports.handleWebhook = async (req, res) => {
 
         metrics.webhookTotal.inc({ type: event.type, status: "received", regionCode });
 
-        // 4. Multi-node Lock (Short-lived)
+        // 4. Multi-node Lock (Short-lived, Mongo-backed via DistributedLock).
+        // Phase 6 migration: v14.1's Redis lock was replaced by the Mongo
+        // primitive in src/utils/DistributedLock.js. API shape identical —
+        // acquire returns a token string on success, null on contention.
+        // Stripe safety: contention returns 200 so Stripe does NOT retry;
+        // another instance is already processing the same event.id.
         const lockKey = `webhook:lock:${regionCode}:${event.id}`;
-        const token = await redisLock.acquireLock(lockKey, 30000);
+        const token = await distributedLock.acquire(lockKey, 30000);
         if (!token) {
             metrics.webhookTotal.inc({ type: event.type, status: "locked", regionCode });
             return res.status(200).json({ received: true, locked: true });
@@ -109,7 +114,7 @@ exports.handleWebhook = async (req, res) => {
             res.json({ received: true, ...result });
 
         } finally {
-            await redisLock.releaseLock(lockKey, token);
+            await distributedLock.release(lockKey, token);
         }
 
     } catch (err) {

@@ -30,6 +30,10 @@ const ROOT = path.resolve(__dirname, "..", "src");
 const ALLOWED = new Set([
     path.join("platform", "billing", "services", "platformSubscriptionService.js"),
     path.join("services", "platformUserService.js"),
+    // Stripe webhook event-id dedup. Single-shot lock keyed on
+    // `webhook:lock:${regionCode}:${event.id}` — acquire → process → release
+    // inside try/finally. Phase 6 migration from utils/redisLock (deleted).
+    path.join("platform", "billing", "controllers", "stripe.webhook.controller.js"),
     // The module itself, obviously.
     path.join("utils", "DistributedLock.js"),
 ]);
