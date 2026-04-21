@@ -44,6 +44,19 @@ async function handleCommunicationJob(req, res) {
     const qstashMessageId = req.get("upstash-message-id") || null;
     const idempotencyKeyValue = qstashMessageId ? `job:${qstashMessageId}` : null;
 
+    // Phase F soft enforcement: log when the upstash-message-id header is
+    // missing so we can see WHO is calling the receiver without the QStash
+    // contract (legitimate reasons: local manual replay, test fixtures).
+    // When all callers are verified to go through QStash this can be
+    // promoted to a hard throw (QSTASH_MESSAGE_ID_REQUIRED); until then
+    // the handler stays tolerant and just runs without dedup.
+    if (!qstashMessageId) {
+        logger.warn(
+            { event: "QSTASH_MESSAGE_ID_MISSING", path: req.path },
+            "[qstash.receiver] missing upstash-message-id — proceeding without idempotency key"
+        );
+    }
+
     // 1. Raw body guard — refuse to process a JSON-parsed body.
     if (!Buffer.isBuffer(req.body)) {
         logger.error("[qstash.receiver] req.body is not a Buffer — raw body middleware not wired");
