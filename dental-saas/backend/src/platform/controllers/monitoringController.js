@@ -1,14 +1,21 @@
 /**
  * monitoringController.js
  * Platform Controller — Communication Monitoring Dashboard APIs
- * v1.0
+ * v2.0 — Phase 6 cleanup (Redis + BullMQ queues eradicated)
  *
  * Provides aggregated health and metrics endpoints for the Monitoring Dashboard.
  *
  * Endpoints:
- *   GET /api/platform/monitoring/email-metrics
- *   GET /api/platform/monitoring/queue-health
- *   GET /api/platform/monitoring/worker-status
+ *   GET /api/platform/monitoring/email-metrics   → DB-backed, unchanged
+ *   GET /api/platform/monitoring/queue-health    → 501 (queues removed)
+ *   GET /api/platform/monitoring/worker-status   → degraded (no redis/queues to ping)
+ *
+ * v1.0 pinged Redis + read BullMQ queue depths. Both surfaces were
+ * removed in Phase 6 — Redis is no longer used anywhere in the app,
+ * and async delivery is now handled by QStash (which does its own
+ * retry accounting server-side). No replacement signal exists at this
+ * layer yet; the endpoints report "removed-phase-6" honestly so the
+ * frontend can degrade instead of polling a dead surface.
  *
  * GUARD: all routes use VIEW_COMMUNICATION_METRICS capability
  * PLANE: Platform
@@ -18,15 +25,20 @@
 const logger = require("@utils/logger");
 const CommunicationMetrics = require("../models/CommunicationMetrics.model").default;
 const { EmailEvent } = require("../models/EmailEvent.model");
-const redisClient = require("@infra/redis/redisClient");
 
-// Lazy-load queue references to avoid circular require at boot
-function _getQueues() {
-    const { emailQueue } = require("@infra/queues/emailQueue");
-    const { smsQueue, whatsappQueue } = require("@infra/queues/channelQueues");
-    const { emailDLQ } = require("@infra/queues/deadLetterQueue");
-    return { emailQueue, smsQueue, whatsappQueue, emailDLQ };
-}
+// Shared response body for endpoints that cannot be answered without the
+// removed BullMQ/Redis surface. Kept consistent with communicationMetricsController
+// so frontends can detect and degrade uniformly on `error === "QUEUES_ERADICATED"`.
+const QUEUES_REMOVED_PAYLOAD = {
+    success: false,
+    error: "QUEUES_ERADICATED",
+    reason:
+        "BullMQ communication queues + Redis client were removed in Phase 6. " +
+        "Sync delivery goes through communication.dispatcher; async delivery " +
+        "goes through QStash (which manages its own retries). No inspectable " +
+        "queue depth or Redis connectivity exists at the app layer.",
+    replacement: "infrastructure/communication/communication.dispatcher.js",
+};
 
 // ─── GET /api/platform/monitoring/email-metrics ───────────────────────────────
 /**
@@ -121,32 +133,7 @@ async function getEmailMetrics(req, res) {
  *         description: Queue depth snapshot
  */
 async function getQueueHealth(req, res) {
-    try {
-        const { emailQueue, smsQueue, whatsappQueue, emailDLQ } = _getQueues();
-
-        const [emailCounts, smsCounts, waCounts, dlqCounts] = await Promise.all([
-            emailQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
-            smsQueue.getJobCounts("waiting", "active", "completed", "failed"),
-            whatsappQueue.getJobCounts("waiting", "active", "completed", "failed"),
-            emailDLQ.getJobCounts("waiting", "active", "completed", "failed"),
-        ]);
-
-        return res.json({
-            success: true,
-            data: {
-                timestamp: new Date().toISOString(),
-                queues: {
-                    email: emailCounts,
-                    sms: smsCounts,
-                    whatsapp: waCounts,
-                    emailDLQ: dlqCounts,
-                }
-            }
-        });
-    } catch (err) {
-        logger.error({ err: err.message }, "[MonitoringCtrl] getQueueHealth failed");
-        return res.status(500).json({ success: false, error: { message: err.message } });
-    }
+    return res.status(501).json(QUEUES_REMOVED_PAYLOAD);
 }
 
 // ─── GET /api/platform/monitoring/worker-status ───────────────────────────────
@@ -164,47 +151,41 @@ async function getQueueHealth(req, res) {
  *         description: Worker status snapshot
  */
 async function getWorkerStatus(req, res) {
+    // Redis + emailWorker telemetry was tied to the removed Redis/BullMQ
+    // surface. The only signal that still works is "are emails actually
+    // being sent?" — inferred from recent EmailEvent records.
     const status = {
         timestamp: new Date().toISOString(),
-        redis: "unknown",
-        emailWorker: "unknown",
+        redis: "removed-phase-6",
+        emailWorker: "removed-phase-6",
         providerChain: process.env.EMAIL_PROVIDER_CHAIN || "auto (env-based)",
     };
 
-    // Redis ping
-    try {
-        await redisClient.ping();
-        status.redis = "connected";
-    } catch {
-        status.redis = "disconnected";
-    }
-
-    // emailWorker health — check queue is reachable
-    try {
-        const { emailQueue } = _getQueues();
-        const counts = await emailQueue.getJobCounts("active");
-        status.emailWorker = "running";
-        status.activeEmailJobs = counts.active ?? 0;
-    } catch {
-        status.emailWorker = "degraded";
-    }
-
-    // Recent email events in last 5 minutes = indicator worker is processing
+    // Recent email events in last 5 minutes = indicator the dispatcher
+    // + provider chain is still moving messages end-to-end.
+    let recentSent = null;
     try {
         const since = new Date(Date.now() - 5 * 60 * 1000);
-        const recentSent = await EmailEvent.countDocuments({ status: "sent", createdAt: { $gte: since } });
+        recentSent = await EmailEvent.countDocuments({ status: "sent", createdAt: { $gte: since } });
         status.recentSentLast5m = recentSent;
-    } catch {
+    } catch (err) {
+        logger.warn({ err: err.message }, "[MonitoringCtrl] recentSent count failed");
         status.recentSentLast5m = null;
     }
 
-    const overallStatus = status.redis === "connected" && status.emailWorker === "running"
-        ? "healthy"
-        : "degraded";
+    // Without a queue-depth or redis-ping signal, "healthy" means the
+    // dispatcher has emitted at least one sent event in the last window.
+    // "unknown" if the EmailEvent read failed; "degraded" otherwise.
+    const overallStatus =
+        recentSent === null
+            ? "unknown"
+            : recentSent > 0
+                ? "healthy"
+                : "degraded";
 
     return res.json({
         success: true,
-        data: { ...status, overallStatus }
+        data: { ...status, overallStatus, note: "queue-depth + redis-ping telemetry removed in Phase 6" },
     });
 }
 
