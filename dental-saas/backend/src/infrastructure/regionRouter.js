@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const Redis = require("ioredis");
 // v31.1 — Region config now comes from in-memory regionRegistry (no DB lookup).
 // The Region model import has been removed. See regionRegistry.js for details.
 const { getRegionConfig } = require("./regions/regionRegistry");
@@ -9,7 +8,7 @@ const logger = require("../utils/logger");
  * RegionRouter.js
  * v31.1 Geopolitical Sovereignty — Connection Switchboard
  *
- * Purpose: Dynamically route requests to regional data planes (DB, Redis).
+ * Purpose: Dynamically route requests to the regional data plane (Mongo).
  * Prohibits use of global/default connections in sovereign flows.
  *
  * v31.1 — Registry Cache:
@@ -23,8 +22,7 @@ const logger = require("../utils/logger");
  */
 
 const connectionCache = {
-    mongoose: {},
-    redis: {}
+    mongoose: {}
 };
 
 async function getRegionContext(regionCode, actor) {
@@ -47,8 +45,7 @@ async function getRegionContext(regionCode, actor) {
     // Return cached connection if available
     if (connectionCache.mongoose[code]) {
         return {
-            mongooseConnection: connectionCache.mongoose[code],
-            redisClient: connectionCache.redis[code]
+            mongooseConnection: connectionCache.mongoose[code]
             // stripeClient removed: use paymentProviderFactory.getProvider() instead
         };
     }
@@ -60,18 +57,14 @@ async function getRegionContext(regionCode, actor) {
         throw new Error(`Region ${code} is currently ${region.status}. Transactions suspended.`);
     }
 
-    // 1. Initialize Regional Mongoose Connection
+    // Initialize Regional Mongoose Connection
     // Note: v13.2 Index Governance still applies to regional connections
     const mongooseConnection = mongoose.createConnection(region.dbUri, {
         autoIndex: process.env.NODE_ENV !== "production"
     });
 
-    // 2. Initialize Regional Redis client
-    const redisClient = new Redis(region.redisUrl);
-
     // Store in connection cache
     connectionCache.mongoose[code] = mongooseConnection;
-    connectionCache.redis[code] = redisClient;
 
     logger.info({
         service: "regionRouter",
@@ -80,10 +73,10 @@ async function getRegionContext(regionCode, actor) {
     }, `[RegionRouter] Established connections for region ${code}`);
 
     return {
-        mongooseConnection,
-        redisClient
+        mongooseConnection
         // Stripe client deliberately removed: use paymentProviderFactory.getProvider('stripe') instead.
         // Do NOT add stripeClient back here. See StripeProvider.js.
+        // Redis client removed v9.1: Phase 6 Redis-eradication (Mongo-backed primitives replace it).
     };
 }
 
