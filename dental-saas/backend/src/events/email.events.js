@@ -1,20 +1,23 @@
 /**
  * email.events.js
  * Platform Events — Email Event Listeners
- * v2.0 — EventBus → emailQueue bridge
+ * v3.0 — EventBus → communication.dispatcher bridge
  *
  * Registers listeners on the platform EventBus for all email-triggering events.
- * Each listener enqueues a job to emailQueue (non-blocking, fire-and-forget).
+ * Each listener hands off to communication.dispatcher, which routes the message
+ * synchronously (user-waiting types like MAGIC_LINK / OTP) or asynchronously
+ * via QStash (system flows). The previous v2.0 bridge wrote to BullMQ's
+ * emailQueue, which was removed in Phase 6 (Redis eradication).
  *
  * Event routing:
- *   email.magic_link      → MAGIC_LINK job
- *   email.password_reset  → PASSWORD_RESET job
- *   email.otp             → EMAIL_OTP job
- *   email.invoice         → INVOICE job
- *   email.refund          → REFUND job
- *   email.ticket_reply    → TICKET_REPLY job
+ *   email.magic_link      → MAGIC_LINK
+ *   email.password_reset  → PASSWORD_RESET
+ *   email.otp             → EMAIL_OTP
+ *   email.invoice         → INVOICE
+ *   email.refund          → REFUND
+ *   email.ticket_reply    → TICKET_REPLY
  *
- * Emitters queue jobs via:
+ * Emitters fire events via:
  *   eventBus.emit("email.magic_link", { email, name, link }, "emitterName")
  *
  * NOTE: These events are NOT registered in the schemaRegistry because they are
@@ -28,7 +31,7 @@
 "use strict";
 
 const eventBus = require("../core/eventBus");
-const { enqueueEmail } = require("../infrastructure/queues/emailQueue");
+const { dispatch } = require("../infrastructure/communication/communication.dispatcher");
 const logger = require("../utils/logger");
 
 // ─── Type-safe emitter helpers ────────────────────────────────────────────────
@@ -115,14 +118,18 @@ function emitRetryFailed(payload) {
 
 function _enqueueOrWarn(eventName, jobType, payload) {
     if (!payload?.email) {
-        logger.warn({ eventName, jobType }, "[email.events] Skipped enqueue — missing email in payload");
+        logger.warn({ eventName, jobType }, "[email.events] Skipped dispatch — missing email in payload");
         return;
     }
 
-    enqueueEmail(jobType, payload).catch((err) => {
+    // Fire-and-forget: the dispatcher handles routing (sync vs. QStash async),
+    // idempotency, and provider errors internally. We only log dispatch-layer
+    // failures (unreachable dispatcher, malformed payload) — per-provider
+    // failures are logged inside sync/async handlers with full context.
+    dispatch({ channel: "email", type: jobType, payload }).catch((err) => {
         logger.error(
             { eventName, jobType, to: payload.email, err: err.message },
-            "[email.events] Failed to enqueue email job"
+            "[email.events] Failed to dispatch email"
         );
     });
 }
