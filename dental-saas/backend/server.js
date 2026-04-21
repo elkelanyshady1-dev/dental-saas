@@ -22,6 +22,23 @@ logger.info(
     `[System] Instance started: ${global.INSTANCE_ID}`
 );
 
+// 🛡️ Phase F — Redis Kill Switch (Hardening Lockdown).
+// The system is Redis-free (Phase 6). Setting any of these env vars is
+// a configuration mistake — usually a carried-over deployment template or
+// an operator assuming the old architecture. Fail boot loudly so the
+// mistake is visible immediately, rather than letting the system come up
+// and silently no-op until a legacy code path tries to read them.
+const FORBIDDEN_REDIS_ENV = ["REDIS_URL", "REDIS_HOST", "REDIS_PORT"];
+const setRedisEnv = FORBIDDEN_REDIS_ENV.filter((key) => process.env[key]);
+if (setRedisEnv.length > 0) {
+    logger.error(
+        { service: "server", action: "startup_abort", event: "BOOT_BLOCK_REDIS_ENV", setKeys: setRedisEnv },
+        `CRITICAL: Redis env var(s) set but this deployment is Redis-free (Phase 6): ${setRedisEnv.join(", ")}. ` +
+        `Remove them from the environment or deployment template. Aborting startup.`
+    );
+    process.exit(1);
+}
+
 // 🛡️ v11.0 Hardening — Startup Config Validation
 // REDIS_URL removed from required env — the system is Redis-free (Phase 6).
 const requiredEnv = [
