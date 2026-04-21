@@ -202,6 +202,10 @@ const authHealthRoutes = require("./src/routes/internal/authHealth.routes");
 app.use("/api/internal", authHealthRoutes);
 app.use("/api/public", platformPublicRoutes);
 
+// Public share-link resolver (token-gated, no auth). The token is the
+// capability; the controller enforces expiration + asset contract.
+app.use("/api/v1/public/share-links", require("./src/modules/share/routes/shareLink.routes"));
+
 // Audit loggers are read-only observers — safe to mount globally
 app.use(auditLogger);
 app.use(platformAuditLogger);
@@ -599,16 +603,20 @@ app.get("/api/governance/history", ...platformProtectMw, superAdminOnlyMw, (req,
 // Global Error Handler must be the last middleware
 app.use(errorHandler);
 
-// Initialize Infrastructure (v1.6.0)
-require("./src/infrastructure/workers/communication.worker");
-// v3.1 Channel Workers — Email (PRIMARY), SMS
-require("./src/infrastructure/workers/emailWorker");   // ← processes emailQueue (SMTP dispatch)
-require("./src/infrastructure/workers/smsWorker");
-// Note: whatsappWorker follows the smsWorker pattern — add when WhatsApp provider is configured
-logger.info({ service: "app" }, "[BOOT] Email + SMS workers started");
-
-// Initialize Notification Domain Engine (v1.8.1)
-require("./src/modules/notificationDomain/notification.worker");
+// Phase 6 — BullMQ workers removed.
+//   Communication delivery is handled by communication.dispatcher
+//   (sync path) and QStash → job.controller (async path), not by
+//   in-process worker loops. Notification persistence is now a direct
+//   Mongo write inside notification.service.
+//
+// Previously required here (removed in the Phase 6 cleanup):
+//   ./src/infrastructure/workers/communication.worker
+//   ./src/infrastructure/workers/emailWorker
+//   ./src/infrastructure/workers/smsWorker
+//   ./src/modules/notificationDomain/notification.worker
+//
+// The subscriptions file below is still required — it wires eventBus
+// listeners that call notification.service.enqueueNotification.
 require("./src/modules/notificationDomain/notification.subscriptions");
 
 // Initialize Phase 1 Domain Subscribers (v3.2)
