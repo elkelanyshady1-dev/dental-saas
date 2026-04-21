@@ -1,7 +1,7 @@
 /**
  * auditService.js
  *
- * Cryptographic Audit Chain Service (v3.3)
+ * Cryptographic Audit Chain Service (v5.0)
  * Enforces per-tenant immutable hashing.
  *
  * v3.2 — Platform Plane Isolation:
@@ -9,10 +9,17 @@
  *   Never routes through regionRouter. regionCode set to "GLOBAL" sentinel.
  * - all other actors: regional routing preserved exactly as before.
  *
- * v3.3 — Concurrency-Safe Hash Chain:
- * - Both platform AND regional paths now use _withHashChainRetry().
- * - Retries up to 3 times on hash chain collisions (MongoDB 11000 / concurrency errors).
- * - 10-50ms jitter between retries to avoid thundering herd.
+ * v5.0 — Direct-write with hash-chain retry (Phase 6 Redis-eradication):
+ * - Prior v4.0 BullMQ queue removed. Audit writes go directly to the per-DB
+ *   AuditLog collection on the request path, guarded by _withHashChainRetry().
+ * - Concurrency safety comes from the unique index on {previousHash} in
+ *   AuditLog.js: two writers racing to append after the same last-hash produce
+ *   E11000 on the loser, which we catch + re-read + re-hash + retry (up to 3
+ *   attempts, 10-50ms jitter between). The index is the serialization point;
+ *   no external queue is required.
+ * - session (optional) is passed through to Mongoose so callers that bundle
+ *   the audit write with a domain transaction get atomic semantics. Fire-
+ *   and-forget callers pass no session and the write stands alone.
  */
 
 const crypto = require("crypto");
@@ -21,12 +28,13 @@ const { getRegionContext } = require("../infrastructure/regionRouter");
 const { auditLogSchema } = require("../shared/models/AuditLog");
 const logger = require("../utils/logger");
 const { getRequestId } = require("../platform/context/requestContextStore");
-const { auditQueue } = require("../infrastructure/queues/auditQueue");
 
-// ── Concurrency-Safe Audit Queue (v4.0) ───────────────────────────────────
-// v3.5 polling lock replaced with BullMQ global sequential queue.
-// Ensures that every organization's hash chain is updated one at a time,
-// preventing "Audit Chain Split" across multiple backend instances.
+// Retry budget for hash-chain collisions. 3 attempts covers the common
+// case where two concurrent writers collide once; beyond that, sustained
+// contention is the real problem and we want the failure to be visible.
+const HASH_CHAIN_MAX_ATTEMPTS = 3;
+const HASH_CHAIN_JITTER_MIN_MS = 10;
+const HASH_CHAIN_JITTER_MAX_MS = 50;
 
 
 // v21.0 — Request metadata extractor for device/geo enrichment (optional import)
@@ -133,51 +141,130 @@ function resolvePlatformAuditConnection() {
     return mongoose.connection.model("AuditLog", auditLogSchema);
 }
 
-// ── Concurrency-Safe Ingestion (v4.0) ───────────────────────────────────────
+// ── Hash-Chain Retry (v5.0) ───────────────────────────────────────────────
+/**
+ * _withHashChainRetry
+ *
+ * Appends a new AuditLog record to the chain, retrying on hash-chain
+ * collisions. Serialization is delegated to the {previousHash: 1} unique
+ * index in AuditLog.js — two concurrent writers reading the same "last
+ * record" will both hash off the same previousHash; the second write gets
+ * E11000 and we re-read + re-hash for a fresh previousHash.
+ *
+ * A collision here is normal under load (< 1 per 100 writes in practice,
+ * governed by the read→write window). An exhausted retry budget usually
+ * means sustained multi-writer contention on the same org and warrants
+ * investigation rather than a silent extension of the retry count.
+ */
+async function _withHashChainRetry(AuditLogModel, data, session) {
+    let lastErr = null;
+
+    for (let attempt = 1; attempt <= HASH_CHAIN_MAX_ATTEMPTS; attempt++) {
+        try {
+            // Fetch the tail of the chain for this DB. The AuditLog.createdAt
+            // desc index keeps this to a single indexed seek.
+            const tailQuery = AuditLogModel
+                .findOne({})
+                .sort({ createdAt: -1 })
+                .select("currentHash")
+                .lean();
+            if (session) tailQuery.session(session);
+            const lastRecord = await tailQuery.exec();
+
+            const previousHash = lastRecord?.currentHash || "0";
+            const currentHash = generateHash(data, previousHash);
+
+            const doc = {
+                ...data,
+                previousHash,
+                currentHash,
+                signatureVersion: data.signatureVersion || 1,
+            };
+            // Internal workflow fields (not part of the AuditLog schema) —
+            // strip before writing. `req` and `actor` are enrichment inputs;
+            // `session` is a mongoose-level arg, never a document field.
+            delete doc.req;
+            delete doc.actor;
+            delete doc.session;
+
+            const createOpts = session ? { session } : undefined;
+            const [record] = await AuditLogModel.create([doc], createOpts);
+            return record;
+        } catch (err) {
+            // Only E11000 on the {previousHash} unique index is retryable —
+            // any other error (validation, connection loss) bubbles up.
+            if (err?.code !== 11000) throw err;
+            lastErr = err;
+            if (attempt < HASH_CHAIN_MAX_ATTEMPTS) {
+                const range = HASH_CHAIN_JITTER_MAX_MS - HASH_CHAIN_JITTER_MIN_MS;
+                const jitter = HASH_CHAIN_JITTER_MIN_MS + Math.floor(Math.random() * range);
+                await new Promise((resolve) => setTimeout(resolve, jitter));
+            }
+        }
+    }
+
+    // Budget exhausted — surface it. Callers in fire-and-forget paths
+    // (autoAudit) will log; transactional callers will see the failure
+    // and can decide whether to abort the outer transaction.
+    logger.error(
+        {
+            event: "AUDIT_HASH_CHAIN_RETRY_EXHAUSTED",
+            attempts: HASH_CHAIN_MAX_ATTEMPTS,
+            action: data.action,
+            actorType: data.actorType,
+            err: lastErr?.message,
+        },
+        "[Audit] hash-chain retry exhausted — sustained writer contention or bug"
+    );
+    throw new Error(
+        `[Audit] hash-chain retry exhausted after ${HASH_CHAIN_MAX_ATTEMPTS} attempts: ${lastErr?.message || "unknown"}`
+    );
+}
+
+// ── Ingestion (v5.0) ────────────────────────────────────────────────────────
 /**
  * createAuditRecord
- * v4.0 — BullMQ Ingestion Layer.
- * Pushes audit data to the "audit-queue" for sequential execution via worker.
- * Prevents hash collisions by serializing all records globally.
+ * Direct write to the per-DB AuditLog collection with hash-chain retry.
  *
- * NOTE: This is now asynchronous (job queued).
+ * Platform actors (actorType === "platform_user") write to the Control
+ * Plane DB via mongoose.connection. All other actors route through
+ * regionRouter. The per-DB {previousHash} unique index is the
+ * serialization primitive — no external queue required.
+ *
+ * @param {Object} data — audit payload (see AuditLog schema for required fields)
+ * @param {import("mongoose").ClientSession} [session] — optional transaction session
+ * @returns {Promise<Object>} — the persisted AuditLog document
  */
 async function createAuditRecord(data, session = null) {
-    // ── Pre-flight Enrichment (happens synchronously to capture process state) ──
+    // Pre-flight enrichment runs synchronously to capture request-scoped
+    // state (AsyncLocalStorage, req headers) before it goes out of scope.
     _enrichWithRequestMetadata(data);
     _enrichWithActor(data);
-
-    const orgId = data.organizationId ? data.organizationId.toString() : "platform";
 
     // Trace context for correlation
     data.requestId = getRequestId() || data.requestId || null;
 
-    logger.debug({ orgId, action: data.action }, `[Audit] 📥 Queueing audit job for org: ${orgId}`);
-
-    const job = await auditQueue.add(
-        "audit-job",
-        {
-            data,
-            actorType: data.actorType,
-            organizationId: orgId
-        },
-        {
-            // Consistent jobId prevents accidental duplicates within the same ms
-            jobId: `audit-${orgId}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-            attempts: 3,
-            backoff: { type: "exponential", delay: 1000 }
+    let AuditLogModel;
+    if (data.actorType === "platform_user") {
+        if (!data.regionCode) data.regionCode = "GLOBAL";
+        AuditLogModel = resolvePlatformAuditConnection();
+    } else {
+        if (!data.regionCode) {
+            throw new Error("[Audit] regionCode is required for non-platform audit records");
         }
-    );
+        const { mongooseConnection } = await getRegionContext(data.regionCode, {
+            actorType: data.actorType,
+        });
+        AuditLogModel = mongooseConnection.model("AuditLog", auditLogSchema);
+    }
 
-    return job; // Caller receives BullMQ Job object (eventually consistent)
+    return _withHashChainRetry(AuditLogModel, data, session);
 }
-
-// ── Legacy Internal Helpers (v3.x) — Removed in v4.0 for Worker Logic ─────────
-// Logic moved to src/infrastructure/workers/auditWorker.js
 
 module.exports = {
     createAuditRecord,
     generateHash,
     _enrichWithRequestMetadata,
-    _enrichWithActor
+    _enrichWithActor,
+    _withHashChainRetry,
 };
