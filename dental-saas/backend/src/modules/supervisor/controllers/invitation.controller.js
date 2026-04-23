@@ -28,22 +28,19 @@ const logger = require("@utils/logger");
  * List pending invitations for the authenticated supervisor.
  */
 async function listMyInvitations(req, res) {
-    try {
-        const invitations = await invitationService.listPendingInvitations(
-            req.supervisor.email
-        );
-
-        res.json({
-            success: true,
-            data: invitations,
-        });
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const invitations = await invitationService.listPendingInvitations(req.supervisor.email);
+    res.json({
+      success: true,
+      data: invitations
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 /**
@@ -51,30 +48,28 @@ async function listMyInvitations(req, res) {
  * Accept a pending invitation.
  */
 async function acceptInvitation(req, res) {
-    try {
-        const result = await invitationService.acceptInvitation({
-            invitationId: req.params.id,
-            supervisorId: req.supervisor.supervisorId,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-        });
-    } catch (error) {
-        logger.error({
-            event: "INVITATION_ACCEPT_ERROR",
-            error: error.message,
-            invitationId: req.params.id,
-            supervisorId: req.supervisor?.supervisorId,
-        });
-
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const result = await invitationService.acceptInvitation({
+      invitationId: req.params.id,
+      supervisorId: req.supervisor.supervisorId
+    });
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    logger.error({
+      event: "INVITATION_ACCEPT_ERROR",
+      error: error.message,
+      invitationId: req.params.id,
+      supervisorId: req.supervisor?.supervisorId
+    });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 /**
@@ -82,23 +77,22 @@ async function acceptInvitation(req, res) {
  * Decline a pending invitation.
  */
 async function declineInvitation(req, res) {
-    try {
-        const result = await invitationService.declineInvitation({
-            invitationId: req.params.id,
-            supervisorId: req.supervisor.supervisorId,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-        });
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const result = await invitationService.declineInvitation({
+      invitationId: req.params.id,
+      supervisorId: req.supervisor.supervisorId
+    });
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 /**
@@ -107,31 +101,31 @@ async function declineInvitation(req, res) {
  * Body: { token }
  */
 async function acceptByToken(req, res) {
-    try {
-        const { token } = req.body;
-        if (!token) {
-            return res.status(400).json({
-                success: false,
-                error: "token is required.",
-            });
-        }
-
-        const result = await invitationService.acceptByToken({
-            token,
-            supervisorId: req.supervisor.supervisorId,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-        });
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
+  try {
+    const {
+      token
+    } = req.body;
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "token is required."
+      });
     }
+    const result = await invitationService.acceptByToken({
+      token,
+      supervisorId: req.supervisor.supervisorId
+    });
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -144,42 +138,41 @@ async function acceptByToken(req, res) {
  * Requires: orgProtect, requireOrgPermission("orthodontics.full")
  */
 async function createInvitation(req, res) {
-    try {
-        const { email, role, permissions } = req.body;
-
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                error: "Supervisor email is required.",
-            });
-        }
-
-        const invitation = await invitationService.createInvitation({
-            caseId: req.params.id,
-            organizationId: req.organizationId || req.user?.organizationId,
-            invitedBy: req.user._id,
-            inviteeEmail: email,
-            role,
-            permissions,
-        });
-
-        res.status(201).json({
-            success: true,
-            data: invitation,
-        });
-    } catch (error) {
-        logger.error({
-            event: "INVITATION_CREATE_ERROR",
-            error: error.message,
-            caseId: req.params.id,
-        });
-
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
+  try {
+    const {
+      email,
+      role,
+      permissions
+    } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Supervisor email is required."
+      });
     }
+    const invitation = await invitationService.createInvitation({
+      caseId: req.params.id,
+      invitedBy: req.user._id,
+      inviteeEmail: email,
+      role,
+      permissions
+    });
+    res.status(201).json({
+      success: true,
+      data: invitation
+    });
+  } catch (error) {
+    logger.error({
+      event: "INVITATION_CREATE_ERROR",
+      error: error.message,
+      caseId: req.params.id
+    });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 /**
@@ -188,23 +181,21 @@ async function createInvitation(req, res) {
  * Requires: orgProtect, requireOrgPermission("orthodontics.read")
  */
 async function listCaseInvitations(req, res) {
-    try {
-        const invitations = await invitationService.listCaseInvitations({
-            caseId: req.params.id,
-            organizationId: req.organizationId || req.user?.organizationId,
-        });
-
-        res.json({
-            success: true,
-            data: invitations,
-        });
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const invitations = await invitationService.listCaseInvitations({
+      caseId: req.params.id
+    });
+    res.json({
+      success: true,
+      data: invitations
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
 
 /**
@@ -213,34 +204,31 @@ async function listCaseInvitations(req, res) {
  * Requires: orgProtect, requireOrgPermission("orthodontics.full")
  */
 async function revokeInvitation(req, res) {
-    try {
-        const result = await invitationService.revokeInvitation({
-            invitationId: req.params.invitationId,
-            organizationId: req.organizationId || req.user?.organizationId,
-            revokedBy: req.user._id,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-        });
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        res.status(statusCode).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const result = await invitationService.revokeInvitation({
+      invitationId: req.params.invitationId,
+      revokedBy: req.user._id
+    });
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 }
-
 module.exports = {
-    // Supervisor-plane
-    listMyInvitations,
-    acceptInvitation,
-    declineInvitation,
-    acceptByToken,
-    // Org-plane
-    createInvitation,
-    listCaseInvitations,
-    revokeInvitation,
+  // Supervisor-plane
+  listMyInvitations,
+  acceptInvitation,
+  declineInvitation,
+  acceptByToken,
+  // Org-plane
+  createInvitation,
+  listCaseInvitations,
+  revokeInvitation
 };

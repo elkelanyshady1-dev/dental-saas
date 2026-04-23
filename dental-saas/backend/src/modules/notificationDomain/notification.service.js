@@ -37,32 +37,36 @@ const logger = require("@utils/logger");
  * @returns {Promise<void>}
  */
 async function enqueueNotification(payload) {
-    if (!payload?.organizationId) {
-        logger.warn("[NotificationService] enqueueNotification called without organizationId — skipped");
-        return;
-    }
-    if (!payload?.type || !payload?.title || !payload?.message) {
-        logger.warn({ org: payload.organizationId }, "[NotificationService] Missing required fields — skipped");
-        return;
-    }
-
-    try {
-        await Notification.create({
-            organizationId: payload.organizationId,
-            userId: payload.userId || null,
-            type: payload.type,
-            title: payload.title,
-            message: payload.message,
-            entityType: payload.entityType || null,
-            entityId: payload.entityId || null,
-            metadata: payload.metadata || {},
-            priority: payload.priority || "normal",
-        });
-    } catch (err) {
-        // Non-fatal: log and continue — never block the caller. Same
-        // contract the queue-based v1.x had (queue errors were swallowed).
-        logger.error({ err: err.message, type: payload.type }, "[NotificationService] Failed to persist notification");
-    }
+  if (!payload?.organizationId) {
+    logger.warn("[NotificationService] enqueueNotification called without organizationId — skipped");
+    return;
+  }
+  if (!payload?.type || !payload?.title || !payload?.message) {
+    logger.warn({
+      org: payload.organizationId
+    }, "[NotificationService] Missing required fields — skipped");
+    return;
+  }
+  try {
+    await Notification.create({
+      userId: payload.userId || null,
+      type: payload.type,
+      title: payload.title,
+      message: payload.message,
+      entityType: payload.entityType || null,
+      entityId: payload.entityId || null,
+      metadata: payload.metadata || {},
+      priority: payload.priority || "normal"
+    });
+  } catch (err) {
+    // Non-fatal: log and continue — never block the caller. Same
+    // contract the queue-based v1.x had (queue errors were swallowed).
+    logger.error({
+      err: err.message,
+      type: payload.type
+    }, "[NotificationService] Failed to persist notification");
+  }
 }
-
-module.exports = { enqueueNotification };
+module.exports = {
+  enqueueNotification
+};

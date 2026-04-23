@@ -2,11 +2,8 @@ const mongoose = require("mongoose");
 
 const patientSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-        },
+        // organizationId removed (Step 5c Commit 2 of 3-Layer refactor):
+        // per-org DB IS the tenant boundary — the field was redundant.
 
         // v1.7.0 Multi-Branch Association
         primaryBranchId: {
@@ -218,38 +215,38 @@ patientSchema.pre("save", async function () {
 
 // ─── Indexes ──────────────────────────────────────────────
 // Multi-tenant uniqueness invariant
-patientSchema.index({ organizationId: 1, patientCode: 1 }, { unique: true });
+patientSchema.index({ patientCode: 1 }, { unique: true });
 
 // Enterprise multi-tenant list sorting
-patientSchema.index({ organizationId: 1, createdAt: -1 });
+patientSchema.index({ createdAt: -1 });
 
 // Token-based search indexing
-patientSchema.index({ organizationId: 1, nameTokens: 1 });
+patientSchema.index({ nameTokens: 1 });
 
 // v1.7.0 Phone-based search index
-patientSchema.index({ organizationId: 1, phoneDigits: 1 });
+patientSchema.index({ phoneDigits: 1 });
 
 // v1.7.0 Branch-aware visibility index
-patientSchema.index({ organizationId: 1, allowedBranchIds: 1, createdAt: -1 });
+patientSchema.index({ allowedBranchIds: 1, createdAt: -1 });
 
 // v1.7.0 Analytics primary branch index
-patientSchema.index({ organizationId: 1, primaryBranchId: 1 });
+patientSchema.index({ primaryBranchId: 1 });
 
 // v4.5 Ownership composite index
-patientSchema.index({ organizationId: 1, visibleToDoctors: 1 });
+patientSchema.index({ visibleToDoctors: 1 });
 
 // v5.0 Full-text search on normalized name
-patientSchema.index({ organizationId: 1, fullNameNormalized: "text" });
+patientSchema.index({ fullNameNormalized: "text" });
 
 // Standardized single-field indexes
 patientSchema.index({ isActive: 1 });
 
 // v6.0 Intelligence Engine Indexes
-patientSchema.index({ organizationId: 1, tags: 1 });
-patientSchema.index({ organizationId: 1, lastVisit: 1 });
-patientSchema.index({ organizationId: 1, priorityScore: -1 });
-patientSchema.index({ organizationId: 1, assignedDoctorId: 1 });
-patientSchema.index({ organizationId: 1, "alerts.type": 1 });
+patientSchema.index({ tags: 1 });
+patientSchema.index({ lastVisit: 1 });
+patientSchema.index({ priorityScore: -1 });
+patientSchema.index({ assignedDoctorId: 1 });
+patientSchema.index({ "alerts.type": 1 });
 
 const modelName = "Patient";
 

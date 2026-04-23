@@ -15,26 +15,49 @@
 "use strict";
 
 const mongoose = require("mongoose");
-const logger   = require("@utils/logger");
+const logger = require("@utils/logger");
 
 // ── DLQ Schema ─────────────────────────────────────────────────────────────
 const NotificationDLQSchema = new mongoose.Schema({
-    organizationId: { type: String, index: true },
-    jobId:          { type: String },
-    payload:        { type: mongoose.Schema.Types.Mixed, required: true },
-    error:          { type: String, required: true },
-    retryCount:     { type: Number, default: 0 },
-    resolvedAt:     { type: Date, default: null },
-    resolution:     { type: String, enum: ["retried", "dismissed", "escalated", null], default: null },
-    createdAt:      { type: Date, default: Date.now, index: true },
+  jobId: {
+    type: String
+  },
+  payload: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true
+  },
+  error: {
+    type: String,
+    required: true
+  },
+  retryCount: {
+    type: Number,
+    default: 0
+  },
+  resolvedAt: {
+    type: Date,
+    default: null
+  },
+  resolution: {
+    type: String,
+    enum: ["retried", "dismissed", "escalated", null],
+    default: null
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    index: true
+  }
 });
-
-NotificationDLQSchema.index({ organizationId: 1, createdAt: -1 });
-NotificationDLQSchema.index({ resolvedAt: 1, resolution: 1 });
-
+NotificationDLQSchema.index({
+  createdAt: -1
+});
+NotificationDLQSchema.index({
+  resolvedAt: 1,
+  resolution: 1
+});
 const MODEL_NAME = "NotificationDLQ";
-const NotificationDLQ =
-    mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, NotificationDLQSchema);
+const NotificationDLQ = mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, NotificationDLQSchema);
 
 // ── DLQ Write ──────────────────────────────────────────────────────────────
 
@@ -46,48 +69,60 @@ const NotificationDLQ =
  * @param {object} params.job      — BullMQ Job object
  * @param {Error}  params.err      — Final failure error
  */
-async function write({ job, err }) {
-    try {
-        const payload = job?.data || {};
-
-        await NotificationDLQ.create({
-            organizationId: payload.organizationId || "unknown",
-            jobId:          job?.id || "unknown",
-            payload,
-            error:          err?.message || String(err),
-            retryCount:     job?.attemptsMade || 0,
-        });
-
-        logger.warn(
-            { jobId: job?.id, orgId: payload.organizationId, err: err?.message },
-            "[NotificationDLQ] Job written to DLQ after exhausted retries"
-        );
-    } catch (dlqError) {
-        // DLQ write itself failed — just log, never throw
-        logger.error(
-            { err: dlqError.message },
-            "[NotificationDLQ] Failed to write to DLQ — data may be lost"
-        );
-    }
+async function write({
+  job,
+  err
+}) {
+  try {
+    const payload = job?.data || {};
+    await NotificationDLQ.create({
+      jobId: job?.id || "unknown",
+      payload,
+      error: err?.message || String(err),
+      retryCount: job?.attemptsMade || 0
+    });
+    logger.warn({
+      jobId: job?.id,
+      orgId: payload.organizationId,
+      err: err?.message
+    }, "[NotificationDLQ] Job written to DLQ after exhausted retries");
+  } catch (dlqError) {
+    // DLQ write itself failed — just log, never throw
+    logger.error({
+      err: dlqError.message
+    }, "[NotificationDLQ] Failed to write to DLQ — data may be lost");
+  }
 }
 
 /**
  * markResolved() — Mark a DLQ entry as resolved.
  */
 async function markResolved(dlqId, resolution = "dismissed") {
-    return NotificationDLQ.findByIdAndUpdate(dlqId, {
-        resolvedAt: new Date(),
-        resolution,
-    }, { new: true }).lean();
+  return NotificationDLQ.findByIdAndUpdate(dlqId, {
+    resolvedAt: new Date(),
+    resolution
+  }, {
+    new: true
+  }).lean();
 }
 
 /**
  * listUnresolved() — Fetch unresolved DLQ entries for monitoring dashboards.
  */
-async function listUnresolved({ organizationId, limit = 50 } = {}) {
-    const query = { resolvedAt: null };
-    if (organizationId) query.organizationId = organizationId;
-    return NotificationDLQ.find(query).sort({ createdAt: -1 }).limit(limit).lean();
+async function listUnresolved({
+  limit = 50
+} = {}) {
+  // Per-org DB: no orgId filter needed (connection IS the tenant boundary).
+  const query = {
+    resolvedAt: null
+  };
+  return NotificationDLQ.find(query).sort({
+    createdAt: -1
+  }).limit(limit).lean();
 }
-
-module.exports = { write, markResolved, listUnresolved, NotificationDLQ };
+module.exports = {
+  write,
+  markResolved,
+  listUnresolved,
+  NotificationDLQ
+};

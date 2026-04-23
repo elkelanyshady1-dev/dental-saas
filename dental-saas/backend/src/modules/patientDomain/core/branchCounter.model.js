@@ -16,34 +16,29 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const branchCounterSchema = new mongoose.Schema(
-    {
-        branchId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Branch",
-            required: true,
-        },
-        // Per-org DB: kept for reference but NOT required.
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-        },
-        sequence: {
-            type: Number,
-            default: 0,
-        },
-    },
-    { timestamps: true }
-);
+const branchCounterSchema = new mongoose.Schema({
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Branch",
+    required: true
+  },
+  sequence: {
+    type: Number,
+    default: 0
+  }
+}, {
+  timestamps: true
+});
 
 // Per-org DB: unique per branch per database (was per-org+branch)
-branchCounterSchema.index({ branchId: 1 }, { unique: true });
-
+branchCounterSchema.index({
+  branchId: 1
+}, {
+  unique: true
+});
 const modelName = "BranchCounter";
-
 module.exports = {
-    modelName,
-    schema: branchCounterSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, branchCounterSchema),
+  modelName,
+  schema: branchCounterSchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, branchCounterSchema)
 };

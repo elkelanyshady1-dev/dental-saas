@@ -27,7 +27,6 @@ const { autoAudit } = require("@middleware/auditInterceptor");
 // Phase F.6: Rate limiters for public intake endpoints (INV-18)
 const { intakeValidateLimiter, intakeSubmitLimiter } = require("@middleware/rateLimiter");
 
-
 // Specialized Controllers (v1.7.0)
 const patientCreateController = require("./core/patient.create.controller");
 const patientListController = require("./core/patient.list.controller");
@@ -215,7 +214,6 @@ router.post("/internal/patients", limitGuard("maxPatients"), policyMiddleware(P.
 router.get("/internal/patients", fieldFilterMiddleware("patient"), patientListController.list);
 
 // LEGACY/PILOT REMOVED
-
 
 /**
  * 🏥 SOVEREIGN PATIENT MANAGEMENT (Normalized v1.7.0)
@@ -535,7 +533,6 @@ router.delete("/:id", policyMiddleware(P.PATIENTS_DELETE, async (req) => _getSec
 router.get("/:id/clinical", fieldFilterMiddleware("patient"), clinicalController.getRecord);
 router.put("/:id/clinical", policyMiddleware(P.PATIENTS_UPDATE, async (req) => _getSecurePatient(req).findOne({ _id: req.params.id })), fieldWriteGuardMiddleware("patient"), clinicalController.update);
 router.put("/policies", policyMiddleware(P.PATIENTS_UPDATE), policyController.update);
-
 
 // ─── Sovereign Boundary Certification ───────────────────────────────────────
 global.__PATIENT_AGGREGATE_ACTIVE__ = true;

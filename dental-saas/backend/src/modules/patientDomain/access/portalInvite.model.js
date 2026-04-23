@@ -18,89 +18,80 @@
  */
 
 const mongoose = require("mongoose");
-
-const portalInviteSchema = new mongoose.Schema(
-    {
-        // ── Tenant Isolation ─────────────────────────────────────────────
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-        },
-
-        // ── Patient Reference ────────────────────────────────────────────
-        patientId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Patient",
-            required: true,
-        },
-
-        // ── Invite Type ──────────────────────────────────────────────────
-        type: {
-            type: String,
-            enum: ["magic_link", "setup_link", "otp"],
-            required: true,
-            default: "magic_link",
-        },
-
-        // ── Token (SHA-256 hash — raw NEVER stored) ──────────────────────
-        tokenHash: {
-            type: String,
-            required: true,
-            index: true,
-        },
-
-        // ── Expiry ───────────────────────────────────────────────────────
-        expiresAt: {
-            type: Date,
-            required: true,
-            index: { expires: 0 }, // TTL index — MongoDB auto-deletes after expiry
-        },
-
-        // ── One-Time Use ─────────────────────────────────────────────────
-        usedAt: Date,
-
-        // ── OTP Fields ───────────────────────────────────────────────────
-        otpHash: String,
-        otpExpiresAt: Date,
-        otpAttempts: {
-            type: Number,
-            default: 0,
-        },
-        lockedUntil: Date,
-
-        // ── Contact Info ─────────────────────────────────────────────────
-        email: String,
-
-        // ── Delivery Channel ─────────────────────────────────────────────
-        deliveryChannel: {
-            type: String,
-            enum: ["whatsapp", "sms", "email"],
-        },
-
-        // ── Metadata ─────────────────────────────────────────────────────
-        metadata: {
-            phone: String,
-            email: String,
-            sentBy: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            },
-            sentByName: String,
-        },
+const portalInviteSchema = new mongoose.Schema({
+  // ── Patient Reference ────────────────────────────────────────────
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Patient",
+    required: true
+  },
+  // ── Invite Type ──────────────────────────────────────────────────
+  type: {
+    type: String,
+    enum: ["magic_link", "setup_link", "otp"],
+    required: true,
+    default: "magic_link"
+  },
+  // ── Token (SHA-256 hash — raw NEVER stored) ──────────────────────
+  tokenHash: {
+    type: String,
+    required: true,
+    index: true
+  },
+  // ── Expiry ───────────────────────────────────────────────────────
+  expiresAt: {
+    type: Date,
+    required: true,
+    index: {
+      expires: 0
+    } // TTL index — MongoDB auto-deletes after expiry
+  },
+  // ── One-Time Use ─────────────────────────────────────────────────
+  usedAt: Date,
+  // ── OTP Fields ───────────────────────────────────────────────────
+  otpHash: String,
+  otpExpiresAt: Date,
+  otpAttempts: {
+    type: Number,
+    default: 0
+  },
+  lockedUntil: Date,
+  // ── Contact Info ─────────────────────────────────────────────────
+  email: String,
+  // ── Delivery Channel ─────────────────────────────────────────────
+  deliveryChannel: {
+    type: String,
+    enum: ["whatsapp", "sms", "email"]
+  },
+  // ── Metadata ─────────────────────────────────────────────────────
+  metadata: {
+    phone: String,
+    email: String,
+    sentBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     },
-    { timestamps: true }
-);
+    sentByName: String
+  }
+}, {
+  timestamps: true
+});
 
 // ── Indexes ──────────────────────────────────────────────────────────────────
-portalInviteSchema.index({ organizationId: 1, tokenHash: 1 });
-portalInviteSchema.index({ organizationId: 1, patientId: 1, type: 1 });
-portalInviteSchema.index({ organizationId: 1, patientId: 1, otpHash: 1 });
-
+portalInviteSchema.index({
+  tokenHash: 1
+});
+portalInviteSchema.index({
+  patientId: 1,
+  type: 1
+});
+portalInviteSchema.index({
+  patientId: 1,
+  otpHash: 1
+});
 const modelName = "PortalInvite";
-
 module.exports = {
-    modelName,
-    schema: portalInviteSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, portalInviteSchema),
+  modelName,
+  schema: portalInviteSchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, portalInviteSchema)
 };

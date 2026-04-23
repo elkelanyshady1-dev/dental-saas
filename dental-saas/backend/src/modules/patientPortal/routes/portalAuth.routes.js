@@ -17,9 +17,11 @@
 
 const express = require("express");
 const router = express.Router();
-
 const patientProtect = require("../../patientDomain/access/patientProtect");
-const { portalRLSContext, portalRLSContextPublic } = require("../../../middleware/portalContext");
+const {
+  portalRLSContext,
+  portalRLSContextPublic
+} = require("../../../middleware/portalContext");
 const ctrl = require("../controllers/portalAuth.controller");
 const logger = require("@utils/logger");
 
@@ -28,28 +30,22 @@ const logger = require("@utils/logger");
 // This replaces the standard organizationContext middleware which requires
 // req.user to be set (impossible on pre-auth routes).
 function portalOrganizationContext(req, res, next) {
-    const orgId = req.headers["x-organization-id"] || req.query.organizationId;
-
-    if (!orgId) {
-        return res.status(400).json({
-            success: false,
-            error: {
-                code: "MISSING_ORGANIZATION",
-                message: "X-Organization-Id header is required for portal auth.",
-            },
-        });
-    }
-
-    req.organizationId = orgId;
-
-    logger.debug({
-        event: "PORTAL_ORG_CONTEXT_RESOLVED",
-        organizationId: orgId,
-        path: req.originalUrl,
-        source: req.headers["x-organization-id"] ? "header" : "query",
+  const orgId = req.headers["x-organization-id"] || req.query.organizationId;
+  if (!orgId) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "MISSING_ORGANIZATION",
+        message: "X-Organization-Id header is required for portal auth."
+      }
     });
-
-    next();
+  }
+  logger.debug({
+    event: "PORTAL_ORG_CONTEXT_RESOLVED",
+    path: req.originalUrl,
+    source: req.headers["x-organization-id"] ? "header" : "query"
+  });
+  next();
 }
 
 // ─── Public Auth Routes ─────────────────────────────────────────────────────
@@ -183,5 +179,4 @@ router.post("/otp/verify", ctrl.verifyOtp);
  *         description: Logged out successfully
  */
 router.post("/logout", patientProtect, portalRLSContext, ctrl.logout);
-
 module.exports = router;

@@ -13,47 +13,59 @@ const getModel = require("../../../core/db/getModel");
 
 // ── Strict Per-Org Helper ───────────────────────────────────────────────────
 function _getPatientUser(reqOrConnection) {
-    const connection = reqOrConnection?.dbConnection || reqOrConnection;
-    if (!connection) {
-        throw new Error("[PatientUserRepository] connection is REQUIRED — per-org mode does not allow fallback");
-    }
-    return getModel(connection, PatientUserDef);
+  const connection = reqOrConnection?.dbConnection || reqOrConnection;
+  if (!connection) {
+    throw new Error("[PatientUserRepository] connection is REQUIRED — per-org mode does not allow fallback");
+  }
+  return getModel(connection, PatientUserDef);
 }
-
 class PatientUserRepository {
-    /**
-     * Invalidate patient portal access (kill-switch).
-     * Increments tokenVersion to invalidate all active JWTs.
-     *
-     * @param {string} patientId
-     * @param {string} organizationId
-     * @param {import("mongoose").ClientSession} session
-     * @param {object} req   Express request (must have req.dbConnection)
-     */
-    async invalidateAccess(patientId, organizationId, session, req) {
-        const PatientUser = _getPatientUser(req);
-        return PatientUser.updateOne(
-            { patientId },
-            { $inc: { tokenVersion: 1 }, $set: { isActive: false } },
-            session ? { session } : undefined
-        );
-    }
+  /**
+   * Invalidate patient portal access (kill-switch).
+   * Increments tokenVersion to invalidate all active JWTs.
+   *
+   * @param {string} patientId
+   * @param {string} organizationId
+   * @param {import("mongoose").ClientSession} session
+   * @param {object} req   Express request (must have req.dbConnection)
+   */
+  async invalidateAccess(patientId, organizationId, session, req) {
+    const PatientUser = _getPatientUser(req);
+    return PatientUser.updateOne({
+      patientId
+    }, {
+      $inc: {
+        tokenVersion: 1
+      },
+      $set: {
+        isActive: false
+      }
+    }, session ? {
+      session
+    } : undefined);
+  }
 
-    /**
-     * Background/transaction context — requires explicit connection.
-     * @param {string} patientId
-     * @param {string} organizationId
-     * @param {import("mongoose").ClientSession} session
-     * @param {import("mongoose").Connection} connection — from connectionResolver
-     */
-    async invalidateAccessWithConnection(patientId, organizationId, session, connection) {
-        const PatientUser = _getPatientUser(connection);
-        return PatientUser.updateOne(
-            { patientId, organizationId },
-            { $inc: { tokenVersion: 1 }, $set: { isActive: false } },
-            { session }
-        );
-    }
+  /**
+   * Background/transaction context — requires explicit connection.
+   * @param {string} patientId
+   * @param {string} organizationId
+   * @param {import("mongoose").ClientSession} session
+   * @param {import("mongoose").Connection} connection — from connectionResolver
+   */
+  async invalidateAccessWithConnection(patientId, organizationId, session, connection) {
+    const PatientUser = _getPatientUser(connection);
+    return PatientUser.updateOne({
+      patientId
+    }, {
+      $inc: {
+        tokenVersion: 1
+      },
+      $set: {
+        isActive: false
+      }
+    }, {
+      session
+    });
+  }
 }
-
 module.exports = new PatientUserRepository();

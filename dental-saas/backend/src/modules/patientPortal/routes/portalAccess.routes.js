@@ -25,39 +25,43 @@ const orgProtect = require("@middleware/orgProtect");
 const organizationContext = require("@middleware/organizationMiddleware");
 const requireOrgPermission = require("@middleware/requireOrgPermission");
 const policyMiddleware = require("@rbac/policyMiddleware");
-const { P } = require("@rbac/orgPermissions");
+const {
+  P
+} = require("@rbac/orgPermissions");
 
 // ── Public portal middleware ─────────────────────────────────────────────────
-const { portalRLSContextPublic } = require("../../../middleware/portalContext");
+const {
+  portalRLSContextPublic
+} = require("../../../middleware/portalContext");
 const logger = require("@utils/logger");
 
 // ── Rate limiting (IPv6-safe via centralized factory) ────────────────────────
-const { createLimiter } = require("../../../middleware/rateLimiter");
-
+const {
+  createLimiter
+} = require("../../../middleware/rateLimiter");
 const portalAccessLimiter = createLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    keyType: "ip",
-    message: (req, res) => res.status(429).json({
-        success: false,
-        error: {
-            code: "RATE_LIMIT_EXCEEDED",
-            message: "Too many access link requests. Please try again later.",
-        },
-    }),
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyType: "ip",
+  message: (req, res) => res.status(429).json({
+    success: false,
+    error: {
+      code: "RATE_LIMIT_EXCEEDED",
+      message: "Too many access link requests. Please try again later."
+    }
+  })
 });
-
 const portalSetupLimiter = createLimiter({
-    windowMs: 60 * 60 * 1000,
-    max: 5,
-    keyType: "ip",
-    message: (req, res) => res.status(429).json({
-        success: false,
-        error: {
-            code: "RATE_LIMIT_EXCEEDED",
-            message: "Too many setup attempts. Please try again later.",
-        },
-    }),
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyType: "ip",
+  message: (req, res) => res.status(429).json({
+    success: false,
+    error: {
+      code: "RATE_LIMIT_EXCEEDED",
+      message: "Too many setup attempts. Please try again later."
+    }
+  })
 });
 
 // ── Controller ───────────────────────────────────────────────────────────────
@@ -65,27 +69,21 @@ const ctrl = require("../controllers/portalAccess.controller");
 
 // ── Portal Organization Context (for public routes) ──────────────────────────
 function portalOrganizationContext(req, res, next) {
-    const orgId = req.headers["x-organization-id"] || req.query.organizationId;
-
-    if (!orgId) {
-        return res.status(400).json({
-            success: false,
-            error: {
-                code: "MISSING_ORGANIZATION",
-                message: "X-Organization-Id header is required for portal access.",
-            },
-        });
-    }
-
-    req.organizationId = orgId;
-
-    logger.debug({
-        event: "PORTAL_ACCESS_ORG_CONTEXT",
-        organizationId: orgId,
-        path: req.originalUrl,
+  const orgId = req.headers["x-organization-id"] || req.query.organizationId;
+  if (!orgId) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "MISSING_ORGANIZATION",
+        message: "X-Organization-Id header is required for portal access."
+      }
     });
-
-    next();
+  }
+  logger.debug({
+    event: "PORTAL_ACCESS_ORG_CONTEXT",
+    path: req.originalUrl
+  });
+  next();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -117,13 +115,7 @@ function portalOrganizationContext(req, res, next) {
  *       404:
  *         description: Patient not found or no portal account (for magic_link)
  */
-router.post("/send",
-    orgProtect,
-    organizationContext,
-    requireOrgPermission(P.PORTAL_MANAGE),
-    policyMiddleware(P.PORTAL_MANAGE),
-    ctrl.sendAccessLink
-);
+router.post("/send", orgProtect, organizationContext, requireOrgPermission(P.PORTAL_MANAGE), policyMiddleware(P.PORTAL_MANAGE), ctrl.sendAccessLink);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. PUBLIC ROUTES — Verify tokens + complete setup
@@ -150,12 +142,7 @@ router.post("/send",
  *       401:
  *         description: Invalid or expired token
  */
-router.post("/verify",
-    portalOrganizationContext,
-    portalRLSContextPublic,
-    portalAccessLimiter,
-    ctrl.verifyAccessToken
-);
+router.post("/verify", portalOrganizationContext, portalRLSContextPublic, portalAccessLimiter, ctrl.verifyAccessToken);
 
 /**
  * @swagger
@@ -187,11 +174,5 @@ router.post("/verify",
  *       401:
  *         description: Invalid setup token
  */
-router.post("/setup/complete",
-    portalOrganizationContext,
-    portalRLSContextPublic,
-    portalSetupLimiter,
-    ctrl.completeSetup
-);
-
+router.post("/setup/complete", portalOrganizationContext, portalRLSContextPublic, portalSetupLimiter, ctrl.completeSetup);
 module.exports = router;

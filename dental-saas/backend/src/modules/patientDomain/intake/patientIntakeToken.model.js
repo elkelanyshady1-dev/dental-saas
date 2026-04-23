@@ -12,47 +12,42 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const patientIntakeTokenSchema = new mongoose.Schema(
-    {
-        patientId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Patient",
-            required: true,
-        },
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-        },
-        token: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-        expiresAt: {
-            type: Date,
-            required: true,
-        },
-        used: {
-            type: Boolean,
-            default: false,
-        },
-        submittedAt: {
-            type: Date,
-            default: null,
-        },
-    },
-    { timestamps: true }
-);
+const patientIntakeTokenSchema = new mongoose.Schema({
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Patient",
+    required: true
+  },
+  token: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  expiresAt: {
+    type: Date,
+    required: true
+  },
+  used: {
+    type: Boolean,
+    default: false
+  },
+  submittedAt: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true
+});
 
 // Cleanup: find expired tokens
-patientIntakeTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
+patientIntakeTokenSchema.index({
+  expiresAt: 1
+}, {
+  expireAfterSeconds: 0
+});
 const modelName = "PatientIntakeToken";
-
 module.exports = {
-    modelName,
-    schema: patientIntakeTokenSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, patientIntakeTokenSchema),
+  modelName,
+  schema: patientIntakeTokenSchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, patientIntakeTokenSchema)
 };
