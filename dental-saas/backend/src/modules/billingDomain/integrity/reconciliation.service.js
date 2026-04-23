@@ -28,24 +28,23 @@ const JournalEntryDef = require("../models/JournalEntry.model");
 const PatientInvoiceDef = require("../organizationFinance/models/PatientInvoice.model");
 const PatientPaymentDef = require("../organizationFinance/models/PatientPayment.model");
 const getModel = require("@core/db/getModel");
-const { ACCOUNTS } = require("../constants/accounts");
-
+const {
+  ACCOUNTS
+} = require("../constants/accounts");
 const logger = require("@utils/logger");
 
 // ─── Strict Per-Org Model Resolvers (Phase 3.3) ─────────────────────────────
 function _getSecureJournal(connection) {
-    if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
-    return getModel(connection, JournalEntryDef);
+  if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
+  return getModel(connection, JournalEntryDef);
 }
-
 function _getSecureInvoice(connection) {
-    if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
-    return getModel(connection, PatientInvoiceDef);
+  if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
+  return getModel(connection, PatientInvoiceDef);
 }
-
 function _getSecurePayment(connection) {
-    if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
-    return getModel(connection, PatientPaymentDef);
+  if (!connection) throw new Error("[ReconciliationService] connection is REQUIRED — per-org mode does not allow fallback");
+  return getModel(connection, PatientPaymentDef);
 }
 
 // ─── Core Reconciliation ────────────────────────────────────────────────────
@@ -62,119 +61,106 @@ function _getSecurePayment(connection) {
  * @returns {Promise<Object>} — reconciliation report
  */
 async function reconcileOrganization(organizationId, connection = null) {
-    const timestamp = new Date();
-    const discrepancies = [];
-    const coverageGaps = [];
+  const timestamp = new Date();
+  const discrepancies = [];
+  const coverageGaps = [];
 
-    // ─── Step 1: Compute Ledger Balances ────────────────────────────
+  // ─── Step 1: Compute Ledger Balances ────────────────────────────
 
-    const ledgerBalances = await computeLedgerBalances(organizationId, connection);
+  const ledgerBalances = await computeLedgerBalances(organizationId, connection);
 
-    // ─── Step 2: Compute Source-of-Truth Totals ─────────────────────
+  // ─── Step 2: Compute Source-of-Truth Totals ─────────────────────
 
-    const sourceTotals = await computeSourceTotals(organizationId, connection);
+  const sourceTotals = await computeSourceTotals(organizationId, connection);
 
-    // ─── Step 3: Compare Accounts Receivable ────────────────────────
+  // ─── Step 3: Compare Accounts Receivable ────────────────────────
 
-    const arLedger = ledgerBalances.accounts_receivable || 0;
-    const arSource = sourceTotals.outstandingReceivableMinor;
+  const arLedger = ledgerBalances.accounts_receivable || 0;
+  const arSource = sourceTotals.outstandingReceivableMinor;
+  if (arLedger !== arSource) {
+    discrepancies.push({
+      account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
+      label: "Accounts Receivable",
+      ledgerMinor: arLedger,
+      sourceMinor: arSource,
+      diffMinor: arLedger - arSource,
+      ledger: arLedger / 100,
+      source: arSource / 100,
+      diff: (arLedger - arSource) / 100
+    });
+  }
 
-    if (arLedger !== arSource) {
-        discrepancies.push({
-            account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
-            label: "Accounts Receivable",
-            ledgerMinor: arLedger,
-            sourceMinor: arSource,
-            diffMinor: arLedger - arSource,
-            ledger: arLedger / 100,
-            source: arSource / 100,
-            diff: (arLedger - arSource) / 100,
-        });
-    }
+  // ─── Step 4: Compare Cash ───────────────────────────────────────
 
-    // ─── Step 4: Compare Cash ───────────────────────────────────────
+  const cashLedger = ledgerBalances.cash || 0;
+  const cashSource = sourceTotals.totalPaymentsMinor;
+  if (cashLedger !== cashSource) {
+    discrepancies.push({
+      account: ACCOUNTS.CASH,
+      label: "Cash / Bank",
+      ledgerMinor: cashLedger,
+      sourceMinor: cashSource,
+      diffMinor: cashLedger - cashSource,
+      ledger: cashLedger / 100,
+      source: cashSource / 100,
+      diff: (cashLedger - cashSource) / 100
+    });
+  }
 
-    const cashLedger = ledgerBalances.cash || 0;
-    const cashSource = sourceTotals.totalPaymentsMinor;
+  // ─── Step 5: Compare Revenue ────────────────────────────────────
 
-    if (cashLedger !== cashSource) {
-        discrepancies.push({
-            account: ACCOUNTS.CASH,
-            label: "Cash / Bank",
-            ledgerMinor: cashLedger,
-            sourceMinor: cashSource,
-            diffMinor: cashLedger - cashSource,
-            ledger: cashLedger / 100,
-            source: cashSource / 100,
-            diff: (cashLedger - cashSource) / 100,
-        });
-    }
+  const revLedger = ledgerBalances.revenue || 0;
+  const revSource = sourceTotals.totalRevenueMinor;
+  if (revLedger !== revSource) {
+    discrepancies.push({
+      account: ACCOUNTS.REVENUE,
+      label: "Revenue",
+      ledgerMinor: revLedger,
+      sourceMinor: revSource,
+      diffMinor: revLedger - revSource,
+      ledger: revLedger / 100,
+      source: revSource / 100,
+      diff: (revLedger - revSource) / 100
+    });
+  }
 
-    // ─── Step 5: Compare Revenue ────────────────────────────────────
+  // ─── Step 6: Coverage Check ─────────────────────────────────────
 
-    const revLedger = ledgerBalances.revenue || 0;
-    const revSource = sourceTotals.totalRevenueMinor;
+  const coverage = await checkJournalCoverage(organizationId, connection);
+  coverageGaps.push(...coverage.gaps);
 
-    if (revLedger !== revSource) {
-        discrepancies.push({
-            account: ACCOUNTS.REVENUE,
-            label: "Revenue",
-            ledgerMinor: revLedger,
-            sourceMinor: revSource,
-            diffMinor: revLedger - revSource,
-            ledger: revLedger / 100,
-            source: revSource / 100,
-            diff: (revLedger - revSource) / 100,
-        });
-    }
+  // ─── Build Report ───────────────────────────────────────────────
 
-    // ─── Step 6: Coverage Check ─────────────────────────────────────
-
-    const coverage = await checkJournalCoverage(organizationId, connection);
-    coverageGaps.push(...coverage.gaps);
-
-    // ─── Build Report ───────────────────────────────────────────────
-
-    const status = discrepancies.length === 0 && coverageGaps.length === 0
-        ? "balanced"
-        : "drift";
-
-    const report = {
-        organizationId,
-        timestamp,
-        status,
-        summary: {
-            accountsChecked: 3,
-            discrepanciesFound: discrepancies.length,
-            coverageGaps: coverageGaps.length,
-        },
-        discrepancies,
-        coverageGaps,
-        ledgerBalances: {
-            accountsReceivableMinor: arLedger,
-            cashMinor: cashLedger,
-            revenueMinor: revLedger,
-        },
-        sourceTotals,
-    };
-
-    if (status === "drift") {
-        logger.error(
-            {
-                organizationId,
-                discrepancies: discrepancies.length,
-                coverageGaps: coverageGaps.length,
-            },
-            "[Reconciliation] ⚠ FINANCIAL DRIFT DETECTED"
-        );
-    } else {
-        logger.info(
-            { organizationId },
-            "[Reconciliation] ✅ Organization finances fully reconciled"
-        );
-    }
-
-    return report;
+  const status = discrepancies.length === 0 && coverageGaps.length === 0 ? "balanced" : "drift";
+  const report = {
+    timestamp,
+    status,
+    summary: {
+      accountsChecked: 3,
+      discrepanciesFound: discrepancies.length,
+      coverageGaps: coverageGaps.length
+    },
+    discrepancies,
+    coverageGaps,
+    ledgerBalances: {
+      accountsReceivableMinor: arLedger,
+      cashMinor: cashLedger,
+      revenueMinor: revLedger
+    },
+    sourceTotals
+  };
+  if (status === "drift") {
+    logger.error({
+      organizationId,
+      discrepancies: discrepancies.length,
+      coverageGaps: coverageGaps.length
+    }, "[Reconciliation] ⚠ FINANCIAL DRIFT DETECTED");
+  } else {
+    logger.info({
+      organizationId
+    }, "[Reconciliation] ✅ Organization finances fully reconciled");
+  }
+  return report;
 }
 
 // ─── Internal Computations ──────────────────────────────────────────────────
@@ -184,96 +170,99 @@ async function reconcileOrganization(organizationId, connection = null) {
  * For each account, net = sum(debits) - sum(credits) in minor units.
  */
 async function computeLedgerBalances(organizationId, connection = null) {
-
-    // secureModel.aggregate prepends $match { organizationId } automatically
-    const results = await _getSecureJournal(connection).aggregate([
-        { $unwind: "$entries" },
-        {
-            $group: {
-                _id: {
-                    account: "$entries.account",
-                    type: "$entries.type",
-                },
-                totalMinor: { $sum: "$entries.amountMinor" },
-            },
-        },
-    ]);
-
-    // Pivot: compute net balance per account
-    // Asset accounts: balance = debits - credits
-    // Revenue accounts: balance = credits - debits
-    const rawMap = {};
-    for (const r of results) {
-        const { account, type } = r._id;
-        if (!rawMap[account]) rawMap[account] = { debit: 0, credit: 0 };
-        rawMap[account][type] += r.totalMinor;
+  // secureModel.aggregate prepends $match { organizationId } automatically
+  const results = await _getSecureJournal(connection).aggregate([{
+    $unwind: "$entries"
+  }, {
+    $group: {
+      _id: {
+        account: "$entries.account",
+        type: "$entries.type"
+      },
+      totalMinor: {
+        $sum: "$entries.amountMinor"
+      }
     }
+  }]);
 
-    const balances = {};
-    for (const [account, sides] of Object.entries(rawMap)) {
-        // Net balance: debits - credits (positive = net debit)
-        balances[account] = sides.debit - sides.credit;
-    }
-
-    return balances;
+  // Pivot: compute net balance per account
+  // Asset accounts: balance = debits - credits
+  // Revenue accounts: balance = credits - debits
+  const rawMap = {};
+  for (const r of results) {
+    const {
+      account,
+      type
+    } = r._id;
+    if (!rawMap[account]) rawMap[account] = {
+      debit: 0,
+      credit: 0
+    };
+    rawMap[account][type] += r.totalMinor;
+  }
+  const balances = {};
+  for (const [account, sides] of Object.entries(rawMap)) {
+    // Net balance: debits - credits (positive = net debit)
+    balances[account] = sides.debit - sides.credit;
+  }
+  return balances;
 }
 
 /**
  * Compute source-of-truth totals from invoice and payment collections.
  */
 async function computeSourceTotals(organizationId, connection = null) {
+  // Outstanding AR: issued + partially_paid invoices
+  // secureModel.aggregate prepends $match { organizationId } automatically
+  const arResult = await _getSecureInvoice(connection).aggregate([{
+    $match: {
+      status: {
+        $in: ["issued", "partially_paid"]
+      }
+    }
+  }, {
+    $group: {
+      _id: null,
+      totalMinor: {
+        $sum: "$totalAmountMinor"
+      }
+    }
+  }]);
 
-    // Outstanding AR: issued + partially_paid invoices
-    // secureModel.aggregate prepends $match { organizationId } automatically
-    const arResult = await _getSecureInvoice(connection).aggregate([
-        {
-            $match: {
-                status: { $in: ["issued", "partially_paid"] },
-            },
-        },
-        {
-            $group: {
-                _id: null,
-                totalMinor: { $sum: "$totalAmountMinor" },
-            },
-        },
-    ]);
+  // Total payments (active only, exclude refunded)
+  const cashResult = await _getSecurePayment(connection).aggregate([{
+    $match: {
+      status: "active"
+    }
+  }, {
+    $group: {
+      _id: null,
+      totalMinor: {
+        $sum: "$amountMinor"
+      }
+    }
+  }]);
 
-    // Total payments (active only, exclude refunded)
-    const cashResult = await _getSecurePayment(connection).aggregate([
-        {
-            $match: {
-                status: "active",
-            },
-        },
-        {
-            $group: {
-                _id: null,
-                totalMinor: { $sum: "$amountMinor" },
-            },
-        },
-    ]);
-
-    // Total revenue: all non-voided invoices
-    const revResult = await _getSecureInvoice(connection).aggregate([
-        {
-            $match: {
-                status: { $ne: "voided" },
-            },
-        },
-        {
-            $group: {
-                _id: null,
-                totalMinor: { $sum: "$totalAmountMinor" },
-            },
-        },
-    ]);
-
-    return {
-        outstandingReceivableMinor: arResult[0]?.totalMinor || 0,
-        totalPaymentsMinor: cashResult[0]?.totalMinor || 0,
-        totalRevenueMinor: revResult[0]?.totalMinor || 0,
-    };
+  // Total revenue: all non-voided invoices
+  const revResult = await _getSecureInvoice(connection).aggregate([{
+    $match: {
+      status: {
+        $ne: "voided"
+      }
+    }
+  }, {
+    $group: {
+      _id: null,
+      totalMinor: {
+        $sum: "$totalAmountMinor"
+      }
+    }
+  }]);
+  return {
+    outstandingReceivableMinor: arResult[0]?.totalMinor || 0,
+    totalPaymentsMinor: cashResult[0]?.totalMinor || 0,
+    totalRevenueMinor: revResult[0]?.totalMinor || 0
+  };
 }
 
 /**
@@ -281,94 +270,118 @@ async function computeSourceTotals(organizationId, connection = null) {
  * Returns gaps where source data exists but no journal entry.
  */
 async function checkJournalCoverage(organizationId, connection = null) {
-    const gaps = [];
+  const gaps = [];
 
-    // Find invoices without journal entries
-    // secureModel.aggregate prepends $match { organizationId } automatically
-    const invoicesWithoutJournal = await _getSecureInvoice(connection).aggregate([
-        { $match: { status: { $ne: "voided" } } },
-        {
-            $lookup: {
-                from: "journalentries",
-                let: { invId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    { $eq: ["$referenceId", "$$invId"] },
-                                    { $eq: ["$referenceType", "invoice"] },
-                                ],
-                            },
-                        },
-                    },
-                ],
-                as: "journalEntries",
-            },
-        },
-        { $match: { journalEntries: { $size: 0 } } },
-        { $project: { _id: 1, totalAmountMinor: 1, status: 1, createdAt: 1 } },
-    ]);
-
-    for (const inv of invoicesWithoutJournal) {
-        gaps.push({
-            type: "missing_journal_entry",
-            sourceType: "invoice",
-            sourceId: inv._id,
-            amountMinor: inv.totalAmountMinor,
-            createdAt: inv.createdAt,
-        });
+  // Find invoices without journal entries
+  // secureModel.aggregate prepends $match { organizationId } automatically
+  const invoicesWithoutJournal = await _getSecureInvoice(connection).aggregate([{
+    $match: {
+      status: {
+        $ne: "voided"
+      }
     }
-
-    // Find payments without journal entries
-    const paymentsWithoutJournal = await _getSecurePayment(connection).aggregate([
-        { $match: { status: "active" } },
-        {
-            $lookup: {
-                from: "journalentries",
-                let: { payId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    { $eq: ["$referenceId", "$$payId"] },
-                                    { $eq: ["$referenceType", "payment"] },
-                                ],
-                            },
-                        },
-                    },
-                ],
-                as: "journalEntries",
-            },
-        },
-        { $match: { journalEntries: { $size: 0 } } },
-        { $project: { _id: 1, amountMinor: 1, createdAt: 1 } },
-    ]);
-
-    for (const pay of paymentsWithoutJournal) {
-        gaps.push({
-            type: "missing_journal_entry",
-            sourceType: "payment",
-            sourceId: pay._id,
-            amountMinor: pay.amountMinor,
-            createdAt: pay.createdAt,
-        });
+  }, {
+    $lookup: {
+      from: "journalentries",
+      let: {
+        invId: "$_id"
+      },
+      pipeline: [{
+        $match: {
+          $expr: {
+            $and: [{
+              $eq: ["$referenceId", "$$invId"]
+            }, {
+              $eq: ["$referenceType", "invoice"]
+            }]
+          }
+        }
+      }],
+      as: "journalEntries"
     }
+  }, {
+    $match: {
+      journalEntries: {
+        $size: 0
+      }
+    }
+  }, {
+    $project: {
+      _id: 1,
+      totalAmountMinor: 1,
+      status: 1,
+      createdAt: 1
+    }
+  }]);
+  for (const inv of invoicesWithoutJournal) {
+    gaps.push({
+      type: "missing_journal_entry",
+      sourceType: "invoice",
+      sourceId: inv._id,
+      amountMinor: inv.totalAmountMinor,
+      createdAt: inv.createdAt
+    });
+  }
 
-    return {
-        gaps,
-        invoicesChecked: invoicesWithoutJournal.length === 0 ? "all_covered" : `${invoicesWithoutJournal.length}_missing`,
-        paymentsChecked: paymentsWithoutJournal.length === 0 ? "all_covered" : `${paymentsWithoutJournal.length}_missing`,
-    };
+  // Find payments without journal entries
+  const paymentsWithoutJournal = await _getSecurePayment(connection).aggregate([{
+    $match: {
+      status: "active"
+    }
+  }, {
+    $lookup: {
+      from: "journalentries",
+      let: {
+        payId: "$_id"
+      },
+      pipeline: [{
+        $match: {
+          $expr: {
+            $and: [{
+              $eq: ["$referenceId", "$$payId"]
+            }, {
+              $eq: ["$referenceType", "payment"]
+            }]
+          }
+        }
+      }],
+      as: "journalEntries"
+    }
+  }, {
+    $match: {
+      journalEntries: {
+        $size: 0
+      }
+    }
+  }, {
+    $project: {
+      _id: 1,
+      amountMinor: 1,
+      createdAt: 1
+    }
+  }]);
+  for (const pay of paymentsWithoutJournal) {
+    gaps.push({
+      type: "missing_journal_entry",
+      sourceType: "payment",
+      sourceId: pay._id,
+      amountMinor: pay.amountMinor,
+      createdAt: pay.createdAt
+    });
+  }
+  return {
+    gaps,
+    invoicesChecked: invoicesWithoutJournal.length === 0 ? "all_covered" : `${invoicesWithoutJournal.length}_missing`,
+    paymentsChecked: paymentsWithoutJournal.length === 0 ? "all_covered" : `${paymentsWithoutJournal.length}_missing`
+  };
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
-    reconcileOrganization,
-    // Exposed for testing and partial runs
-    computeLedgerBalances,
-    computeSourceTotals,
-    checkJournalCoverage,
+  reconcileOrganization,
+  // Exposed for testing and partial runs
+  computeLedgerBalances,
+  computeSourceTotals,
+  checkJournalCoverage
 };

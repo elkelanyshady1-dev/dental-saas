@@ -23,15 +23,19 @@
 
 const JournalEntryDef = require("../models/JournalEntry.model");
 const getModel = require("@core/db/getModel");
-const { ACCOUNTS } = require("../constants/accounts");
+const {
+  ACCOUNTS
+} = require("../constants/accounts");
 const idempotencyGuard = require("../guards/idempotency.guard");
 const eventBus = require("@core/eventBus");
-const { LEDGER_ENTRY_POSTED } = require("@core/domainEvents");
+const {
+  LEDGER_ENTRY_POSTED
+} = require("@core/domainEvents");
 
 // ─── Strict Per-Org Model Resolver (Phase 3.3) ──────────────────────────────
 function _getJournalEntry(connection) {
-    if (!connection) throw new Error("[JournalService] connection is REQUIRED — per-org mode does not allow fallback");
-    return getModel(connection, JournalEntryDef);
+  if (!connection) throw new Error("[JournalService] connection is REQUIRED — per-org mode does not allow fallback");
+  return getModel(connection, JournalEntryDef);
 }
 
 // ─── Core Journal Posting ───────────────────────────────────────────────────
@@ -53,87 +57,76 @@ function _getJournalEntry(connection) {
  * @returns {Promise<Object>} — created JournalEntry document
  */
 async function postJournalEntry({
-    organizationId,
-    branchId,
-    patientId,
-    referenceType,
-    referenceId,
-    entries,
-    currency = "AED",
-    description,
-    createdBy,
-    session,
-    connection,
+  organizationId,
+  branchId,
+  patientId,
+  referenceType,
+  referenceId,
+  entries,
+  currency = "AED",
+  description,
+  createdBy,
+  session,
+  connection
 }) {
-    if (!session) {
-        throw new Error("JournalService: session is REQUIRED for transactional integrity.");
-    }
+  if (!session) {
+    throw new Error("JournalService: session is REQUIRED for transactional integrity.");
+  }
 
-    // Idempotency check: prevent duplicate journal entries
-    const existing = await idempotencyGuard.checkAndPrevent(referenceType, referenceId, session, connection);
-    if (existing) return existing;
+  // Idempotency check: prevent duplicate journal entries
+  const existing = await idempotencyGuard.checkAndPrevent(referenceType, referenceId, session, connection);
+  if (existing) return existing;
 
-    // Pre-validate balance (fail-fast before model validation)
-    let debitMinor = 0;
-    let creditMinor = 0;
-    for (const line of entries) {
-        if (line.type === "debit") debitMinor += line.amountMinor;
-        else creditMinor += line.amountMinor;
-    }
-
-    if (debitMinor !== creditMinor) {
-        throw new Error(
-            `Journal balance violation: DR(${debitMinor}) ≠ CR(${creditMinor}) minor units. ` +
-            `Reference: ${referenceType}/${referenceId}`
-        );
-    }
-
-    let journalEntry;
-    const JournalEntry = _getJournalEntry(connection);
-    try {
-        const [created] = await JournalEntry.create(
-            [
-                {
-                    organizationId,
-                    branchId,
-                    patientId,
-                    referenceType,
-                    referenceId,
-                    entries,
-                    currency,
-                    description,
-                    createdBy,
-                    // totals auto-computed by pre-validate hook
-                },
-            ],
-            { session }
-        );
-        journalEntry = created;
-    } catch (err) {
-        // DB-level exactly-once: handle unique index violation gracefully
-        if (err.code === 11000) {
-            const existing = await JournalEntry.findOne(
-                { organizationId, referenceType, referenceId }
-            ).session(session).lean();
-            if (existing) return existing;
-        }
-        throw err;
-    }
-
-    // Non-blocking event emission (after commit, the orchestrator handles this)
-    // We emit here for observability — the actual event is idempotent
-    setImmediate(() => {
-        eventBus.emit(LEDGER_ENTRY_POSTED, {
-            journalEntryId: journalEntry._id,
-            organizationId,
-            referenceType,
-            referenceId,
-            totalDebitMinor: debitMinor,
-            currency,
-        });
+  // Pre-validate balance (fail-fast before model validation)
+  let debitMinor = 0;
+  let creditMinor = 0;
+  for (const line of entries) {
+    if (line.type === "debit") debitMinor += line.amountMinor;else creditMinor += line.amountMinor;
+  }
+  if (debitMinor !== creditMinor) {
+    throw new Error(`Journal balance violation: DR(${debitMinor}) ≠ CR(${creditMinor}) minor units. ` + `Reference: ${referenceType}/${referenceId}`);
+  }
+  let journalEntry;
+  const JournalEntry = _getJournalEntry(connection);
+  try {
+    const [created] = await JournalEntry.create([{
+      branchId,
+      patientId,
+      referenceType,
+      referenceId,
+      entries,
+      currency,
+      description,
+      createdBy
+      // totals auto-computed by pre-validate hook
+    }], {
+      session
     });
+    journalEntry = created;
+  } catch (err) {
+    // DB-level exactly-once: handle unique index violation gracefully
+    if (err.code === 11000) {
+      const existing = await JournalEntry.findOne({
+        referenceType,
+        referenceId
+      }).session(session).lean();
+      if (existing) return existing;
+    }
+    throw err;
+  }
 
-    return journalEntry;
+  // Non-blocking event emission (after commit, the orchestrator handles this)
+  // We emit here for observability — the actual event is idempotent
+  setImmediate(() => {
+    eventBus.emit(LEDGER_ENTRY_POSTED, {
+      journalEntryId: journalEntry._id,
+      referenceType,
+      referenceId,
+      totalDebitMinor: debitMinor,
+      currency
+    });
+  });
+  return journalEntry;
 }
 
 // ─── Domain-Specific Entry Factories ────────────────────────────────────────
@@ -152,36 +145,33 @@ async function postJournalEntry({
  * @param {import("mongoose").ClientSession} session
  */
 async function recordInvoiceEntry(invoice, session, connection) {
-    const entries = [];
+  const entries = [];
 
-    // Main entry: full subtotal (before discount)
-    entries.push({
-        account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
-        type: "debit",
-        amount: invoice.totalAmount,
-        amountMinor: invoice.totalAmountMinor,
-    });
-
-    entries.push({
-        account: ACCOUNTS.REVENUE,
-        type: "credit",
-        amount: invoice.totalAmount,
-        amountMinor: invoice.totalAmountMinor,
-    });
-
-    return postJournalEntry({
-        organizationId: invoice.organizationId,
-        branchId: invoice.branchId,
-        patientId: invoice.patientId,
-        referenceType: "invoice",
-        referenceId: invoice._id,
-        entries,
-        currency: invoice.currency || "AED",
-        description: `Invoice ${invoice._id} issued — total ${invoice.totalAmount} ${invoice.currency || "AED"}`,
-        createdBy: invoice.issuedByUserId,
-        session,
-        connection,
-    });
+  // Main entry: full subtotal (before discount)
+  entries.push({
+    account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
+    type: "debit",
+    amount: invoice.totalAmount,
+    amountMinor: invoice.totalAmountMinor
+  });
+  entries.push({
+    account: ACCOUNTS.REVENUE,
+    type: "credit",
+    amount: invoice.totalAmount,
+    amountMinor: invoice.totalAmountMinor
+  });
+  return postJournalEntry({
+    branchId: invoice.branchId,
+    patientId: invoice.patientId,
+    referenceType: "invoice",
+    referenceId: invoice._id,
+    entries,
+    currency: invoice.currency || "AED",
+    description: `Invoice ${invoice._id} issued — total ${invoice.totalAmount} ${invoice.currency || "AED"}`,
+    createdBy: invoice.issuedByUserId,
+    session,
+    connection
+  });
 }
 
 /**
@@ -194,34 +184,29 @@ async function recordInvoiceEntry(invoice, session, connection) {
  * @param {import("mongoose").ClientSession} session
  */
 async function recordPaymentEntry(payment, session, connection) {
-    const entries = [
-        {
-            account: ACCOUNTS.CASH,
-            type: "debit",
-            amount: payment.amount,
-            amountMinor: payment.amountMinor,
-        },
-        {
-            account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
-            type: "credit",
-            amount: payment.amount,
-            amountMinor: payment.amountMinor,
-        },
-    ];
-
-    return postJournalEntry({
-        organizationId: payment.organizationId,
-        branchId: payment.branchId,
-        patientId: payment.patientId,
-        referenceType: "payment",
-        referenceId: payment._id,
-        entries,
-        currency: payment.currency || "AED",
-        description: `Payment ${payment._id} recorded — ${payment.amount} ${payment.currency || "AED"} via ${payment.paymentMethod}`,
-        createdBy: payment.collectedByUserId,
-        session,
-        connection,
-    });
+  const entries = [{
+    account: ACCOUNTS.CASH,
+    type: "debit",
+    amount: payment.amount,
+    amountMinor: payment.amountMinor
+  }, {
+    account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
+    type: "credit",
+    amount: payment.amount,
+    amountMinor: payment.amountMinor
+  }];
+  return postJournalEntry({
+    branchId: payment.branchId,
+    patientId: payment.patientId,
+    referenceType: "payment",
+    referenceId: payment._id,
+    entries,
+    currency: payment.currency || "AED",
+    description: `Payment ${payment._id} recorded — ${payment.amount} ${payment.currency || "AED"} via ${payment.paymentMethod}`,
+    createdBy: payment.collectedByUserId,
+    session,
+    connection
+  });
 }
 
 /**
@@ -235,34 +220,29 @@ async function recordPaymentEntry(payment, session, connection) {
  * @param {import("mongoose").ClientSession} session
  */
 async function recordVoidEntry(invoice, voidedByUserId, session, connection) {
-    const entries = [
-        {
-            account: ACCOUNTS.REVENUE,
-            type: "debit",
-            amount: invoice.totalAmount,
-            amountMinor: invoice.totalAmountMinor,
-        },
-        {
-            account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
-            type: "credit",
-            amount: invoice.totalAmount,
-            amountMinor: invoice.totalAmountMinor,
-        },
-    ];
-
-    return postJournalEntry({
-        organizationId: invoice.organizationId,
-        branchId: invoice.branchId,
-        patientId: invoice.patientId,
-        referenceType: "void",
-        referenceId: invoice._id,
-        entries,
-        currency: invoice.currency || "AED",
-        description: `Invoice ${invoice._id} voided — reversed ${invoice.totalAmount} ${invoice.currency || "AED"}`,
-        createdBy: voidedByUserId,
-        session,
-        connection,
-    });
+  const entries = [{
+    account: ACCOUNTS.REVENUE,
+    type: "debit",
+    amount: invoice.totalAmount,
+    amountMinor: invoice.totalAmountMinor
+  }, {
+    account: ACCOUNTS.ACCOUNTS_RECEIVABLE,
+    type: "credit",
+    amount: invoice.totalAmount,
+    amountMinor: invoice.totalAmountMinor
+  }];
+  return postJournalEntry({
+    branchId: invoice.branchId,
+    patientId: invoice.patientId,
+    referenceType: "void",
+    referenceId: invoice._id,
+    entries,
+    currency: invoice.currency || "AED",
+    description: `Invoice ${invoice._id} voided — reversed ${invoice.totalAmount} ${invoice.currency || "AED"}`,
+    createdBy: voidedByUserId,
+    session,
+    connection
+  });
 }
 
 /**
@@ -275,42 +255,37 @@ async function recordVoidEntry(invoice, voidedByUserId, session, connection) {
  * @param {import("mongoose").ClientSession} session
  */
 async function recordRefundEntry(refund, session, connection) {
-    const entries = [
-        {
-            account: ACCOUNTS.REFUNDS,
-            type: "debit",
-            amount: refund.amount,
-            amountMinor: refund.amountMinor,
-        },
-        {
-            account: ACCOUNTS.CASH,
-            type: "credit",
-            amount: refund.amount,
-            amountMinor: refund.amountMinor,
-        },
-    ];
-
-    return postJournalEntry({
-        organizationId: refund.organizationId,
-        branchId: refund.branchId,
-        patientId: refund.patientId,
-        referenceType: "refund",
-        referenceId: refund._id,
-        entries,
-        currency: refund.currency || "AED",
-        description: `Refund ${refund._id} processed — ${refund.amount} ${refund.currency || "AED"}`,
-        createdBy: refund.processedByUserId,
-        session,
-        connection,
-    });
+  const entries = [{
+    account: ACCOUNTS.REFUNDS,
+    type: "debit",
+    amount: refund.amount,
+    amountMinor: refund.amountMinor
+  }, {
+    account: ACCOUNTS.CASH,
+    type: "credit",
+    amount: refund.amount,
+    amountMinor: refund.amountMinor
+  }];
+  return postJournalEntry({
+    branchId: refund.branchId,
+    patientId: refund.patientId,
+    referenceType: "refund",
+    referenceId: refund._id,
+    entries,
+    currency: refund.currency || "AED",
+    description: `Refund ${refund._id} processed — ${refund.amount} ${refund.currency || "AED"}`,
+    createdBy: refund.processedByUserId,
+    session,
+    connection
+  });
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
-    postJournalEntry,
-    recordInvoiceEntry,
-    recordPaymentEntry,
-    recordVoidEntry,
-    recordRefundEntry,
+  postJournalEntry,
+  recordInvoiceEntry,
+  recordPaymentEntry,
+  recordVoidEntry,
+  recordRefundEntry
 };

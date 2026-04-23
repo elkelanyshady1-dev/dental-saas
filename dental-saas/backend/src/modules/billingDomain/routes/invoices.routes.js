@@ -18,24 +18,32 @@
 
 const express = require("express");
 const router = express.Router();
-
 const orgProtect = require("@middleware/orgProtect");
 const organizationContext = require("@middleware/organizationMiddleware");
 const requireOrgPermission = require("@middleware/requireOrgPermission");
-const { P } = require("@rbac/orgPermissions");
-
+const {
+  P
+} = require("@rbac/orgPermissions");
 const financialOrchestrator = require("../organizationFinance/services/ledger.orchestrator.service");
 const financialReadService = require("../organizationFinance/services/clinicLedger.service");
 const logger = require("@utils/logger");
-const { fieldFilterMiddleware } = require("@rbac/fieldFilter");
+const {
+  fieldFilterMiddleware
+} = require("@rbac/fieldFilter");
 const policyMiddleware = require("@rbac/policyMiddleware");
-const { fieldWriteGuardMiddleware } = require("@rbac/fieldWriteGuard");
-
+const {
+  fieldWriteGuardMiddleware
+} = require("@rbac/fieldWriteGuard");
 const validate = require("@middleware/validate");
-const { createInvoiceSchema, voidInvoiceSchema } = require("../validators/invoice.validator");  // billingDomain/validators/
+const {
+  createInvoiceSchema,
+  voidInvoiceSchema
+} = require("../validators/invoice.validator"); // billingDomain/validators/
 
 const requireEntitlement = require("@middleware/requireEntitlement");
-const { autoAudit } = require("@middleware/auditInterceptor");
+const {
+  autoAudit
+} = require("@middleware/auditInterceptor");
 
 // Phase X.2.2 — subscriptionGuard removed (requireEntitlement in moduleLoader is SSOT).
 router.use(orgProtect, organizationContext, requireEntitlement("finance"), autoAudit("Invoice"));
@@ -66,21 +74,31 @@ router.use(orgProtect, organizationContext, requireEntitlement("finance"), autoA
  *         description: Paginated invoice list
  */
 router.get("/", requireOrgPermission(P.INVOICES_READ), fieldFilterMiddleware("invoice"), async (req, res) => {
-    try {
-        const { patientId, status } = req.query;
-        const filter = {};
-        if (patientId) filter.patientId = patientId;
-        if (status) filter.status = status;
-
-        const invoices = await financialReadService.listInvoices(req, filter, {
-            limit: Math.min(parseInt(req.query.limit) || 50, 100),
-            skip: ((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50)
-        });
-
-        return res.json({ success: true, data: invoices });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: { code: "LIST_ERROR", message: err.message } });
-    }
+  try {
+    const {
+      patientId,
+      status
+    } = req.query;
+    const filter = {};
+    if (patientId) filter.patientId = patientId;
+    if (status) filter.status = status;
+    const invoices = await financialReadService.listInvoices(req, filter, {
+      limit: Math.min(parseInt(req.query.limit) || 50, 100),
+      skip: ((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50)
+    });
+    return res.json({
+      success: true,
+      data: invoices
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "LIST_ERROR",
+        message: err.message
+      }
+    });
+  }
 });
 
 /**
@@ -103,13 +121,28 @@ router.get("/", requireOrgPermission(P.INVOICES_READ), fieldFilterMiddleware("in
  *         description: Invoice not found
  */
 router.get("/:id", requireOrgPermission(P.INVOICES_READ), fieldFilterMiddleware("invoice"), async (req, res) => {
-    try {
-        const invoice = await financialReadService.getInvoiceById(req, req.params.id);
-        if (!invoice) return res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Invoice not found" } });
-        return res.json({ success: true, data: invoice });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: { code: "GET_ERROR", message: err.message } });
-    }
+  try {
+    const invoice = await financialReadService.getInvoiceById(req, req.params.id);
+    if (!invoice) return res.status(404).json({
+      success: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "Invoice not found"
+      }
+    });
+    return res.json({
+      success: true,
+      data: invoice
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "GET_ERROR",
+        message: err.message
+      }
+    });
+  }
 });
 
 /**
@@ -160,20 +193,27 @@ router.get("/:id", requireOrgPermission(P.INVOICES_READ), fieldFilterMiddleware(
  *         description: Validation error
  */
 router.post("/", requireOrgPermission(P.INVOICES_CREATE), policyMiddleware(P.INVOICES_CREATE), fieldWriteGuardMiddleware("invoice"), validate(createInvoiceSchema), async (req, res) => {
-    try {
-        const invoice = await financialOrchestrator.createInvoice({
-            organizationId: req.organizationId,
-            ...req.body,
-            issuedByUserId: req.user._id,
-            treatmentOperatorId: req.body.treatmentOperatorId || req.user._id,
-            ipAddress: req.ip
-        }, req);
-
-        logger.info(`[Invoices] Created invoice for patient ${req.body.patientId} in org ${req.organizationId}`);
-        return res.status(201).json({ success: true, data: invoice });
-    } catch (err) {
-        return res.status(err.statusCode || 400).json({ success: false, error: { code: "CREATE_ERROR", message: err.message } });
-    }
+  try {
+    const invoice = await financialOrchestrator.createInvoice({
+      ...req.body,
+      issuedByUserId: req.user._id,
+      treatmentOperatorId: req.body.treatmentOperatorId || req.user._id,
+      ipAddress: req.ip
+    }, req);
+    logger.info(`[Invoices] Created invoice for patient ${req.body.patientId} in org ${req.organizationId}`);
+    return res.status(201).json({
+      success: true,
+      data: invoice
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 400).json({
+      success: false,
+      error: {
+        code: "CREATE_ERROR",
+        message: err.message
+      }
+    });
+  }
 });
 
 /**
@@ -206,19 +246,25 @@ router.post("/", requireOrgPermission(P.INVOICES_CREATE), policyMiddleware(P.INV
  *         description: Already voided or version conflict
  */
 router.post("/:id/void", requireOrgPermission(P.INVOICES_DELETE), policyMiddleware(P.INVOICES_DELETE), validate(voidInvoiceSchema), async (req, res) => {
-    try {
-        const invoice = await financialOrchestrator.voidInvoice({
-            organizationId: req.organizationId,
-            invoiceId: req.params.id,
-            voidedByUserId: req.user._id,
-            voidedReason: req.body.voidedReason,
-            expectedVersion: req.body.expectedVersion
-        }, req);
-
-        return res.json({ success: true, data: invoice });
-    } catch (err) {
-        return res.status(err.statusCode || 400).json({ success: false, error: { code: "VOID_ERROR", message: err.message } });
-    }
+  try {
+    const invoice = await financialOrchestrator.voidInvoice({
+      invoiceId: req.params.id,
+      voidedByUserId: req.user._id,
+      voidedReason: req.body.voidedReason,
+      expectedVersion: req.body.expectedVersion
+    }, req);
+    return res.json({
+      success: true,
+      data: invoice
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 400).json({
+      success: false,
+      error: {
+        code: "VOID_ERROR",
+        message: err.message
+      }
+    });
+  }
 });
-
 module.exports = router;

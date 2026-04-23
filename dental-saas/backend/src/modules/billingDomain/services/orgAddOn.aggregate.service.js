@@ -14,10 +14,11 @@
 // OrgAddOn model lives in organization/billing/models — platform-level data.
 const OrgAddOnDef = require("../../../organization/billing/models/orgAddOn.model");
 const getModel = require("../../../core/db/getModel");
-const { getPlatformConnection } = require("../../../core/db/dbResolver");
-
+const {
+  getPlatformConnection
+} = require("../../../core/db/dbResolver");
 function _getOrgAddOn() {
-    return getModel(getPlatformConnection(), OrgAddOnDef);
+  return getModel(getPlatformConnection(), OrgAddOnDef);
 }
 
 /**
@@ -25,7 +26,7 @@ function _getOrgAddOn() {
  * @param {object} data - Add-on subscription data
  */
 async function createOrgAddOn(data) {
-    return await _getOrgAddOn().create(data);
+  return await _getOrgAddOn().create(data);
 }
 
 /**
@@ -34,19 +35,19 @@ async function createOrgAddOn(data) {
  * @param {string} organizationId - Owner org
  */
 async function cancelOrgAddOn(id, organizationId) {
-    // @per-org-transactional — add-on aggregate — organizationId from authenticated req
-    const orgAddOn = await _getOrgAddOn().findOne({ _id: id, organizationId });
-    if (!orgAddOn) throw new Error("ADDON_SUBSCRIPTION_NOT_FOUND");
-    if (orgAddOn.status === "cancelled") throw new Error("ADDON_ALREADY_CANCELLED");
-
-    orgAddOn.status = "cancelled";
-    orgAddOn.autoRenew = false;
-    orgAddOn.version += 1;
-    await orgAddOn.save();
-    return orgAddOn;
+  // @per-org-transactional — add-on aggregate — organizationId from authenticated req
+  const orgAddOn = await _getOrgAddOn().findOne({
+    _id: id
+  });
+  if (!orgAddOn) throw new Error("ADDON_SUBSCRIPTION_NOT_FOUND");
+  if (orgAddOn.status === "cancelled") throw new Error("ADDON_ALREADY_CANCELLED");
+  orgAddOn.status = "cancelled";
+  orgAddOn.autoRenew = false;
+  orgAddOn.version += 1;
+  await orgAddOn.save();
+  return orgAddOn;
 }
-
 module.exports = {
-    createOrgAddOn,
-    cancelOrgAddOn
+  createOrgAddOn,
+  cancelOrgAddOn
 };

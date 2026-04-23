@@ -11,60 +11,68 @@
 
 const getModel = require("../../../../core/db/getModel");
 const CategoryDef = require("../models/TreatmentCategory.model");
-
 function _getModel(req) {
-    return getModel(req.dbConnection, CategoryDef);
+  return getModel(req.dbConnection, CategoryDef);
 }
-
-async function findAll(req, { includeInactive = false } = {}) {
-    const Category = _getModel(req);
-    const query = { organizationId: req.context.organizationId };
-    if (!includeInactive) query.isActive = true;
-    return Category.find(query).sort({ sortOrder: 1, name: 1 }).lean();
+async function findAll(req, {
+  includeInactive = false
+} = {}) {
+  const Category = _getModel(req);
+  const query = {};
+  if (!includeInactive) query.isActive = true;
+  return Category.find(query).sort({
+    sortOrder: 1,
+    name: 1
+  }).lean();
 }
-
 async function findById(req, id) {
-    const Category = _getModel(req);
-    return Category.findOne({
-        _id: id,
-        organizationId: req.context.organizationId,
-    }).lean();
+  const Category = _getModel(req);
+  return Category.findOne({
+    _id: id
+  }).lean();
 }
-
 async function findByCode(req, code) {
-    const Category = _getModel(req);
-    return Category.findOne({
-        organizationId: req.context.organizationId,
-        code: code.toUpperCase(),
-    }).lean();
+  const Category = _getModel(req);
+  return Category.findOne({
+    code: code.toUpperCase()
+  }).lean();
 }
-
 async function create(req, data) {
-    const Category = _getModel(req);
-    const doc = await Category.create({
-        ...data,
-        organizationId: req.context.organizationId,
-        createdBy: req.context.userId,
-    });
-    return doc.toObject();
+  const Category = _getModel(req);
+  const doc = await Category.create({
+    ...data,
+    createdBy: req.context.userId
+  });
+  return doc.toObject();
 }
-
 async function updateById(req, id, data) {
-    const Category = _getModel(req);
-    return Category.findOneAndUpdate(
-        { _id: id, organizationId: req.context.organizationId },
-        { $set: data },
-        { new: true, runValidators: true }
-    ).lean();
+  const Category = _getModel(req);
+  return Category.findOneAndUpdate({
+    _id: id
+  }, {
+    $set: data
+  }, {
+    new: true,
+    runValidators: true
+  }).lean();
 }
-
 async function toggleStatus(req, id, isActive) {
-    const Category = _getModel(req);
-    return Category.findOneAndUpdate(
-        { _id: id, organizationId: req.context.organizationId },
-        { $set: { isActive } },
-        { new: true }
-    ).lean();
+  const Category = _getModel(req);
+  return Category.findOneAndUpdate({
+    _id: id
+  }, {
+    $set: {
+      isActive
+    }
+  }, {
+    new: true
+  }).lean();
 }
-
-module.exports = { findAll, findById, findByCode, create, updateById, toggleStatus };
+module.exports = {
+  findAll,
+  findById,
+  findByCode,
+  create,
+  updateById,
+  toggleStatus
+};

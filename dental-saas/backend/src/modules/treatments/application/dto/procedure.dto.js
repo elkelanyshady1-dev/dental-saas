@@ -19,23 +19,23 @@
  * @param {Object} [category] - optionally populate category name
  */
 function buildProcedureDTO(procedure, category = null) {
-    return {
-        id: procedure._id.toString(),
-        organizationId: procedure.organizationId?.toString(),
-        categoryId: procedure.categoryId?._id?.toString() ?? procedure.categoryId?.toString(),
-        categoryName: category?.name ?? procedure.categoryId?.name ?? undefined,
-        name: procedure.name,
-        code: procedure.code,
-        duration: procedure.duration,  // minutes — maps directly to appointment duration
-        price: procedure.price ?? null,
-        currency: procedure.currency ?? "EGP",
-        color: procedure.color,
-        description: procedure.description || "",
-        isActive: procedure.isActive,
-        sortOrder: procedure.sortOrder ?? 0,
-        createdAt: procedure.createdAt,
-        updatedAt: procedure.updatedAt,
-    };
+  return {
+    id: procedure._id.toString(),
+    categoryId: procedure.categoryId?._id?.toString() ?? procedure.categoryId?.toString(),
+    categoryName: category?.name ?? procedure.categoryId?.name ?? undefined,
+    name: procedure.name,
+    code: procedure.code,
+    duration: procedure.duration,
+    // minutes — maps directly to appointment duration
+    price: procedure.price ?? null,
+    currency: procedure.currency ?? "EGP",
+    color: procedure.color,
+    description: procedure.description || "",
+    isActive: procedure.isActive,
+    sortOrder: procedure.sortOrder ?? 0,
+    createdAt: procedure.createdAt,
+    updatedAt: procedure.updatedAt
+  };
 }
 
 /**
@@ -46,27 +46,28 @@ function buildProcedureDTO(procedure, category = null) {
  * @param {Object} [category] - TreatmentCategory document (for categoryName)
  */
 function buildProcedureSnapshot(procedure, category = null) {
-    return {
-        procedureId: procedure._id.toString(),
-        categoryId: procedure.categoryId?.toString(),
-        categoryName: category?.name ?? null,
-        name: procedure.name,
-        duration: procedure.duration,
-        price: procedure.price ?? null,
-        color: procedure.color,
-    };
+  return {
+    procedureId: procedure._id.toString(),
+    categoryId: procedure.categoryId?.toString(),
+    categoryName: category?.name ?? null,
+    name: procedure.name,
+    duration: procedure.duration,
+    price: procedure.price ?? null,
+    color: procedure.color
+  };
 }
 
 /**
  * Build a list response for procedures.
  */
 function buildProcedureListDTO(procedures) {
-    return procedures.map(proc => {
-        const category = proc.categoryId && typeof proc.categoryId === "object"
-            ? proc.categoryId
-            : null;
-        return buildProcedureDTO(proc, category);
-    });
+  return procedures.map(proc => {
+    const category = proc.categoryId && typeof proc.categoryId === "object" ? proc.categoryId : null;
+    return buildProcedureDTO(proc, category);
+  });
 }
-
-module.exports = { buildProcedureDTO, buildProcedureListDTO, buildProcedureSnapshot };
+module.exports = {
+  buildProcedureDTO,
+  buildProcedureListDTO,
+  buildProcedureSnapshot
+};
