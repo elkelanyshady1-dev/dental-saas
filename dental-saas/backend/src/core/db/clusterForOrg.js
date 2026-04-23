@@ -65,6 +65,27 @@ function invalidate(orgId) {
 }
 
 /**
+ * peekSync
+ * Read the cache synchronously. Returns the cluster key if cached (and
+ * not expired), otherwise undefined. Does NOT hit the platform DB. Used by
+ * dbManager.getConnection (sync hot path) — callers must have populated the
+ * cache via an earlier clusterForOrg() / getConnectionAsync() call.
+ *
+ * @param {string} orgId
+ * @returns {string | undefined}
+ */
+function peekSync(orgId) {
+    if (!orgId) return undefined;
+    const hit = cache.get(String(orgId));
+    if (!hit) return undefined;
+    if (hit.expiresAt <= Date.now()) {
+        cache.delete(String(orgId));
+        return undefined;
+    }
+    return hit.cluster;
+}
+
+/**
  * clear
  * Full cache wipe. Used in tests; also safe to call from ops tooling.
  */
@@ -80,6 +101,7 @@ function _snapshot() {
 
 module.exports = {
     clusterForOrg,
+    peekSync,
     invalidate,
     clear,
     _snapshot,

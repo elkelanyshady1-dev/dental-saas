@@ -32,7 +32,9 @@ const logger = require("../../../utils/logger");
  */
 async function _getAuditModel(regionCode) {
     if (!regionCode || regionCode === "GLOBAL") {
-        return mongoose.connection.model("AuditLog", auditLogSchema);
+        // Step 5d: AuditLog is platform-plane (cross-org, audit cluster).
+        const platformConnection = require("../../../core/db/platformConnection");
+        return platformConnection.get().model("AuditLog", auditLogSchema);
     }
     const { mongooseConnection } = await getRegionContext(regionCode);
     return mongooseConnection.model("AuditLog", auditLogSchema);

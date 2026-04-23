@@ -132,13 +132,14 @@ exports.getOrgProfile = async (req, res) => {
     if (!org) {
       // Fix 3 — Diagnostic: log exactly WHY we got null so we can identify
       // whether this is a stale JWT, a deleted/archived org, or a DB mismatch.
-      const mongoose = require("mongoose");
+      const platformConnection = require("../../core/db/platformConnection");
       const logger = require("../../utils/logger");
+      const platformConn = platformConnection.isReady() ? platformConnection.get() : null;
       logger.error({
         event: "ORG_PROFILE_NOT_FOUND",
         orgId: orgId?.toString(),
-        dbName: mongoose.connection.name,
-        dbReadyState: mongoose.connection.readyState,
+        dbName: platformConn?.name,
+        dbReadyState: platformConn?.readyState,
         // 1 = connected
         userId: req.user?._id?.toString(),
         tokenOrgId: req.context?.organizationId?.toString(),

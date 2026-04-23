@@ -38,8 +38,11 @@ const logger = require("@utils/logger");
  * @returns {Promise<{ checked: number, recovered: number, errors: number }>}
  */
 async function recoverStrandedPaidInvoices() {
-    const OrgContract = mongoose.connection.models["OrgContract"];
-    const PlatformInvoice = mongoose.connection.models["PlatformInvoice"];
+    // Step 5d: platform sibling — these models live on the platform cluster.
+    const platformConnection = require("@core/db/platformConnection");
+    const platformConn = platformConnection.get();
+    const OrgContract = platformConn.models["OrgContract"];
+    const PlatformInvoice = platformConn.models["PlatformInvoice"];
 
     if (!OrgContract || !PlatformInvoice) {
         logger.warn("[BillingRecovery] Required models not loaded — skipping stranded invoice recovery");
@@ -123,7 +126,8 @@ async function recoverStrandedPaidInvoices() {
  * @returns {Promise<{ checked: number, expired: number }>}
  */
 async function recoverExpiredTrialContracts() {
-    const OrgContract = mongoose.connection.models["OrgContract"];
+    const platformConnection = require("@core/db/platformConnection");
+    const OrgContract = platformConnection.get().models["OrgContract"];
     if (!OrgContract) return { checked: 0, expired: 0 };
 
     const now = new Date();
@@ -157,8 +161,10 @@ async function recoverExpiredTrialContracts() {
  * @returns {Promise<{ checked: number, repaired: number }>}
  */
 async function recoverContractPointers() {
-    const Organization = mongoose.connection.models["Organization"];
-    const OrgContract = mongoose.connection.models["OrgContract"];
+    const platformConnection = require("@core/db/platformConnection");
+    const platformConn = platformConnection.get();
+    const Organization = platformConn.models["Organization"];
+    const OrgContract = platformConn.models["OrgContract"];
 
     if (!Organization || !OrgContract) return { checked: 0, repaired: 0 };
 

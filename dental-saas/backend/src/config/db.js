@@ -1,7 +1,20 @@
 const mongoose = require("mongoose");
 const platformConnection = require("@core/db/platformConnection");
 const sharedConnection = require("@core/db/sharedConnection");
+const clusterRegistry = require("@core/db/clusterRegistry");
+const clusterConnections = require("@core/db/clusterConnections");
 
+/**
+ * connectDB — Step 5d boot sequence.
+ *
+ * The global mongoose.connect() root has been removed; every connection is
+ * a sibling opened explicitly:
+ *   1. platformConnection  — control plane
+ *   2. sharedConnection    — cross-org infra
+ *   3. cluster connections — per tenant cluster key (pre-warmed so
+ *                            clusterConnections.getSync(key) is safe
+ *                            synchronously from the hot path)
+ */
 const connectDB = async () => {
     try {
         // v13.2 Index Governance — Disable auto-index creation in production
@@ -9,47 +22,31 @@ const connectDB = async () => {
 
         // Phase 3.4 — Query Performance Plugin (global)
         // Applies maxTimeMS enforcement + slow query detection to ALL schemas.
-        // Must be registered BEFORE any model compilation.
+        // Registered BEFORE any connection is opened so every sibling inherits it.
         const { queryPerformancePlugin } = require("@core/db/queryPerformance");
         mongoose.plugin(queryPerformancePlugin);
 
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("MongoDB Connected");
-
-        // ── 3-Layer DB Rollout, Step 1 — Dual-root siblings ───────────────────
-        // Open dedicated platform and shared-infra connections alongside the
-        // existing global mongoose.connection. Day-1 they may resolve to the
-        // same URI (dev-single mode or default fallback) — no behavior change.
-        // Step 5 flips call sites off the global root onto these siblings.
+        // Step 5d: no more mongoose.connect(). Open the siblings directly.
         await platformConnection.init();
         await sharedConnection.init();
 
-        // ── 3-Layer DB Rollout, Step 3 — Pre-warm cluster connections ────────
-        // When DB_USE_CLUSTER_LAYER=true, authMiddleware + dbContext resolve
-        // tenant DBs via `clusterConnections.getSync(key).useDb(dbName)`. That
-        // accessor requires the cluster root connection to be already open —
-        // pre-warm every declared cluster at boot so the first request never
-        // blocks on cluster-connection establishment.
-        if (process.env.DB_USE_CLUSTER_LAYER === "true") {
-            const clusterRegistry = require("@core/db/clusterRegistry");
-            const clusterConnections = require("@core/db/clusterConnections");
-
-            const entries = clusterRegistry.all();
-            console.log(`[BOOT] DB_USE_CLUSTER_LAYER=true — pre-warming ${entries.length} cluster connection(s)`);
-            for (const entry of entries) {
-                await clusterConnections.ensureCluster(entry.key);
-            }
+        // Pre-warm every ENV-declared tenant cluster. clusterConnections.getSync
+        // is called from the request hot path and requires an already-open root.
+        const entries = clusterRegistry.all();
+        console.log(`[BOOT] Pre-warming ${entries.length} cluster connection(s): ${entries.map(e => e.key).join(", ")}`);
+        for (const entry of entries) {
+            await clusterConnections.ensureCluster(entry.key);
         }
 
-        // Phase 3.4 — Startup Index Validation (non-blocking)
-        // Checks critical indexes on the platform DB.
-        // Runs after connection is established, does NOT block boot.
+        console.log("[BOOT] 3-layer DB ready (platform + shared + clusters)");
+
+        // Startup Index Validation (non-blocking) — now against the platform
+        // sibling, not the removed global root.
         setImmediate(async () => {
             try {
                 const { validateIndexes } = require("@core/db/indexValidator");
-                await validateIndexes(mongoose.connection, "platform");
+                await validateIndexes(platformConnection.get(), "platform");
             } catch (err) {
-                // Never fail boot due to index validation
                 console.warn("[IndexValidator] Startup check error (non-fatal):", err.message);
             }
         });

@@ -523,6 +523,24 @@ async function getConnectionAsync(orgId) {
         throw new Error("[DBManager] orgId is REQUIRED — per-org mode does not allow null connections");
     }
 
+    // Step 5d: prime the orgId → cluster cache before resolving. The sync
+    // createConnection path reads clusterForOrg.peekSync; priming here
+    // guarantees a cache hit downstream for workers / background jobs that
+    // entered through the async gate.
+    try {
+        const { clusterForOrg } = require("./clusterForOrg");
+        await clusterForOrg(String(orgId));
+    } catch (err) {
+        // Non-fatal: createConnection falls back to the legacy shard key
+        // if peek returns undefined. Log for observability.
+        if (ENABLE_DEBUG) {
+            logger.debug(
+                { orgId, err: err.message, source: "dbManager" },
+                "[DBManager] clusterForOrg priming failed — falling back to shard resolver"
+            );
+        }
+    }
+
     // Phase 3.5: Derive composite key
     const { key, shard } = orgIdToKey(orgId);
 
@@ -628,22 +646,44 @@ async function getConnectionAsync(orgId) {
 
 /**
  * createConnection
- * Creates a new org connection via mongoose.connection.useDb().
+ * Creates a new org connection via `clusterConn.useDb(dbName)`, where the
+ * cluster root is resolved from `clusterForOrg` (cache-backed) and opened
+ * via `clusterConnections.getSync(clusterKey)`.
  *
- * Phase 3.5: Now accepts pre-computed key and shard from callers
- * to avoid redundant orgIdToKey() derivations.
+ * Step 5d — previously used the global `mongoose.connection.useDb()`. That
+ * root was removed when `mongoose.connect()` was deleted from config/db.js;
+ * dbManager is now fully cluster-aware.
  *
- * @param {string} orgId — Original org identifier (for logging/metadata)
- * @param {string} key   — Composite cache key (shard:orgId)
- * @param {string} shard — Shard identifier
+ * Precondition: the cluster for `orgId` must already be present in the
+ * clusterForOrg in-memory cache. authMiddleware / dbContext / worker paths
+ * that don't have it yet MUST use `getConnectionAsync` which primes the
+ * cache via the platform DB before calling this.
+ *
+ * @param {string} orgId — Original org identifier
+ * @param {string} key   — Composite cache key ({cluster}:{orgId})
+ * @param {string} shard — Legacy shard/cluster identifier (used for logging)
  * @returns {mongoose.Connection} — never null
- * @throws {Error} — If connection creation fails
+ * @throws {Error} — If the cluster is unknown or not pre-warmed
  */
 function createConnection(orgId, key, shard) {
     const dbName = getDbName(orgId);
 
     try {
-        const conn = mongoose.connection.useDb(dbName, {
+        // Step 5d: resolve the cluster root and useDb against it.
+        const clusterForOrgMod = require("./clusterForOrg");
+        const clusterConnections = require("./clusterConnections");
+
+        let clusterKey = clusterForOrgMod.peekSync(orgId);
+        if (!clusterKey) {
+            // Fallback: legacy shard/cluster resolver (may be "shard-1"
+            // or the canonical cluster for single-cluster deployments).
+            // When the platform DB doesn't yet have the org's cluster
+            // cached, `getConnectionAsync` primes it before we're reached.
+            clusterKey = shard || "default";
+        }
+
+        const clusterRoot = clusterConnections.getSync(clusterKey);
+        const conn = clusterRoot.useDb(dbName, {
             useCache: true,
             noListener: true,
         });
@@ -684,6 +724,38 @@ function createConnection(orgId, key, shard) {
                         require("../migrations/migrateAppointmentIndex");
                     migrateAppointmentExternalRequestIdIndex(conn, dbName).catch(() => {});
                 } catch (_) { /* migration module not found — skip */ }
+
+                // ── Hardening §1 (Pre-Production): Ortho TreatmentPlanVersion ──
+                // Ensure the partial-unique indexes enforcing
+                // single-approved / single-active invariants exist on every org DB.
+                // In production, ensureTreatmentPlanIndexes throws if either is
+                // missing — that will be surfaced here (we catch to keep the
+                // connection usable for other tenants, but the error is logged
+                // as CRITICAL and ops can alert on PLAN_INDEX_READY absence).
+                try {
+                    const { ensureTreatmentPlanIndexes } =
+                        require("../../modules/orthodontics/services/treatmentPlanVersion.service");
+                    Promise.resolve(ensureTreatmentPlanIndexes(conn))
+                        .then((result) => {
+                            if (result && result.ok) {
+                                logger.info(
+                                    { orgId, dbName, source: "dbManager" },
+                                    "PLAN_INDEX_READY"
+                                );
+                            } else {
+                                logger.error(
+                                    { orgId, dbName, missing: result?.missing || [], source: "dbManager" },
+                                    "[DBManager] PLAN_INDEX_NOT_READY — missing partial-unique indexes"
+                                );
+                            }
+                        })
+                        .catch((err) => {
+                            logger.error(
+                                { orgId, dbName, err: err.message, source: "dbManager" },
+                                "[DBManager] ensureTreatmentPlanIndexes failed"
+                            );
+                        });
+                } catch (_) { /* service module not found — skip */ }
             });
         }
 

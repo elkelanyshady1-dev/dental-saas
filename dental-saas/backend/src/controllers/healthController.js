@@ -5,8 +5,8 @@ const sharedConnection = require("@core/db/sharedConnection");
 const dbManager = require("@core/db/dbManager");
 
 exports.getHealthStatus = asyncHandler(async (req, res) => {
-    // 1. Check MongoDB Connection
-    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+    // 1. Check MongoDB Connection (Step 5d: platform sibling, not the removed global root)
+    const dbStatus = platformConnection.isReady() ? "connected" : "disconnected";
 
     // 2. Memory Usage
     const memoryUsage = process.memoryUsage();
@@ -88,8 +88,8 @@ exports.getDbHealth = asyncHandler(async (req, res) => {
  * Exposes outbox and system metrics for monitoring.
  */
 exports.getMetrics = asyncHandler(async (req, res) => {
-    // Outbox collection metrics
-    const EventOutbox = mongoose.connection.models["EventOutbox"];
+    // Outbox collection metrics (Step 5d: platform sibling — EventOutbox lives on platform)
+    const EventOutbox = platformConnection.get().models["EventOutbox"];
     let outboxMetrics = { pending: 0, published: 0, failed: 0 };
 
     if (EventOutbox) {

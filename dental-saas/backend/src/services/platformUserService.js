@@ -26,7 +26,9 @@ async function acquireSuperadminLock() {
 
 async function checkReplicaSet() {
     try {
-        const client = mongoose.connection.getClient();
+        // Step 5d: platform sibling — the replica-set check targets the control plane.
+        const platformConnection = require("../core/db/platformConnection");
+        const client = platformConnection.get().getClient();
         const topology = client.topology?.description;
         return topology?.type.includes('ReplicaSet') || topology?.servers?.size > 1;
     } catch (e) {
@@ -96,7 +98,7 @@ exports.updatePlatformUserRole = async ({ targetId, newRole, actor, req }) => {
             entity: "PlatformUser",
             entityId: target._id,
             success: true,
-            details: { oldRole, newRole }
+            details: { oldRole, newRole },
             signatureVersion: 1
         }, session);
 
@@ -152,7 +154,7 @@ exports.updatePlatformUserStatus = async ({ targetId, isActive, actor, req }) =>
             entity: "PlatformUser",
             entityId: target._id,
             success: true,
-            details: { isActive }
+            details: { isActive },
             signatureVersion: 1
         }, session);
 
@@ -190,7 +192,7 @@ exports.deletePlatformUser = async ({ targetId, actor, req }) => {
             entity: "PlatformUser",
             entityId: targetId,
             success: true,
-            details: { email: target.email, role: target.role }
+            details: { email: target.email, role: target.role },
             signatureVersion: 1
         }, session);
 

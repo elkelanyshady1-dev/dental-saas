@@ -111,26 +111,20 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // ─── 3-Layer Rollout, Step 3 — Cluster-aware tenant DB resolution ───
-        // When DB_USE_CLUSTER_LAYER=true, resolve the tenant DB via the
-        // cluster-root connection (pre-warmed at boot in config/db.js).
-        // Else fall back to the legacy dbManager path rooted on mongoose.connection.
-        let orgConn;
-        const useClusters = process.env.DB_USE_CLUSTER_LAYER === "true";
-        if (useClusters) {
-            const { clusterForOrg } = require("@core/db/clusterForOrg");
-            const clusterConnections = require("@core/db/clusterConnections");
-            const clusterKey = await clusterForOrg(String(decoded.organizationId));
-            const clusterRoot = clusterConnections.getSync(clusterKey);
-            orgConn = clusterRoot.useDb(`dental_org_${decoded.organizationId}`, {
-                useCache: true,
-                noListener: true,
-            });
-            req._clusterKey = clusterKey;
-            req._dbViaCluster = true;
-        } else {
-            orgConn = dbManager.getConnection(String(decoded.organizationId));
-        }
+        // ─── 3-Layer — Cluster-aware tenant DB resolution (Step 5d default) ─
+        // Resolves org → cluster (cached via clusterForOrg) → tenant DB via
+        // useDb against the pre-warmed cluster root. Legacy dbManager path
+        // removed — cluster layer is the only tenant resolution path.
+        const { clusterForOrg } = require("@core/db/clusterForOrg");
+        const clusterConnections = require("@core/db/clusterConnections");
+        const clusterKey = await clusterForOrg(String(decoded.organizationId));
+        const clusterRoot = clusterConnections.getSync(clusterKey);
+        const orgConn = clusterRoot.useDb(`dental_org_${decoded.organizationId}`, {
+            useCache: true,
+            noListener: true,
+        });
+        req._clusterKey = clusterKey;
+        req._dbViaCluster = true;
         const User = getModel(orgConn, UserDef);
 
         // Inject req.dbConnection early so downstream dbContext reuses cached conn

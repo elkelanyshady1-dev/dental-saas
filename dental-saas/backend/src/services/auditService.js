@@ -135,10 +135,9 @@ function _enrichWithActor(data) {
  * Used exclusively for actorType === "platform_user" events.
  */
 function resolvePlatformAuditConnection() {
-    // Use the default mongoose connection — the Control Plane DB.
-    // This is the same connection established in app.js on startup.
-    // Never call getRegionContext() for platform actors.
-    return mongoose.connection.model("AuditLog", auditLogSchema);
+    // Step 5d: platform sibling — AuditLog lives on the platform control plane.
+    const platformConnection = require("../core/db/platformConnection");
+    return platformConnection.get().model("AuditLog", auditLogSchema);
 }
 
 // ── Hash-Chain Retry (v5.0) ───────────────────────────────────────────────
