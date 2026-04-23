@@ -15,11 +15,6 @@ const mongoose = require("mongoose");
 const castAnalysisSchema = new mongoose.Schema(
     {
         // ── Multi-Tenancy ──────────────────────────────────────────
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-        },
 
         // ── Patient + Case ─────────────────────────────────────────
         patientId: {
@@ -112,7 +107,7 @@ const castAnalysisSchema = new mongoose.Schema(
 
 // Indexes
 castAnalysisSchema.index({ patientId: 1, createdAt: -1 });
-castAnalysisSchema.index({ organizationId: 1, createdAt: -1 });
+castAnalysisSchema.index({ createdAt: -1 });
 castAnalysisSchema.index({ caseId: 1, createdAt: -1 });
 
 const modelName = "CastAnalysis";

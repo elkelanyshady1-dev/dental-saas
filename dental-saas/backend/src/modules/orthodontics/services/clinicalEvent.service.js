@@ -81,7 +81,7 @@ function validateClinicalEvent(event) {
 async function getNextSequence(req, caseId, session) {
   const CaseSequence = getModel(req.dbConnection, CaseSequenceDef);
   const result = await CaseSequence.findOneAndUpdate(
-    { caseId, organizationId: req.context.organizationId },
+    { caseId },
     { $inc: { currentSequence: 1 } },
     { new: true, upsert: true, session },
   );
@@ -175,7 +175,6 @@ async function logEvent(req, event) {
 
   try {
     const doc = await ClinicalEvent.create({
-      organizationId: req.context.organizationId,
       caseId:         event.caseId,
       visitId:        event.visitId,          // 🔴 Phase 2: required
       doctorId:       event.doctorId ?? req.context.userId,  // 🔴 Phase 6: required
@@ -267,7 +266,7 @@ async function logEventSync(req, event, { session } = {}) {
   {
     const VisitRecord = getModel(req.dbConnection, VisitRecordDef);
     const visit = await VisitRecord.findOne(
-      { _id: event.visitId, organizationId: req.context.organizationId },
+      { _id: event.visitId },
       { status: 1, caseId: 1 }
     ).lean();
 
@@ -305,7 +304,6 @@ async function logEventSync(req, event, { session } = {}) {
   const sequence = await getNextSequence(req, event.caseId, session);
 
   const docPayload = {
-    organizationId: req.context.organizationId,
     caseId:         event.caseId,
     visitId:        event.visitId,          // 🔴 Phase 2: required
     doctorId:       event.doctorId ?? req.context.userId,  // 🔴 Phase 6: required
@@ -345,7 +343,6 @@ async function getEventsByCase(req, caseId, { limit = 100, type, severity } = {}
   const ClinicalEvent = _getModel(req);
 
   const query = {
-    organizationId: req.context.organizationId,
     caseId,
   };
 
@@ -365,7 +362,6 @@ async function getEventsBySnapshot(req, snapshotId) {
   const ClinicalEvent = _getModel(req);
 
   return ClinicalEvent.find({
-    organizationId: req.context.organizationId,
     snapshotId,
   })
     .sort({ createdAt: 1 })
@@ -378,9 +374,7 @@ async function getEventsBySnapshot(req, snapshotId) {
 async function getRecentEvents(req, { limit = 50, types, severity } = {}) {
   const ClinicalEvent = _getModel(req);
 
-  const query = {
-    organizationId: req.context.organizationId,
-  };
+  const query = {};
 
   if (types && types.length > 0) {
     query.type = { $in: types };
@@ -402,7 +396,6 @@ async function getCriticalEvents(req, { limit = 20 } = {}) {
   const ClinicalEvent = _getModel(req);
 
   return ClinicalEvent.find({
-    organizationId: req.context.organizationId,
     severity: "critical",
   })
     .sort({ createdAt: -1 })

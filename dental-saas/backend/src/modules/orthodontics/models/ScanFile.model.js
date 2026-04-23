@@ -13,12 +13,6 @@ const mongoose = require("mongoose");
 
 const scanFileSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            index: true
-        },
         caseId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "OrthodonticCase",
@@ -96,15 +90,18 @@ const scanFileSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
-scanFileSchema.index({ organizationId: 1, caseId: 1, fileType: 1 });
-scanFileSchema.index({ organizationId: 1, patientId: 1 });
-scanFileSchema.index({ organizationId: 1, processingStatus: 1 });
+scanFileSchema.index({ caseId: 1, fileType: 1 });
+scanFileSchema.index({ patientId: 1 });
+scanFileSchema.index({ processingStatus: 1 });
 scanFileSchema.index({ fileKey: 1 }, { unique: true });
 
-// ─── Virtual: storage path builder ───────────────────────────────────────────
-scanFileSchema.virtual("storagePath").get(function () {
-    return `org/${this.organizationId}/cases/${this.caseId}/scans/${this.fileKey}`;
-});
+// ─── Static: storage path builder ────────────────────────────────────────────
+// Step 5c: organizationId is no longer on the tenant doc (per-org DB IS the
+// boundary). R2 keys take the orgId from the caller's context at write time,
+// never from a persisted field. Callers: ScanFile.buildStoragePath(orgId, caseId, fileKey).
+scanFileSchema.statics.buildStoragePath = function (orgId, caseId, fileKey) {
+    return `org/${orgId}/cases/${caseId}/scans/${fileKey}`;
+};
 
 const modelName = "ScanFile";
 

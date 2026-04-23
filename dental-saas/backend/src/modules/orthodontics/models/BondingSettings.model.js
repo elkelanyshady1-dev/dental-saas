@@ -11,12 +11,6 @@ const mongoose = require("mongoose");
 
 const BondingSettingsSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      unique: true,
-      index: true,
-    },
 
     /** Available bracket brands for this org */
     brands: {

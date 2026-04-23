@@ -43,11 +43,6 @@ const SequenceStepSchema = new mongoose.Schema(
 // ─── Main Schema ──────────────────────────────────────────────────────────────
 const SequencePlanSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true,
-    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OrthodonticCase",
@@ -69,7 +64,7 @@ const SequencePlanSchema = new mongoose.Schema(
 );
 
 // One plan per case per org — upsert-safe
-SequencePlanSchema.index({ organizationId: 1, caseId: 1 }, { unique: true });
+SequencePlanSchema.index({ caseId: 1 }, { unique: true });
 
 const modelName = "SequencePlan";
 

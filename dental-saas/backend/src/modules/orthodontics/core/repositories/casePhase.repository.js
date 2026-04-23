@@ -35,8 +35,7 @@ async function createMany(req, phaseDocs, { session } = {}) {
     const docs = await CasePhase.insertMany(
         phaseDocs.map((p) => ({
             ...p,
-            organizationId: req.context.organizationId,
-        })),
+            })),
         { session: session || undefined }
     );
     return docs.map((d) => d.toObject());
@@ -49,8 +48,7 @@ async function findByCaseId(req, caseId) {
     const CasePhase = _getModel(req);
     return CasePhase.find({
         caseId,
-        organizationId: req.context.organizationId,
-    })
+        })
     .sort({ order: 1 })
     .lean();
 }
@@ -62,8 +60,7 @@ async function findById(req, phaseId) {
     const CasePhase = _getModel(req);
     return CasePhase.findOne({
         _id:            phaseId,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 /**
@@ -73,7 +70,6 @@ async function findActivePhase(req, caseId) {
     const CasePhase = _getModel(req);
     return CasePhase.findOne({
         caseId,
-        organizationId: req.context.organizationId,
         status: "active",
     }).lean();
 }
@@ -98,7 +94,7 @@ async function updateStatus(req, phaseId, status, { session } = {}) {
     if (status === "completed") update.$set.completedAt = now;
 
     return CasePhase.findOneAndUpdate(
-        { _id: phaseId, organizationId: req.context.organizationId },
+        { _id: phaseId, },
         update,
         { new: true, runValidators: true, session: session || undefined }
     ).lean();

@@ -151,7 +151,6 @@ const finalPlanSchema = new mongoose.Schema({
 
 const orthodonticCaseSchema = new mongoose.Schema(
     {
-        organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true },
         patientId:      { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
 
         // ── Ownership & Sharing (Phase 14 — Access Control V2) ──────────────
@@ -219,6 +218,27 @@ const orthodonticCaseSchema = new mongoose.Schema(
         // Incremented by orthodonticCase.repository.incrementVisitCounter().
         visitCounter: { type: Number, default: 0, min: 0 },
 
+        // ── Treatment Plan Versioning (Orthodontic Treatment Plan System) ─────
+        // approvedPlanVersionId: the single APPROVED baseline plan for this case.
+        //   Set once by treatmentPlanVersion.service.approvePlan(); never reset
+        //   without explicit admin intervention. PRE becomes locked after set.
+        // activePlanVersionId:   the current authoritative plan. Equals
+        //   approvedPlanVersionId immediately after approval; then advances to
+        //   each new REVISION created during MID phases.
+        // __planVersionCounter:  monotonic allocator, incremented via $inc when
+        //   a new version is created. Same pattern as visitCounter above.
+        approvedPlanVersionId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "TreatmentPlanVersion",
+            default: null,
+        },
+        activePlanVersionId: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "TreatmentPlanVersion",
+            default: null,
+        },
+        __planVersionCounter: { type: Number, default: 0, min: 0 },
+
         // ── Phase System (Phase 3 — Clinical Case Engine) ─────────────────
         // phases[]: ordered list of CasePhase ObjectIds for this case.
         // Populated by phase.service.createDefaultPhases() on case creation.
@@ -278,13 +298,12 @@ const orthodonticCaseSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// ── Indexes ───────────────────────────────────────────────────────────────────
-// Compound index covers the three core query patterns:
-//   1. findAllForOrg({ organizationId })              → list all for org
-//   2. findAllForOrg({ organizationId, patientId })   → list by patient
-//   3. findActiveByPatient({ organizationId, patientId, status: $in }) → active check
-// Replaces the two separate single-field indexes (less efficient for compound queries).
-orthodonticCaseSchema.index({ organizationId: 1, patientId: 1, status: 1 });
+// ── Indexes (Step 5c: organizationId prefix dropped — per-org DB IS the boundary) ──
+// Covers:
+//   1. list all cases in the org               → full-collection scan (org DB is tiny scope)
+//   2. findAllForPatient({ patientId })        → list by patient
+//   3. findActiveByPatient({ patientId, status: $in }) → active check
+orthodonticCaseSchema.index({ patientId: 1, status: 1 });
 orthodonticCaseSchema.index(
     { treatmentCaseId: 1 },
     { unique: true, partialFilterExpression: { treatmentCaseId: { $type: "objectId" } } }
@@ -294,37 +313,34 @@ orthodonticCaseSchema.index(
     { activePhaseId: 1 },
     { partialFilterExpression: { activePhaseId: { $type: "objectId" } } }
 );
-// Soft delete filter (compound with organizationId for efficient queries)
-orthodonticCaseSchema.index(
-    { organizationId: 1, isDeleted: 1 }
-);
+// Soft delete filter — index defined inline on the field above (line 286)
 
 // ── Situation Room dashboard index coverage ────────────────────────────────
 // Supports:
 //   - Doctor workload aggregation: group by ownerId filtered by status
 //   - PBAC scoping: $or: [{ ownerId }, { sharedWith }] on every dashboard query
 //   - Stage distribution group by status
-orthodonticCaseSchema.index({ organizationId: 1, ownerId: 1, status: 1 });
+orthodonticCaseSchema.index({ ownerId: 1, status: 1 });
 // Supports sharedWith leg of the PBAC $or (multikey on array)
-orthodonticCaseSchema.index({ organizationId: 1, sharedWith: 1 });
+orthodonticCaseSchema.index({ sharedWith: 1 });
 // Supports overdue scan: status='active' sorted by updatedAt ascending
-orthodonticCaseSchema.index({ organizationId: 1, status: 1, updatedAt: 1 });
+orthodonticCaseSchema.index({ status: 1, updatedAt: 1 });
 
-// ── Invariant: ONE active case per patient per org (Phase 5.1 hardening) ────
-// Replaces the BullMQ-backed serialization that previously prevented duplicate
-// case creation. Now enforced at the DB level via a partial unique index.
+// ── Invariant: ONE active case per patient (Phase 5.1 hardening) ────────────
+// Per-org DB: "per patient" implicitly means "per patient per org".
+// Enforced at the DB level via a partial unique index.
 // Partial filter matches findActiveByPatient()'s definition of "active":
 //   status ∈ [draft, diagnosis, treatment_planning, active]
 // Completed / cancelled cases are EXCLUDED from the uniqueness constraint, so
 // a patient can start a new treatment cycle after a case closes.
 // Concurrent case.service.findOrCreateOrthoCase() calls that both race past the
-// findActiveByPatient() check will now surface as E11000 duplicate key errors,
+// findActiveByPatient() check will surface as E11000 duplicate key errors,
 // which the service catches and resolves by returning the winner.
 orthodonticCaseSchema.index(
-    { organizationId: 1, patientId: 1 },
+    { patientId: 1 },
     {
         unique: true,
-        name: "uniq_active_case_per_patient_per_org",
+        name: "uniq_active_case_per_patient",
         partialFilterExpression: {
             status: { $in: ["draft", "diagnosis", "treatment_planning", "active"] },
         },

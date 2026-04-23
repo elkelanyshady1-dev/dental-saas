@@ -45,8 +45,7 @@ async function create(req, data, { session } = {}) {
 
     const payload = {
         ...data,
-        organizationId: req.context.organizationId,
-    };
+        };
 
     if (session) {
         // Array form required by Mongoose when session is provided
@@ -84,7 +83,6 @@ async function findByCaseId(req, caseId, { phaseId, limit = 100, skip = 0 } = {}
     const VisitRecord = _getModel(req);
     const query = {
         caseId,
-        organizationId: req.context.organizationId,
         isActive:       true,
     };
     if (phaseId) query.phaseId = phaseId;
@@ -104,7 +102,6 @@ async function countByCaseId(req, caseId) {
     const VisitRecord = _getModel(req);
     return VisitRecord.countDocuments({
         caseId,
-        organizationId: req.context.organizationId,
         isActive:       true,
     });
 }
@@ -117,8 +114,7 @@ async function findById(req, id) {
     const VisitRecord = _getModel(req);
     return VisitRecord.findOne({
         _id:            id,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,8 +125,7 @@ async function findByAppointmentId(req, appointmentId) {
     const VisitRecord = _getModel(req);
     return VisitRecord.findOne({
         appointmentId,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,8 +136,7 @@ async function findBySnapshotId(req, snapshotId) {
     const VisitRecord = _getModel(req);
     return VisitRecord.findOne({
         snapshotId,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 module.exports = {

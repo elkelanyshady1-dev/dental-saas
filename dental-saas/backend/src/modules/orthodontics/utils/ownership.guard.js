@@ -78,7 +78,7 @@ async function checkCaseOwnership(req, caseId) {
     enforceDbIsolation(req);
     const Model   = getModelFromConn(req.dbConnection, OrthodonticCaseDef);
     const caseDoc = await Model.findOne(
-        { _id: caseId, organizationId: orgId },
+        { _id: caseId, },
     ).select("ownerId sharedWith").lean();
 
     if (!caseDoc) {
@@ -136,7 +136,6 @@ async function checkCaseOwnership(req, caseId) {
 
 async function resolveTadOwnership(req, tadService, tadId) {
     const tadDoc = await tadService.getById(req, {
-        organizationId: req.context.organizationId,
         tadId,
     });
 

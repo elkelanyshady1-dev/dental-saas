@@ -18,12 +18,6 @@ const mongoose = require("mongoose");
 
 const caseRecordSetSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-            index:    true,
-        },
         caseId: {
             type:     mongoose.Schema.Types.ObjectId,
             ref:      "OrthodonticCase",
@@ -75,7 +69,7 @@ const caseRecordSetSchema = new mongoose.Schema(
 // ── Indexes ──────────────────────────────────────────────────────────────────
 
 // Primary query: all record sets for a case, newest first
-caseRecordSetSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
+caseRecordSetSchema.index({ caseId: 1, createdAt: -1 });
 
 // Type + version uniqueness per case (dedup constraint)
 caseRecordSetSchema.index(

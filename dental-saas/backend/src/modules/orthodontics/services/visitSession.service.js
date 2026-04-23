@@ -52,7 +52,6 @@ async function getActiveVisit(req, caseId) {
     const VisitRecord = _getModel(req);
     return VisitRecord.findOne({
         caseId,
-        organizationId: req.context.organizationId,
         status:         "active",
     }).lean();
 }
@@ -113,7 +112,7 @@ async function startVisit(req, caseId, { appointmentId = null, phaseId = null, v
     // Atomic correctness: the service guard + partial unique index ensures only
     // one writer can reach this point — no race on visitNumber.
     const lastVisit = await VisitRecord.findOne(
-        { caseId, organizationId: req.context.organizationId },
+        { caseId, },
         { visitNumber: 1 }
     ).sort({ visitNumber: -1 }).lean();
     const visitNumber = (lastVisit?.visitNumber ?? 0) + 1;
@@ -126,7 +125,6 @@ async function startVisit(req, caseId, { appointmentId = null, phaseId = null, v
 
     const now = new Date();
     const doc = await VisitRecord.create({
-        organizationId:  req.context.organizationId,
         caseId,
         phaseId:         phaseId        ? new mongoose.Types.ObjectId(phaseId)        : null,
         appointmentId:   appointmentId  ? new mongoose.Types.ObjectId(appointmentId)  : null,
@@ -198,7 +196,6 @@ async function endVisit(req, visitId, { snapshotId = null, visitDate = null, noS
 
     const visit = await VisitRecord.findOne({
         _id:            visitId,
-        organizationId: req.context.organizationId,
         status:         "active",
     });
 
@@ -227,7 +224,6 @@ async function endVisit(req, visitId, { snapshotId = null, visitDate = null, noS
         const ClinicalSnapshot = getModel(req.dbConnection, ClinicalSnapshotDef);
         const hasSnapshot = await ClinicalSnapshot.exists({
             visitId:        visit._id,
-            organizationId: req.context.organizationId,
             isDeleted:      false,
         });
 
@@ -313,7 +309,6 @@ async function cancelVisit(req, visitId) {
 
     const visit = await VisitRecord.findOne({
         _id:            visitId,
-        organizationId: req.context.organizationId,
         status:         "active",
     });
 
@@ -371,7 +366,6 @@ async function updateVisitNotes(req, visitId, notes) {
     const visit = await VisitRecord.findOneAndUpdate(
         {
             _id:            visitId,
-            organizationId: req.context.organizationId,
             status:         "active",
         },
         { notes: String(notes ?? '') },
@@ -405,7 +399,6 @@ async function addVoiceNote(req, visitId, url, duration = null) {
     const visit = await VisitRecord.findOneAndUpdate(
         {
             _id:            visitId,
-            organizationId: req.context.organizationId,
             status:         "active",
         },
         {
@@ -459,8 +452,7 @@ async function assertVisitLock(req, visitId) {
 
     const visit = await VisitRecord.findOne({
         _id:            visitId,
-        organizationId: req.context.organizationId,
-    });
+        });
 
     if (!visit) {
         const err = new Error(`Visit ${visitId} not found.`);
@@ -520,7 +512,6 @@ async function sendHeartbeat(req, visitId) {
     const visit = await VisitRecord.findOneAndUpdate(
         {
             _id:            visitId,
-            organizationId: req.context.organizationId,
             status:         "active",
             lockedBy:       req.context.userId,
         },

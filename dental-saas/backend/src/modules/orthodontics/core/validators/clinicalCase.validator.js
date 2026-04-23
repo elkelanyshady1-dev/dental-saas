@@ -31,7 +31,7 @@ const saveSnapshotSchema = z.object({
     appointmentId: z.string().min(24).optional().nullable(),
 
     // chartState is REQUIRED — it IS the clinical record
-    chartState: z.record(z.unknown()).refine(
+    chartState: z.record(z.string(), z.unknown()).refine(
         (v) => v !== null && typeof v === "object",
         { message: "chartState must be a non-null object" }
     ),
@@ -83,7 +83,7 @@ const WORKFLOW_TOP_LEVEL_KEYS = new Set([
 ]);
 
 const saveWorkflowSchema = z.object({
-    workflowData: z.record(z.unknown()).refine(
+    workflowData: z.record(z.string(), z.unknown()).refine(
         (v) => v !== null && typeof v === "object",
         { message: "workflowData must be a non-null object" }
     ),
@@ -101,7 +101,7 @@ const PATCHABLE_WORKFLOW_FIELDS = new Set([
 ]);
 
 const patchWorkflowSchema = z.object({
-    changes: z.record(z.unknown()).refine(
+    changes: z.record(z.string(), z.unknown()).refine(
         (obj) => {
             if (!obj || typeof obj !== "object") return false;
             return Object.keys(obj).every((k) => PATCHABLE_WORKFLOW_FIELDS.has(k));

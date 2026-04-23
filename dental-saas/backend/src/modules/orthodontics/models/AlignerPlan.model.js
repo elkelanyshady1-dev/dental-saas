@@ -69,12 +69,6 @@ const stageSchema = new mongoose.Schema(
 
 const alignerPlanSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            index: true
-        },
         caseId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "OrthodonticCase",
@@ -170,9 +164,9 @@ alignerPlanSchema.pre("save", function () {
 });
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
-alignerPlanSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
-alignerPlanSchema.index({ organizationId: 1, patientId: 1 });
-alignerPlanSchema.index({ organizationId: 1, status: 1 });
+alignerPlanSchema.index({ caseId: 1, createdAt: -1 });
+alignerPlanSchema.index({ patientId: 1 });
+alignerPlanSchema.index({ status: 1 });
 
 const modelName = "AlignerPlan";
 

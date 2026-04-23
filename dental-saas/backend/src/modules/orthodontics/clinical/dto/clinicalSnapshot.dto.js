@@ -22,7 +22,6 @@ function buildSnapshotDTO(doc) {
     if (!doc) return null;
     return {
         id:                  doc._id.toString(),
-        organizationId:      doc.organizationId?.toString() ?? null,
         caseId:              doc.caseId?.toString() ?? null,
 
         // Phase 3.X

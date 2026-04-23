@@ -38,7 +38,6 @@ const FDI_MAXILLARY = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 2
 const FDI_MANDIBULAR = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 const ALL_FDI = [...FDI_MAXILLARY, ...FDI_MANDIBULAR];
 
-
 // ─── Mock response for cases with no scan yet ────────────────────────────────
 
 function buildUnanalysedResponse() {
@@ -48,7 +47,6 @@ function buildUnanalysedResponse() {
     }
     return teeth;
 }
-
 
 // ─── Python subprocess bridge ─────────────────────────────────────────────────
 
@@ -102,7 +100,6 @@ function runPythonNumbering(scanPath, timeoutMs = 60_000) {
     });
 }
 
-
 // ─── Controller ───────────────────────────────────────────────────────────────
 
 /**
@@ -117,7 +114,7 @@ async function getTeethChart(req, res) {
         // ── 1. Resolve orthodontic case (RLS-enforced via org dbConnection) ──
         const OrthoCase = getModel(req.dbConnection, OrthoCaseDef);
         const orthoCase = await OrthoCase.findOne(
-            { _id: caseId, organizationId: req.context.organizationId }
+            { _id: caseId, }
         ).lean();
 
         if (!orthoCase) {

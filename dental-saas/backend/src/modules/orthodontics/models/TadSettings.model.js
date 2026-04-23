@@ -11,12 +11,6 @@ const mongoose = require("mongoose");
 
 const TadSettingsSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      unique: true,
-      index: true,
-    },
     brands: {
       type: [String],
       default: ["Ormco", "3M", "Dentsply", "Forestadent", "American Orthodontics"],

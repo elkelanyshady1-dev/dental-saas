@@ -48,12 +48,6 @@ const permissionsSchema = new mongoose.Schema(
 
 const sharedCaseSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
-      required: true,
-      index: true,
-    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OrthodonticCase",

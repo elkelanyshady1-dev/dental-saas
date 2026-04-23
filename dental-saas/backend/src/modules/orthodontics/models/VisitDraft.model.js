@@ -23,11 +23,6 @@ const mongoose = require("mongoose");
 const visitDraftSchema = new mongoose.Schema(
     {
         // ── Multi-Tenancy ──────────────────────────────────────────────────
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            required: true,
-            index:    true,
-        },
 
         // ── Session Reference ─────────────────────────────────────────────
         visitId: {
@@ -65,8 +60,8 @@ const visitDraftSchema = new mongoose.Schema(
     }
 );
 
-// Compound index for common query: findOne({ visitId, organizationId })
-visitDraftSchema.index({ visitId: 1, organizationId: 1 }, { unique: true });
+// Per-org DB: visitId is globally unique within the tenant DB (Step 5c simplification)
+visitDraftSchema.index({ visitId: 1 }, { unique: true });
 
 // TTL index — drafts evicted 7 days after last save (orphan cleanup)
 visitDraftSchema.index({ savedAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });

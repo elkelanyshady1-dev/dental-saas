@@ -53,7 +53,6 @@ function buildCaseDTO(doc, {
     if (!doc) return null;
     return {
         id:                     doc._id.toString(),
-        organizationId:         doc.organizationId?.toString() ?? null,
         patientId:              doc.patientId?.toString() ?? null,
         caseType:               doc.caseType ?? "comprehensive",
         status:                 doc.status ?? "draft",

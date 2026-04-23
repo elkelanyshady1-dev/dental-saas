@@ -25,11 +25,6 @@ const CaseSequenceSchema = new mongoose.Schema(
       type:     mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    organizationId: {
-      type:     mongoose.Schema.Types.ObjectId,
-      required: true,
-      index:    true,
-    },
     currentSequence: {
       type:    Number,
       default: 0,
@@ -39,7 +34,7 @@ const CaseSequenceSchema = new mongoose.Schema(
 );
 
 // Uniqueness enforced at the compound level — one counter per org+case
-CaseSequenceSchema.index({ organizationId: 1, caseId: 1 }, { unique: true });
+CaseSequenceSchema.index({ caseId: 1 }, { unique: true });
 
 const modelName = "CaseSequence";
 

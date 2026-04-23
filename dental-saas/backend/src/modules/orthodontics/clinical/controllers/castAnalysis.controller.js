@@ -31,7 +31,7 @@ const createCastAnalysisSchema = z.object({
     caseId:    z.string().min(24).optional().nullable(),
     input: z.object({
         analysisType: z.enum(["skeletal", "dental", "soft_tissue"]).optional(),
-        measurements: z.record(z.number()).optional(),
+        measurements: z.record(z.string(), z.number()).optional(),
         notes:         z.string().max(2000).optional(),
     }).passthrough(),
 }).strict();
@@ -79,7 +79,6 @@ const createCastAnalysis = async (req, res) => {
         const CastAnalysis = _getModel(req);
 
         const doc = await CastAnalysis.create({
-            organizationId: req.context.organizationId,
             patientId,
             caseId:         caseId || null,
             input,
@@ -114,7 +113,6 @@ const getByPatient = async (req, res) => {
         const CastAnalysis = _getModel(req);
 
         const query = {
-            organizationId: req.context.organizationId,
             patientId,
         };
         if (caseId) query.caseId = caseId;
@@ -145,8 +143,7 @@ const getById = async (req, res) => {
 
         const doc = await CastAnalysis.findOne({
             _id:            req.params.id,
-            organizationId: req.context.organizationId,
-        }).lean();
+            }).lean();
 
         if (!doc) {
             return res.status(404).json({

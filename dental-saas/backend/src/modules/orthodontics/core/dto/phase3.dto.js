@@ -92,7 +92,6 @@ function buildCaseDetailDTO(caseDoc, phases = []) {
     if (!caseDoc) return null;
     return {
         id:            caseDoc._id.toString(),
-        organizationId: caseDoc.organizationId?.toString() ?? null,
         patientId:     caseDoc.patientId?.toString() ?? null,
         caseType:      caseDoc.caseType ?? "comprehensive",
         status:        caseDoc.status ?? "draft",

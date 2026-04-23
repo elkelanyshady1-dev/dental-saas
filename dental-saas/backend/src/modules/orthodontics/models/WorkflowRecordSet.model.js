@@ -57,11 +57,6 @@ const stlFileSchema = new mongoose.Schema({
 
 const workflowRecordSetSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-        },
         caseId: {
             type:     mongoose.Schema.Types.ObjectId,
             ref:      "OrthodonticCase",
@@ -115,8 +110,6 @@ workflowRecordSetSchema.index({ caseId: 1, createdAt: -1 });
 workflowRecordSetSchema.index({ snapshotId: 1 });
 
 // Org-scoped lookup (tenant isolation queries)
-workflowRecordSetSchema.index({ organizationId: 1 });
-
 // legacyId lookup (migration + cross-reference resolution)
 workflowRecordSetSchema.index({ caseId: 1, legacyId: 1 });
 

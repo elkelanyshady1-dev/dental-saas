@@ -40,11 +40,6 @@ const BondingHistorySchema = new mongoose.Schema(
 const BondingSchema = new mongoose.Schema(
   {
     // ── Tenant + Case Context (SSOT) ───────────────────────────────────────
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true,
-    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OrthodonticCase",
@@ -115,8 +110,8 @@ const BondingSchema = new mongoose.Schema(
 
 // ─── Compound Unique Index: one document per tooth per case ──────────────────
 // Allows upsert (rebonding) without creating duplicate records.
-BondingSchema.index({ organizationId: 1, caseId: 1, tooth: 1 }, { unique: true });
-BondingSchema.index({ organizationId: 1, patientId: 1, status: 1 });
+BondingSchema.index({ caseId: 1, tooth: 1 }, { unique: true });
+BondingSchema.index({ patientId: 1, status: 1 });
 BondingSchema.index({ caseId: 1, status: 1 });
 
 const modelName = "Bonding";

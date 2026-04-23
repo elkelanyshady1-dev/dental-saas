@@ -16,11 +16,8 @@
 const mongoose = require("mongoose");
 
 const ClinicalEventSchema = new mongoose.Schema({
-  organizationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    index: true,
-  },
+  // organizationId removed (Step 5c of 3-Layer refactor):
+  // per-org DB IS the tenant boundary — the field was redundant.
   caseId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
@@ -176,16 +173,18 @@ const ClinicalEventSchema = new mongoose.Schema({
   },
 });
 
-ClinicalEventSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
+// Indexes simplified (Step 5c): organizationId prefix dropped now that
+// per-org DB isolation makes it redundant.
+ClinicalEventSchema.index({ caseId: 1, createdAt: -1 });
 // ASC createdAt index retained for: timeline queries, snapshot scoping, time-travel filters
-ClinicalEventSchema.index({ organizationId: 1, caseId: 1, createdAt:  1 }, { name: 'replay_asc' });
+ClinicalEventSchema.index({ caseId: 1, createdAt:  1 }, { name: 'replay_asc' });
 // Phase 5.2: sequence-only index — sole authoritative replay sort (no createdAt tie-break needed)
-ClinicalEventSchema.index({ organizationId: 1, caseId: 1, sequence:   1 }, { name: 'replay_sequence' });
-ClinicalEventSchema.index({ organizationId: 1, caseId: 1, type: 1 });
-ClinicalEventSchema.index({ organizationId: 1, snapshotId: 1 });
+ClinicalEventSchema.index({ caseId: 1, sequence:   1 }, { name: 'replay_sequence' });
+ClinicalEventSchema.index({ caseId: 1, type: 1 });
+ClinicalEventSchema.index({ snapshotId: 1 });
 // Phase 2: per-visit event queries
-ClinicalEventSchema.index({ organizationId: 1, visitId: 1, createdAt: -1 });
-ClinicalEventSchema.index({ organizationId: 1, severity: 1, createdAt: -1 });
+ClinicalEventSchema.index({ visitId: 1, createdAt: -1 });
+ClinicalEventSchema.index({ severity: 1, createdAt: -1 });
 // eventId uniqueness is enforced by the field-level `unique: true` above
 
 const modelName = "ClinicalEvent";

@@ -68,12 +68,6 @@ const measurementSchema = new mongoose.Schema(
 
 const cephAnalysisSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            index: true
-        },
         caseId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "OrthodonticCase",
@@ -172,8 +166,8 @@ const cephAnalysisSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
-cephAnalysisSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
-cephAnalysisSchema.index({ organizationId: 1, status: 1 });
+cephAnalysisSchema.index({ caseId: 1, createdAt: -1 });
+cephAnalysisSchema.index({ status: 1 });
 
 const modelName = "CephAnalysis";
 

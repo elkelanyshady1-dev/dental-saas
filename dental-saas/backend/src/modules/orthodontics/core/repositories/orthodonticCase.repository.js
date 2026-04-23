@@ -44,7 +44,6 @@ async function findActiveByPatient(req, patientId) {
     // Without this, Mongoose auto-cast may silently fail on edge cases.
     const patientOid = new mongoose.Types.ObjectId(patientId);
     return OrthodonticCase.findOne({
-        organizationId: req.context.organizationId,
         patientId:      patientOid,
         status: { $in: ["draft", "diagnosis", "treatment_planning", "active"] },
     })
@@ -60,8 +59,7 @@ async function findById(req, caseId) {
     const OrthodonticCase = _getModel(req);
     return OrthodonticCase.findOne({
         _id:            caseId,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 /**
@@ -75,7 +73,7 @@ async function findById(req, caseId) {
  */
 async function findAllForOrg(req, { status, patientId, limit = 50, skip = 0 } = {}) {
     const OrthodonticCase = _getModel(req);
-    const query = { organizationId: req.context.organizationId };
+    const query = { };
 
     // EXPLICIT CAST — ensures BSON type matches stored ObjectId
     if (patientId) query.patientId = new mongoose.Types.ObjectId(patientId);
@@ -102,7 +100,7 @@ async function findAllForOrg(req, { status, patientId, limit = 50, skip = 0 } = 
  */
 async function countForOrg(req, { status, patientId } = {}) {
     const OrthodonticCase = _getModel(req);
-    const query = { organizationId: req.context.organizationId };
+    const query = { };
     // EXPLICIT CAST — mirrors findAllForOrg for write/read path symmetry
     if (patientId) query.patientId = new mongoose.Types.ObjectId(patientId);
     if (status)    query.status    = status;
@@ -124,8 +122,7 @@ async function create(req, { patientId, caseType = "comprehensive" }, { session 
     const OrthodonticCase = _getModel(req);
     const doc = await OrthodonticCase.create(
         [{
- organizationId: req.context.organizationId,
-            patientId,
+ patientId,
             caseType,
             status: "draft",
         }],
@@ -142,7 +139,7 @@ async function create(req, { patientId, caseType = "comprehensive" }, { session 
 async function updateStatus(req, caseId, status) {
     const OrthodonticCase = _getModel(req);
     return OrthodonticCase.findOneAndUpdate(
-        { _id: caseId, organizationId: req.context.organizationId },
+        { _id: caseId, },
         { $set: { status, ...(status === "completed" ? { completedAt: new Date() } : {}) } },
         { new: true, runValidators: true }
     ).lean();
@@ -165,7 +162,7 @@ async function setPhases(req, caseId, { phaseIds, activePhaseId }, { session } =
     if (phaseIds)      update.$set.phases       = phaseIds;
     if (activePhaseId) update.$set.activePhaseId = activePhaseId;
     return OrthodonticCase.findOneAndUpdate(
-        { _id: caseId, organizationId: req.context.organizationId },
+        { _id: caseId, },
         update,
         { new: true, session: session || undefined }
     ).lean();
@@ -202,7 +199,7 @@ async function incrementVisitCounter(req, caseId, { session } = {}) {
     const updated = await OrthodonticCase.findOneAndUpdate(
         {
             _id:            caseId,
-            organizationId: req.context.organizationId, // SECURITY: org-scoped
+            // SECURITY: org-scoped
         },
         { $inc: { visitCounter: 1 } },
         { new: true, select: "visitCounter", ...(session ? { session } : {}) }
@@ -241,8 +238,7 @@ async function updateWorkflowData(req, caseId, workflowData, expectedVersion = n
     // Build the filter — always scope by org + case
     const filter = {
         _id:            caseId,
-        organizationId: req.context.organizationId,
-    };
+        };
 
     // Optimistic concurrency: if client sends expectedVersion, enforce it
     // This catches concurrent edits (e.g. two browser tabs saving simultaneously)
@@ -270,8 +266,7 @@ async function updateWorkflowData(req, caseId, workflowData, expectedVersion = n
         // Could be: case not found OR version mismatch
         const exists = await OrthodonticCase.exists({
             _id:            caseId,
-            organizationId: req.context.organizationId,
-        });
+            });
 
         if (!exists) {
             throw Object.assign(
@@ -282,7 +277,7 @@ async function updateWorkflowData(req, caseId, workflowData, expectedVersion = n
 
         // Case exists but version mismatched → conflict
         const current = await OrthodonticCase.findOne(
-            { _id: caseId, organizationId: req.context.organizationId },
+            { _id: caseId, },
             { workflowVersion: 1 }
         ).lean();
 
@@ -364,8 +359,7 @@ async function patchWorkflowData(req, caseId, changes, expectedVersion = null) {
     // Optimistic concurrency: scope filter by workflowVersion if provided
     const filter = {
         _id:            caseId,
-        organizationId: req.context.organizationId,
-    };
+        };
     if (typeof expectedVersion === "number") {
         filter.workflowVersion = expectedVersion;
     }
@@ -379,8 +373,7 @@ async function patchWorkflowData(req, caseId, changes, expectedVersion = null) {
     if (!updated) {
         const exists = await OrthodonticCase.exists({
             _id: caseId,
-            organizationId: req.context.organizationId,
-        });
+            });
 
         if (!exists) {
             throw Object.assign(
@@ -391,7 +384,7 @@ async function patchWorkflowData(req, caseId, changes, expectedVersion = null) {
 
         // Case exists but version mismatched → conflict
         const current = await OrthodonticCase.findOne(
-            { _id: caseId, organizationId: req.context.organizationId },
+            { _id: caseId, },
             { workflowVersion: 1 }
         ).lean();
 
@@ -442,13 +435,11 @@ async function setHasDiagnosticSnapshot(req, caseId, { session } = {}) {
     return OrthodonticCase.findOneAndUpdate(
         {
             _id:            caseId,
-            organizationId: req.context.organizationId,
-        },
+            },
         { $set: { hasDiagnosticSnapshot: true } },
         { new: true, select: "hasDiagnosticSnapshot", ...(session ? { session } : {}) }
     ).lean();
 }
-
 
 /**
  * setHasPretreatmentSnapshot
@@ -469,11 +460,9 @@ async function setHasPretreatmentSnapshot(req, caseId, { session } = {}) {
     return OrthodonticCase.findOneAndUpdate(
         {
             _id:            caseId,
-            organizationId: req.context.organizationId,
-        },
+            },
         { $set: { hasPretreatmentSnapshot: true } },
         { new: true, select: "hasPretreatmentSnapshot", ...(session ? { session } : {}) }
     ).lean();
 }
-
 

@@ -118,7 +118,7 @@ async function _getLatestEventSequence(req, caseId) {
     try {
         const ClinicalEvent = getModel(req.dbConnection, ClinicalEventDef);
         const latest = await ClinicalEvent.findOne(
-            { organizationId: req.context.organizationId, caseId },
+            { caseId },
             { sequence: 1 }
         ).sort({ sequence: -1 }).lean();
         return latest?.sequence ?? 0; // 0 means "no events" — replay engine returns empty delta
@@ -139,7 +139,7 @@ async function _captureBondingSnapshot(req, caseId) {
     try {
         const Bonding = getModel(req.dbConnection, BondingDef);
         const bondings = await Bonding.find(
-            { caseId, organizationId: req.context.organizationId },
+            { caseId, },
             { tooth: 1, type: 1, prescription: 1, slot: 1, brand: 1, bondingHeight: 1, status: 1 }
         ).lean();
 
@@ -170,7 +170,6 @@ async function _captureTadSnapshot(req, caseId) {
         const tads = await Tad.find(
             {
                 caseId,
-                organizationId: req.context.organizationId,
                 status: { $ne: "REMOVED" }, // REMOVED TADs are absent at visit time
             },
             { toothNumber: 1, position: 1, positionLabel: 1, brand: 1, diameter: 1, length: 1, status: 1, chartPosition: 1 }
@@ -209,8 +208,7 @@ async function _resolveAppointment(req, appointmentId, caseId, patientId) {
 
     const appt = await Appointment.findOne({
         _id:            appointmentId,
-        organizationId: req.context.organizationId,
-    }).select("clinicalCaseId dateTime patientId").lean();
+        }).select("clinicalCaseId dateTime patientId").lean();
 
     if (!appt) {
         throw Object.assign(
@@ -329,7 +327,6 @@ async function saveSnapshot(req, payload) {
         );
     }
 
-
     if (!type || !VALID_TYPES.includes(type)) {
         throw Object.assign(
             new Error(`Invalid snapshot type. Must be one of: ${VALID_TYPES.join(", ")}`),
@@ -394,7 +391,7 @@ async function saveSnapshot(req, payload) {
         if (newHash) {
             const ClinicalSnapshot = getModel(req.dbConnection, ClinicalSnapshotDef);
             const lastForVisit = await ClinicalSnapshot.findOne(
-                { visitId, organizationId: req.context.organizationId, isDeleted: false },
+                { visitId, isDeleted: false },
                 { chartStateHash: 1, _id: 1, version: 1 }
             ).sort({ createdAt: -1 }).lean();
 
@@ -505,7 +502,6 @@ async function saveSnapshot(req, payload) {
         procedures = [];
     }
 
-
     const normalizedNotes = typeof notes === "string"
         ? { text: notes, tags: [], warnings: [] }
         : notes;
@@ -614,8 +610,6 @@ async function saveSnapshot(req, payload) {
     } finally {
         await session.endSession();
     }
-
-
 
     logger.info({
         event:           type === "diagnostic" ? "DIAGNOSTIC_SNAPSHOT_SAVED"

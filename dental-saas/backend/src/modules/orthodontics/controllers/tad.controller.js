@@ -56,7 +56,6 @@ async function createTad(req, res) {
 
         // 3. EXECUTE
         const tad = await tadService.createTad(req, {
-            organizationId: req.context.organizationId,
             caseId, patientId,
             snapshotId:    snapshotId    || null,
             toothNumber, position, positionLabel,
@@ -89,7 +88,6 @@ async function listTads(req, res) {
         }
 
         const tads = await tadService.listByCase(req, {
-            organizationId: req.context.organizationId,
             caseId,
         });
 
@@ -116,7 +114,6 @@ async function getTad(req, res) {
         }
 
         const tad = await tadService.getById(req, {
-            organizationId: req.context.organizationId,
             tadId: req.params.id,
         });
 
@@ -149,7 +146,6 @@ async function markForRemoval(req, res) {
         // 3. EXECUTE
         const { reason, healingWeeks, notes } = req.body;
         const tad = await tadService.markForRemoval(req, {
-            organizationId: req.context.organizationId,
             tadId:          req.params.id,
             reason, healingWeeks, notes,
             performedBy:    req.context.userId,
@@ -184,7 +180,6 @@ async function removeTad(req, res) {
         // 3. EXECUTE
         const { reason, healingWeeks, notes } = req.body;
         const tad = await tadService.removeTad(req, {
-            organizationId: req.context.organizationId,
             tadId:          req.params.id,
             reason, healingWeeks, notes,
             performedBy:    req.context.userId,
@@ -219,7 +214,6 @@ async function failTad(req, res) {
         // 3. EXECUTE
         const { reason, notes } = req.body;
         const tad = await tadService.failTad(req, {
-            organizationId: req.context.organizationId,
             tadId:          req.params.id,
             reason, notes,
             performedBy:    req.context.userId,
@@ -254,7 +248,6 @@ async function reinsertTad(req, res) {
         // 3. EXECUTE
         const { position, positionLabel, notes } = req.body;
         const tad = await tadService.reinsertTad(req, {
-            organizationId: req.context.organizationId,
             tadId:          req.params.id,
             position, positionLabel, notes,
             performedBy:    req.context.userId,
@@ -314,7 +307,6 @@ async function getFailureRate(req, res) {
         }
 
         const result = await tadService.getFailureRate(req, {
-            organizationId: req.context.organizationId,
             caseId,
         });
 
@@ -375,7 +367,6 @@ async function removeAllTads(req, res) {
         }
 
         const result = await tadService.removeAllByCase(req, {
-            organizationId: req.context.organizationId,
             caseId,
             performedBy: req.context.userId,
         });

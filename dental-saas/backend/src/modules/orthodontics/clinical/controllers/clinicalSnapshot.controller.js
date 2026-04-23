@@ -80,8 +80,6 @@ async function createSnapshot(req, res) {
 
         authorize(req, "orthodontics.full");
 
-
-
         if (!req.body.chartState) {
             return res.status(400).json({
                 success: false,
@@ -109,8 +107,6 @@ async function createSnapshot(req, res) {
             ...parsed.data,
             chartState: req.body.chartState,
         };
-
-
 
         // Structural guard — upperTeeth/lowerTeeth must exist (minimum valid chart)
         const requiredChartKeys = ["upperTeeth", "lowerTeeth"];
@@ -176,7 +172,6 @@ async function createSnapshot(req, res) {
             thumbnail:         data.thumbnail         ?? null,
             diagnosticData:    data.diagnosticData    ?? null,
         });
-
 
         logger.info({
             event: "CLINICAL_SNAPSHOT_CREATED",

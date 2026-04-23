@@ -48,7 +48,6 @@ async function create(req, data, { session } = {}) {
 
     const payload = {
         ...data,
-        organizationId: req.context.organizationId,
         createdBy:      req.context.userId ?? null,
     };
 
@@ -109,7 +108,6 @@ async function findByCase(req, caseId, {
     const ClinicalSnapshot = _getModel(req);
 
     const query = {
-        organizationId: req.context.organizationId,
         caseId,
         isDeleted: { $ne: true }, // ✅ exclude soft-deleted snapshots
     };
@@ -173,7 +171,6 @@ async function findPretreatmentVersions(req, caseId, { limit = 20 } = {}) {
     return ClinicalSnapshot
         .find(
             {
-                organizationId: req.context.organizationId,
                 caseId,
                 type:      "pretreatment",
                 isDeleted: { $ne: true },
@@ -192,7 +189,6 @@ async function findPretreatmentVersions(req, caseId, { limit = 20 } = {}) {
 async function countByCase(req, caseId, { appointmentId, type } = {}) {
     const ClinicalSnapshot = _getModel(req);
     const query = {
-        organizationId: req.context.organizationId,
         caseId,
         isDeleted: { $ne: true },
     };
@@ -221,7 +217,6 @@ async function findById(req, id, { excludeChartState = false } = {}) {
     const projection = excludeChartState ? { chartState: 0 } : {};
     return ClinicalSnapshot.findOne({
         _id:            id,
-        organizationId: req.context.organizationId,
         isDeleted:      { $ne: true }, // exclude soft-deleted
     }, projection).lean();
 }
@@ -245,7 +240,6 @@ async function findDiagnosticByCase(req, caseId) {
     const ClinicalSnapshot = _getModel(req);
     return ClinicalSnapshot.findOne(
         {
-            organizationId: req.context.organizationId,
             caseId,
             type:      "diagnostic",
             isDeleted: { $ne: true },
@@ -253,7 +247,6 @@ async function findDiagnosticByCase(req, caseId) {
         { chartState: 0 } // exclude heavy blob — guard only needs _id
     ).lean();
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // deactivatePriorPretreatmentVersions — Phase 3.X.1 (FIX 2)
@@ -280,7 +273,6 @@ async function deactivatePriorPretreatmentVersions(req, caseId, { session } = {}
     const ClinicalSnapshot = _getModel(req);
     return ClinicalSnapshot.updateMany(
         {
-            organizationId: req.context.organizationId,
             caseId,
             type:           "pretreatment",
             isActiveVersion: true, // only update docs that need it — avoids full-scan writes
@@ -309,7 +301,6 @@ async function deactivatePriorPretreatmentVersions(req, caseId, { session } = {}
 async function findLatest(req, caseId, { type = null } = {}) {
     const ClinicalSnapshot = _getModel(req);
     const query = {
-        organizationId: req.context.organizationId,
         caseId,
         isDeleted: { $ne: true },
     };
@@ -346,7 +337,6 @@ async function updateMetadata(req, snapshotId, patch) {
     return ClinicalSnapshot.findOneAndUpdate(
         {
             _id:            snapshotId,
-            organizationId: req.context.organizationId,
             isDeleted:      { $ne: true },
         },
         { $set: allowedUpdate },
@@ -372,7 +362,6 @@ async function softDelete(req, snapshotId) {
     return ClinicalSnapshot.findOneAndUpdate(
         {
             _id:            snapshotId,
-            organizationId: req.context.organizationId,
             isDeleted:      { $ne: true }, // idempotent
         },
         { $set: { isDeleted: true } },

@@ -46,11 +46,6 @@ const visitAttachmentSchema = new mongoose.Schema(
 const visitRecordSchema = new mongoose.Schema(
     {
         // ── Multi-Tenancy ─────────────────────────────────────────────────
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-        },
 
         // ── Aggregate Root Link ───────────────────────────────────────────
         caseId: {
@@ -273,7 +268,7 @@ visitRecordSchema.index(
 // Only ONE document per (org, case) may have status="active".
 // This is the DB-level backup to the service-layer assertActiveVisit() check.
 visitRecordSchema.index(
-    { organizationId: 1, caseId: 1, status: 1 },
+    { caseId: 1, status: 1 },
     {
         unique: true,
         partialFilterExpression: { status: "active" },
@@ -282,7 +277,7 @@ visitRecordSchema.index(
 );
 
 // Tenant-scoped listing
-visitRecordSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
+visitRecordSchema.index({ caseId: 1, createdAt: -1 });
 
 // Phase 3.X: visitDate index — date-range timeline queries without joining ClinicalSnapshot
 visitRecordSchema.index({ caseId: 1, visitDate: 1 });
@@ -294,7 +289,6 @@ visitRecordSchema.index(
     { caseId: 1, status: 1 },
     { unique: true, partialFilterExpression: { status: "active" } }
 );
-
 
 const modelName = "VisitRecord";
 

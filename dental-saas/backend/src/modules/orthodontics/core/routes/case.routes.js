@@ -103,6 +103,47 @@ router.post("/uploads/audio",
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PHOTO SSOT — sub-routers (MUST be registered BEFORE /:id).
+//
+// Previously orphaned: photo.routes.js + bulkPhoto.routes.js declare themselves
+// as sub-routers of the master case router, but no parent actually mounted
+// them. As a result every GET /api/v1/org/orthodontic-cases/:caseId/photos
+// returned 404 and the frontend's useCasePhotos silently resolved to [] —
+// making Photos / Documents / 3D / DICOM tabs all render empty.
+//
+// photo.routes uses { mergeParams: true } internally, so `req.params.caseId`
+// is visible inside its handlers. The autoAudit("Photo") label inside the
+// sub-router overrides the parent's "OrthodonticCase" label for write paths.
+// ─────────────────────────────────────────────────────────────────────────────
+router.use("/:caseId/photos", require("../../routes/photo.routes"));
+router.use(require("../../routes/bulkPhoto.routes"));
+
+// U-CAP §5 — Case bundle ZIP export.
+// POST /org/orthodontic-cases/:caseId/export  →  streams application/zip.
+// Guarded by the parent chain: orgProtect + organizationContext +
+// requireEntitlement("orthodontics") + autoAudit("OrthodonticCase") —
+// no extra middleware needed (the controller also calls authorize()).
+{
+    const { exportCase } = require("../../controllers/caseExport.controller");
+    router.post("/:caseId/export", exportCase);
+}
+
+// U-CAP Part 3 — Retry Dashboard (org-scoped, no :caseId).
+// Mounted BEFORE any /:caseId/… route wildcard so the dashboard paths
+// don't get captured as caseIds.
+{
+    const {
+        listFailedAssets,
+        retryAllFailed,
+        getAssetMetrics,
+    } = require("../../controllers/assetRecovery.controller");
+    router.get ("/failed-assets",      listFailedAssets);
+    router.post("/retry-all-failed",   retryAllFailed);
+    // U-CAP Observability — org-wide asset-processing metrics snapshot.
+    router.get ("/asset-metrics",      getAssetMetrics);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CASE COLLECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -111,7 +152,6 @@ router.post("/uploads/audio",
  * List cases for org. Filter by patientId and/or status.
  */
 router.get("/", listCases);
-
 
 /**
  * GET /orthodontic-cases/audit/clinical-engine
@@ -163,7 +203,6 @@ router.put("/:id/workflow", saveWorkflow);
  */
 router.patch("/:id/workflow", patchWorkflow);
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CASE INSTANCE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +213,6 @@ router.patch("/:id/workflow", patchWorkflow);
  * (Phase 3 extension of Phase 2 getCaseById)
  */
 router.get("/:id", getCaseDetail);
-
 
 /**
  * PATCH /orthodontic-cases/:id/status

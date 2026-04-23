@@ -57,12 +57,6 @@ const toothLabelSchema = new mongoose.Schema(
 
 const toothSegmentationSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            index: true
-        },
         caseId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "OrthodonticCase",
@@ -141,9 +135,9 @@ const toothSegmentationSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
-toothSegmentationSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
-toothSegmentationSchema.index({ organizationId: 1, scanFileId: 1 });
-toothSegmentationSchema.index({ organizationId: 1, status: 1 });
+toothSegmentationSchema.index({ caseId: 1, createdAt: -1 });
+toothSegmentationSchema.index({ scanFileId: 1 });
+toothSegmentationSchema.index({ status: 1 });
 
 const modelName = "ToothSegmentation";
 

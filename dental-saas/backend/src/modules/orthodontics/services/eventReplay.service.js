@@ -313,7 +313,6 @@ async function getEventsAfterSnapshot(req, caseId, snapshotDate) {
   const ClinicalEvent = getModel(req.dbConnection, ClinicalEventDef);
 
   return ClinicalEvent.find({
-    organizationId: req.context.organizationId,
     caseId,
     createdAt: { $gt: new Date(snapshotDate) },
   })
@@ -330,7 +329,7 @@ async function getEventsAfterSnapshot(req, caseId, snapshotDate) {
  * Phase 6: Fetches ClinicalEvents with sequence > eventOffset.
  * Replaces createdAt-based getEventsAfterSnapshot() for Phase 6 snapshots.
  *
- * Uses the { organizationId, caseId, sequence: 1 } index (replay_sequence) directly.
+ * Uses the { caseId, sequence: 1 } index (replay_sequence) directly.
  * O(k) where k = events since last snapshot — no full table scan.
  *
  * @param {Object} req          — Express request (per-org DB connection)
@@ -343,7 +342,6 @@ async function getEventsAfterOffset(req, caseId, eventOffset) {
   const ClinicalEvent = getModel(req.dbConnection, ClinicalEventDef);
 
   return ClinicalEvent.find({
-    organizationId: req.context.organizationId,
     caseId,
     sequence: { $gt: eventOffset },
   })
@@ -372,7 +370,6 @@ async function getAllEventsForCase(req, caseId, { until } = {}) {
   const ClinicalEvent = getModel(req.dbConnection, ClinicalEventDef);
 
   const query = {
-    organizationId: req.context.organizationId,
     caseId,
   };
 
@@ -608,7 +605,6 @@ async function getTimelineEvents(req, caseId, { visitId, type, toothId } = {}) {
   const ClinicalEvent = getModel(req.dbConnection, ClinicalEventDef);
 
   const query = {
-    organizationId: req.context.organizationId,
     caseId,
   };
 
@@ -640,7 +636,6 @@ async function getStateAtEvent(req, caseId, eventId) {
 
   // Resolve the target event to get its sequence number
   const targetEvent = await ClinicalEvent.findOne({
-    organizationId: req.context.organizationId,
     caseId,
     _id:            eventId,
   }).lean();
@@ -654,7 +649,6 @@ async function getStateAtEvent(req, caseId, eventId) {
 
   // Fetch all events up to and including this event's sequence
   const events = await ClinicalEvent.find({
-    organizationId: req.context.organizationId,
     caseId,
     sequence: { $lte: targetEvent.sequence },
   })

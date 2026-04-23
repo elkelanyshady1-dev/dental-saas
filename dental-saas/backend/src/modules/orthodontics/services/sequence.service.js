@@ -12,21 +12,21 @@
 
 "use strict";
 
-const SequencePlanDef      = require("../models/SequencePlan.model");
-const WorkflowSnapshotDef  = require("../models/WorkflowSnapshot.model");
-const getModel             = require("../../../core/db/getModel");
-const enforceDbIsolation   = require("../../../core/db/dbIsolation.guard");
-const logger               = require("@utils/logger");
+const SequencePlanDef = require("../models/SequencePlan.model");
+const WorkflowSnapshotDef = require("../models/WorkflowSnapshot.model");
+const getModel = require("../../../core/db/getModel");
+const enforceDbIsolation = require("../../../core/db/dbIsolation.guard");
+const logger = require("@utils/logger");
 const clinicalEventService = require("./clinicalEvent.service");
 
 // ─── Per-Request Model Resolution ─────────────────────────────────────────────
 function _getModels(req) {
-    enforceDbIsolation(req);
-    const conn = req.dbConnection;
-    return {
-        SequencePlan:     getModel(conn, SequencePlanDef),
-        WorkflowSnapshot: getModel(conn, WorkflowSnapshotDef),
-    };
+  enforceDbIsolation(req);
+  const conn = req.dbConnection;
+  return {
+    SequencePlan: getModel(conn, SequencePlanDef),
+    WorkflowSnapshot: getModel(conn, WorkflowSnapshotDef)
+  };
 }
 
 // ─── Resolve Snapshot → caseId ───────────────────────────────────────────────
@@ -34,11 +34,13 @@ function _getModels(req) {
 // the controller needing to import WorkflowSnapshot directly.
 
 const getSnapshotCaseId = async (req, context, snapshotId) => {
-  const { WorkflowSnapshot } = _getModels(req);
-  const { organizationId } = context;
-  const snap = await WorkflowSnapshot.findOne(
-    { _id: snapshotId, organizationId },
-  ).select("caseId").lean();
+  const {
+    WorkflowSnapshot
+  } = _getModels(req);
+  const {} = context;
+  const snap = await WorkflowSnapshot.findOne({
+    _id: snapshotId
+  }).select("caseId").lean();
   return snap?.caseId ?? null;
 };
 
@@ -53,9 +55,13 @@ const getSnapshotCaseId = async (req, context, snapshotId) => {
  * @returns {Promise<SequencePlan|null>}
  */
 const getSequenceByCase = async (req, context, caseId) => {
-  const { SequencePlan } = _getModels(req);
-  const { organizationId } = context;
-  return SequencePlan.findOne({ organizationId, caseId }).lean();
+  const {
+    SequencePlan
+  } = _getModels(req);
+  const {} = context;
+  return SequencePlan.findOne({
+    caseId
+  }).lean();
 };
 
 // ─── Create / Upsert Sequence Plan ───────────────────────────────────────────
@@ -71,11 +77,15 @@ const getSequenceByCase = async (req, context, caseId) => {
  * @param {Array}  steps    - [{ order, title, description, actions }]
  */
 const upsertSequencePlan = async (req, context, caseId, name, steps) => {
-  const { SequencePlan } = _getModels(req);
-  const { organizationId, userId } = context;
-
-  const existing = await SequencePlan.findOne({ organizationId, caseId }).lean();
-
+  const {
+    SequencePlan
+  } = _getModels(req);
+  const {
+    userId
+  } = context;
+  const existing = await SequencePlan.findOne({
+    caseId
+  }).lean();
   const sortedSteps = [...steps].sort((a, b) => a.order - b.order);
 
   // AUDIT FIX: Wrap upsert + logEventSync in a single MongoDB transaction.
@@ -85,31 +95,41 @@ const upsertSequencePlan = async (req, context, caseId, name, steps) => {
   const session = await req.dbConnection.startSession();
   try {
     await session.withTransaction(async () => {
-      plan = await SequencePlan.findOneAndUpdate(
-        { organizationId, caseId },
-        {
-          $set: {
-            name: name || "Treatment Sequence",
-            steps: sortedSteps,
-            createdBy: userId || null,
-          },
-        },
-        { new: true, upsert: true, runValidators: true, session }
-      );
+      plan = await SequencePlan.findOneAndUpdate({
+        caseId
+      }, {
+        $set: {
+          name: name || "Treatment Sequence",
+          steps: sortedSteps,
+          createdBy: userId || null
+        }
+      }, {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        session
+      });
 
       // P0-3: blocking — sequence plan changes must be audited transactionally
       await clinicalEventService.logEventSync(req, {
         caseId,
         type: existing ? "SEQUENCE_PLAN_UPDATED" : "SEQUENCE_PLAN_CREATED",
         severity: "info",
-        payload: { name, stepCount: steps.length },
-        metadata: { relatedEntityId: plan._id, relatedEntityType: "SequencePlan" },
-      }, { session });
+        payload: {
+          name,
+          stepCount: steps.length
+        },
+        metadata: {
+          relatedEntityId: plan._id,
+          relatedEntityType: "SequencePlan"
+        }
+      }, {
+        session
+      });
     });
   } finally {
     await session.endSession();
   }
-
   return plan;
 };
 
@@ -127,9 +147,10 @@ const upsertSequencePlan = async (req, context, caseId, name, steps) => {
  * @param {Array}  [steps]     - Optional steps array for step name lookup
  */
 const updateProgress = async (req, context, snapshotId, stepIndex, caseId, steps) => {
-  const { WorkflowSnapshot } = _getModels(req);
-  const { organizationId } = context;
-
+  const {
+    WorkflowSnapshot
+  } = _getModels(req);
+  const {} = context;
   if (typeof stepIndex !== "number" || stepIndex < 0) {
     const err = new Error("stepIndex must be a non-negative integer");
     err.statusCode = 400;
@@ -142,17 +163,16 @@ const updateProgress = async (req, context, snapshotId, stepIndex, caseId, steps
   const _progressSession = await req.dbConnection.startSession();
   try {
     await _progressSession.withTransaction(async () => {
-      const result = await WorkflowSnapshot.updateOne(
-        { _id: snapshotId, organizationId },
-        {
-          $set: {
-            "sequenceProgress.currentStep": stepIndex,
-            "sequenceProgress.lastUpdated": new Date(),
-          },
-        },
-        { session: _progressSession }
-      );
-
+      const result = await WorkflowSnapshot.updateOne({
+        _id: snapshotId
+      }, {
+        $set: {
+          "sequenceProgress.currentStep": stepIndex,
+          "sequenceProgress.lastUpdated": new Date()
+        }
+      }, {
+        session: _progressSession
+      });
       if (result.matchedCount === 0) {
         const err = new Error("Snapshot not found or access denied");
         err.statusCode = 404;
@@ -164,19 +184,27 @@ const updateProgress = async (req, context, snapshotId, stepIndex, caseId, steps
         caseId,
         type: "SEQUENCE_STEP_COMPLETED",
         severity: "info",
-        payload: { stepIndex, stepName: steps?.[stepIndex]?.title },
-        metadata: { relatedEntityId: snapshotId, relatedEntityType: "WorkflowSnapshot" },
-      }, { session: _progressSession });
+        payload: {
+          stepIndex,
+          stepName: steps?.[stepIndex]?.title
+        },
+        metadata: {
+          relatedEntityId: snapshotId,
+          relatedEntityType: "WorkflowSnapshot"
+        }
+      }, {
+        session: _progressSession
+      });
     });
   } finally {
     await _progressSession.endSession();
   }
-
-  logger.info(
-    `[Sequence] Progress updated: snapshot=${snapshotId} step=${stepIndex}`
-  );
-
-  return { snapshotId, stepIndex, updatedAt: new Date() };
+  logger.info(`[Sequence] Progress updated: snapshot=${snapshotId} step=${stepIndex}`);
+  return {
+    snapshotId,
+    stepIndex,
+    updatedAt: new Date()
+  };
 };
 
 // ─── Delete Sequence Plan ─────────────────────────────────────────────────────
@@ -190,31 +218,38 @@ const updateProgress = async (req, context, snapshotId, stepIndex, caseId, steps
  * @param {string} caseId
  */
 const deleteSequencePlan = async (req, context, caseId) => {
-  const { SequencePlan } = _getModels(req);
-  const { organizationId, userId } = context;
-  const updated = await SequencePlan.findOneAndUpdate(
-    { organizationId, caseId },
-    {
-      $set: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedBy: userId ?? null,
-      },
-    },
-    { new: true }
-  );
+  const {
+    SequencePlan
+  } = _getModels(req);
+  const {
+    userId
+  } = context;
+  const updated = await SequencePlan.findOneAndUpdate({
+    caseId
+  }, {
+    $set: {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletedBy: userId ?? null
+    }
+  }, {
+    new: true
+  });
   if (!updated) {
     const err = new Error("Sequence plan not found");
     err.statusCode = 404;
     throw err;
   }
-  return { deleted: true, caseId, deletedAt: updated.deletedAt };
+  return {
+    deleted: true,
+    caseId,
+    deletedAt: updated.deletedAt
+  };
 };
-
 module.exports = {
   getSequenceByCase,
   upsertSequencePlan,
   updateProgress,
   deleteSequencePlan,
-  getSnapshotCaseId,
+  getSnapshotCaseId
 };

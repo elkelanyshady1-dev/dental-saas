@@ -47,8 +47,7 @@ async function saveDraft(req, visitId, data) {
     const draft = await Draft.findOneAndUpdate(
         {
             visitId,
-            organizationId: req.context.organizationId,
-        },
+            },
         {
             $set: {
                 chartState,
@@ -76,8 +75,7 @@ async function getDraft(req, visitId) {
 
     return Draft.findOne({
         visitId,
-        organizationId: req.context.organizationId,
-    }).lean();
+        }).lean();
 }
 
 // ── deleteDraft ───────────────────────────────────────────────────────────────
@@ -97,8 +95,7 @@ async function deleteDraft(req, visitId) {
     await Draft.findOneAndUpdate(
         {
             visitId,
-            organizationId: req.context.organizationId,
-        },
+            },
         {
             $set: {
                 isDeleted: true,

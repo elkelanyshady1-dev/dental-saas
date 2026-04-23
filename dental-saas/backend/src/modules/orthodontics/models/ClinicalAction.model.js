@@ -19,11 +19,6 @@ const mongoose = require("mongoose");
 
 const ClinicalActionSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true,
-    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -108,9 +103,9 @@ const ClinicalActionSchema = new mongoose.Schema(
 
 // ── Indexes ──────────────────────────────────────────────────────────────────
 // Primary query patterns
-ClinicalActionSchema.index({ organizationId: 1, caseId: 1, domain: 1, status: 1 });
-ClinicalActionSchema.index({ organizationId: 1, caseId: 1, createdAt: -1 });
-ClinicalActionSchema.index({ organizationId: 1, snapshotId: 1 });
+ClinicalActionSchema.index({ caseId: 1, domain: 1, status: 1 });
+ClinicalActionSchema.index({ caseId: 1, createdAt: -1 });
+ClinicalActionSchema.index({ snapshotId: 1 });
 
 const modelName = "ClinicalAction";
 

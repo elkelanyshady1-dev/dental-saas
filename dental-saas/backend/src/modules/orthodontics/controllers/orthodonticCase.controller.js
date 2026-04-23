@@ -11,7 +11,7 @@ async function createCase(req, res) {
     try {
         authorize(req, "orthodontics.full");
 
-        logger.info("[SECURITY]", { userId: req.context.userId, organizationId: req.context.organizationId, action: "CASE_CREATE" });
+        logger.info("[SECURITY]", { userId: req.context.userId, action: "CASE_CREATE" });
 
         const { error } = validateCreateCase(req.body);
         if (error) return res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: error } });
@@ -89,7 +89,6 @@ async function updateCaseStatus(req, res) {
         return res.status(err.statusCode || 500).json({ success: false, error: { code: "STATUS_ERROR", message: err.message } });
     }
 }
-
 
 // ─── Scan Management ─────────────────────────────────────────────────────────
 
@@ -342,14 +341,12 @@ async function uploadOrthoPhoto(req, res) {
 
         const result = await storageService.upload({
             file: req.file,
-            organizationId: req.context.organizationId,
             category: "orthodontics/photos",
         });
 
         logger.info(`[OrthoUpload] Photo uploaded: ${result.url} by user ${req.context.userId}`);
 
         storageUsage.increment({
-            organizationId: req.context.organizationId,
             sizeBytes: result.sizeBytes,
             type: "photos",
         }).catch(err => logger.warn(`[OrthoUpload] Usage tracking failed: ${err.message}`));
@@ -385,14 +382,12 @@ async function uploadOrthoStl(req, res) {
 
         const result = await storageService.upload({
             file: req.file,
-            organizationId: req.context.organizationId,
             category: "orthodontics/stl",
         });
 
         logger.info(`[OrthoUpload] STL uploaded: ${result.url} by user ${req.context.userId}`);
 
         storageUsage.increment({
-            organizationId: req.context.organizationId,
             sizeBytes: result.sizeBytes,
             type: "stl",
         }).catch(err => logger.warn(`[OrthoUpload] Usage tracking failed: ${err.message}`));
@@ -428,14 +423,12 @@ async function uploadOrthoAudio(req, res) {
 
         const result = await storageService.upload({
             file: req.file,
-            organizationId: req.context.organizationId,
             category: "orthodontics/audio",
         });
 
         logger.info(`[OrthoUpload] Audio uploaded: ${result.url} by user ${req.context.userId}`);
 
         storageUsage.increment({
-            organizationId: req.context.organizationId,
             sizeBytes: result.sizeBytes,
             type: "audio",
         }).catch(err => logger.warn(`[OrthoUpload] Usage tracking failed: ${err.message}`));
@@ -525,7 +518,7 @@ async function shareCaseInternal(req, res) {
         const OrthodonticCase = getModel(req.dbConnection, OrthodonticCaseDef);
 
         const updated = await OrthodonticCase.findOneAndUpdate(
-            { _id: id, organizationId: req.context.organizationId },
+            { _id: id, },
             { $addToSet: { sharedWith: userId } },
             { new: true }
         ).lean();
@@ -566,7 +559,7 @@ async function unshareCaseInternal(req, res) {
         const OrthodonticCase = getModel(req.dbConnection, OrthodonticCaseDef);
 
         const updated = await OrthodonticCase.findOneAndUpdate(
-            { _id: id, organizationId: req.context.organizationId },
+            { _id: id, },
             { $pull: { sharedWith: userId } },
             { new: true }
         ).lean();

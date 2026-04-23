@@ -46,8 +46,7 @@ async function checkVisitSnapshotIntegrity(req) {
     const ClinicalSnapshot = getModel(req.dbConnection, SnapshotDef);
 
     const visits = await VisitRecord.find({
-        organizationId: req.context.organizationId,
-    })
+        })
     .select("_id snapshotId caseId visitNumber")
     .limit(AUDIT_LIMIT)
     .lean();
@@ -72,8 +71,7 @@ async function checkVisitSnapshotIntegrity(req) {
         // 2. The referenced ClinicalSnapshot must exist (ORG-SCOPED)
         const snapshot = await ClinicalSnapshot.findOne({
             _id:            visit.snapshotId,
-            organizationId: req.context.organizationId,
-        }).select("_id caseId").lean();
+            }).select("_id caseId").lean();
 
         results.push(check(
             `VisitRecord ${visit._id} → Snapshot ${visit.snapshotId} exists`,
@@ -107,7 +105,6 @@ async function checkPhaseIntegrity(req) {
     const CasePhase       = getModel(req.dbConnection, CasePhaseDef);
 
     const cases = await OrthodonticCase.find({
-        organizationId: req.context.organizationId,
         phases: { $exists: true, $ne: [] }, // only cases that have phases (Phase 3 cases)
     })
     .select("_id status phases activePhaseId")
@@ -123,8 +120,7 @@ async function checkPhaseIntegrity(req) {
     for (const orthoCase of cases) {
         const phases = await CasePhase.find({
             caseId:         orthoCase._id,
-            organizationId: req.context.organizationId,
-        }).select("_id order name status").lean();
+            }).select("_id order name status").lean();
 
         // Each case should have exactly 4 phases
         results.push(check(
@@ -177,7 +173,7 @@ async function checkVisitNumberUniqueness(req) {
 
     // Use aggregation to detect duplicate visitNumbers within a case
     const duplicates = await VisitRecord.aggregate([
-        { $match: { organizationId: req.context.organizationId, isActive: true } },
+        { $match: { isActive: true } },
         { $group: { _id: { caseId: "$caseId", visitNumber: "$visitNumber" }, count: { $sum: 1 } } },
         { $match: { count: { $gt: 1 } } },
         { $limit: 50 },

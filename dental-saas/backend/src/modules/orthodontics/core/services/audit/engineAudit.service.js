@@ -43,7 +43,6 @@ async function checkViolations(req) {
 
     // 1. No snapshot should have an "actions" field (forbidden legacy pattern)
     const snapshotsWithActions = await ClinicalSnapshot.countDocuments({
-        organizationId: req.context.organizationId,
         actions:        { $exists: true, $ne: [] },
     });
     results.push(check(
@@ -56,7 +55,6 @@ async function checkViolations(req) {
 
     // 2. No snapshot should have financial fields
     const snapshotsWithFinancialData = await ClinicalSnapshot.countDocuments({
-        organizationId: req.context.organizationId,
         $or: [
             { billingAmount: { $exists: true } },
             { invoiceId:     { $exists: true } },
@@ -73,7 +71,6 @@ async function checkViolations(req) {
 
     // 3. No snapshot should have an empty chartState (clinical record must exist)
     const snapshotsWithEmptyChart = await ClinicalSnapshot.countDocuments({
-        organizationId: req.context.organizationId,
         $or: [
             { chartState: null },
             { chartState: { $exists: false } },
@@ -89,11 +86,9 @@ async function checkViolations(req) {
 
     // 4. No VisitRecord should exist without a snapshotId
     const orphanVisits = await VisitRecord.countDocuments({
-        organizationId: req.context.organizationId,
         snapshotId:     { $exists: false },
     });
     const nullSnapshotVisits = await VisitRecord.countDocuments({
-        organizationId: req.context.organizationId,
         snapshotId:     null,
     });
     results.push(check(
@@ -115,8 +110,8 @@ async function checkViolations(req) {
 
     // 6. Snapshot count vs VisitRecord count should match (1:1)
     const [snapshotCount, visitCount] = await Promise.all([
-        ClinicalSnapshot.countDocuments({ organizationId: req.context.organizationId }),
-        VisitRecord.countDocuments({ organizationId: req.context.organizationId, isActive: true }),
+        ClinicalSnapshot.countDocuments({ }),
+        VisitRecord.countDocuments({ isActive: true }),
     ]);
     results.push(check(
         "ClinicalSnapshot count matches VisitRecord count (1:1 guarantee)",
@@ -163,7 +158,6 @@ async function runClinicalEngineAudit(req) {
             failed:          failed.length,
             healthy:         failed.length === 0,
             durationMs:      Date.now() - startTime,
-            organizationId:  req.context.organizationId,
             auditedAt:       new Date().toISOString(),
             failedChecks:    failed.map((r) => ({ name: r.name, detail: r.detail })),
         },

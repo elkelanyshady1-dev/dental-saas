@@ -114,11 +114,6 @@ const attachmentSchema = new mongoose.Schema(
 const clinicalSnapshotSchema = new mongoose.Schema(
     {
         // ── Multi-Tenancy ─────────────────────────────────────────────────
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-        },
 
         // ── Case Linkage ──────────────────────────────────────────────────
         caseId: {
@@ -398,7 +393,7 @@ clinicalSnapshotSchema.index(
 );
 
 // Tenant-scoped listing
-clinicalSnapshotSchema.index({ organizationId: 1, createdAt: -1 });
+clinicalSnapshotSchema.index({ createdAt: -1 });
 
 // Phase + case queries
 clinicalSnapshotSchema.index(

@@ -26,11 +26,6 @@ const PHASE_STATUSES = ["pending", "active", "completed"];
 const casePhaseSchema = new mongoose.Schema(
     {
         // ── Multi-Tenancy ─────────────────────────────────────────────────
-        organizationId: {
-            type:     mongoose.Schema.Types.ObjectId,
-            ref:      "Organization",
-            required: true,
-        },
 
         // ── Case Link ─────────────────────────────────────────────────────
         caseId: {
@@ -70,7 +65,7 @@ const casePhaseSchema = new mongoose.Schema(
 casePhaseSchema.index({ caseId: 1, order: 1 });
 
 // Tenant-scoped list
-casePhaseSchema.index({ organizationId: 1, caseId: 1 });
+casePhaseSchema.index({ caseId: 1 });
 
 // Active phase lookup
 casePhaseSchema.index(

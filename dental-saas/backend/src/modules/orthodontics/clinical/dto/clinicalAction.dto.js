@@ -24,7 +24,6 @@ function buildClinicalActionDTO(doc) {
     if (!doc) return null;
     return {
         id:               doc._id?.toString() ?? null,
-        organizationId:   doc.organizationId?.toString() ?? null,
         caseId:           doc.caseId?.toString() ?? null,
         patientId:        doc.patientId?.toString() ?? null,
         snapshotId:       doc.snapshotId?.toString() ?? null,
@@ -71,7 +70,6 @@ function buildClinicalActionListItemDTO(doc) {
     if (!doc) return null;
     return {
         id:               doc._id?.toString() ?? null,
-        organizationId:   doc.organizationId?.toString() ?? null,
         caseId:           doc.caseId?.toString() ?? null,
         patientId:        doc.patientId?.toString() ?? null,
 

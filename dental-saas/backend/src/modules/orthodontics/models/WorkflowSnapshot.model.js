@@ -53,7 +53,6 @@ const snapshotRecordSetSchema = new mongoose.Schema({
 
 const workflowSnapshotSchema = new mongoose.Schema(
     {
-        organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true },
         caseId:         { type: mongoose.Schema.Types.ObjectId, ref: "OrthodonticCase", required: true },
         version:        { type: Number, required: true, min: 1 },
         trigger: {
@@ -96,7 +95,6 @@ const workflowSnapshotSchema = new mongoose.Schema(
 );
 
 workflowSnapshotSchema.index({ caseId: 1, version: -1 });
-workflowSnapshotSchema.index({ organizationId: 1 });
 workflowSnapshotSchema.index({ caseId: 1, version: 1 }, { unique: true });
 workflowSnapshotSchema.index({ caseId: 1, createdAt: -1 });
 

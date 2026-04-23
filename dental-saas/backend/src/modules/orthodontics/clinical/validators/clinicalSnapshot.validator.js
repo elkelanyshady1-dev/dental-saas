@@ -92,7 +92,7 @@ const createSnapshotSchema = z.object({
 
     // Phase 3.X: diagnostic payload for pretreatment snapshots
     // Must be null / omitted for treatment + post-treatment (service enforces this)
-    diagnosticData: z.record(z.unknown()).nullable().optional(),
+    diagnosticData: z.record(z.string(), z.unknown()).nullable().optional(),
 
     // Optimistic concurrency — send the last-known version
     expectedVersion: z.number().int().nonnegative().nullable().optional(),

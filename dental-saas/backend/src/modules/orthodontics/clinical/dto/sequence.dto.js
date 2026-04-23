@@ -58,7 +58,6 @@ function buildSequenceDTO(doc) {
     if (!doc) return null;
     return {
         id:              doc._id?.toString() ?? null,
-        organizationId:  doc.organizationId?.toString() ?? null,
         caseId:          doc.caseId?.toString() ?? null,
 
         // ── Metadata ─────────────────────────────────────────────────
@@ -88,7 +87,6 @@ function buildSequenceListItemDTO(doc) {
     if (!doc) return null;
     return {
         id:              doc._id?.toString() ?? null,
-        organizationId:  doc.organizationId?.toString() ?? null,
         caseId:          doc.caseId?.toString() ?? null,
 
         // ── Metadata ─────────────────────────────────────────────────

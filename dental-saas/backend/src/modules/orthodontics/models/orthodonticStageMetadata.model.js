@@ -2,11 +2,6 @@ const mongoose = require("mongoose");
 
 const orthodonticStageMetadataSchema = new mongoose.Schema(
     {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true
-        },
         stageExecutionId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "StageExecution",
@@ -20,7 +15,6 @@ const orthodonticStageMetadataSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-orthodonticStageMetadataSchema.index({ organizationId: 1 });
 orthodonticStageMetadataSchema.index({ stageExecutionId: 1 }, { unique: true });
 
 const modelName = "OrthodonticStageMetadata";

@@ -32,8 +32,7 @@ async function undoLastTadEvent(req, tadId) {
 
     const tad = await Tad.findOne({
         _id: tadId,
-        organizationId: req.context.organizationId,
-    });
+        });
 
     if (!tad) {
         const err = new Error("TAD not found");

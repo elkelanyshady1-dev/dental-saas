@@ -24,7 +24,6 @@ function buildClinicalEventDTO(doc) {
     if (!doc) return null;
     return {
         id:               doc._id?.toString() ?? null,
-        organizationId:   doc.organizationId?.toString() ?? null,
         caseId:           doc.caseId?.toString() ?? null,
         visitId:          doc.visitId?.toString() ?? null,
         doctorId:         doc.doctorId?.toString() ?? null,
@@ -56,7 +55,6 @@ function buildClinicalEventListItemDTO(doc) {
     if (!doc) return null;
     return {
         id:               doc._id?.toString() ?? null,
-        organizationId:   doc.organizationId?.toString() ?? null,
         caseId:           doc.caseId?.toString() ?? null,
         visitId:          doc.visitId?.toString() ?? null,
         doctorId:         doc.doctorId?.toString() ?? null,

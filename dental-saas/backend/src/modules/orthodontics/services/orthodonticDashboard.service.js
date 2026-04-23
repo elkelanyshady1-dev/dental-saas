@@ -83,7 +83,7 @@ function _hasFullAccess(req) {
  */
 function _buildCaseBaseQuery(req) {
     const orgId = req.context.organizationId;
-    const base = { organizationId: orgId, isDeleted: { $ne: true } };
+    const base = { isDeleted: { $ne: true } };
     if (!_hasFullAccess(req)) {
         const uid = req.context.userId;
         base.$or = [{ ownerId: uid }, { sharedWith: uid }];
@@ -182,13 +182,12 @@ async function getKpis(req, ctx) {
     const inTreatmentFilter = { ...base, status: { $in: ["treatment_planning", "active"] } };
     const overdueFilter = { ...base, status: "active", updatedAt: { $lt: overdueCutoff } };
 
+    // ClinicalEvent no longer carries organizationId — per-org DB is the boundary.
     const criticalEventsFilter = {
-        organizationId: orgId,
         severity: "critical",
         createdAt: { $gte: todayStart },
     };
     const todayEventsFilter = {
-        organizationId: orgId,
         createdAt: { $gte: todayStart },
     };
     if (caseIds !== null) {
@@ -196,7 +195,7 @@ async function getKpis(req, ctx) {
         todayEventsFilter.caseId = { $in: caseIds };
     }
 
-    const alignerMatch = { organizationId: orgId, isActive: true };
+    const alignerMatch = { isActive: true };
     if (caseIds !== null) alignerMatch.caseId = { $in: caseIds };
 
     const [
@@ -352,7 +351,6 @@ async function getDoctorWorkload(req) {
         ClinicalEvent.aggregate([
             {
                 $match: {
-                    organizationId: orgId,
                     createdAt: { $gte: weekAgo },
                     doctorId: { $type: "objectId" },
                     ...(caseIds !== null ? { caseId: { $in: caseIds } } : {}),
@@ -427,8 +425,8 @@ async function getApplianceInventory(req, ctx) {
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
 
-    const bondBase = { organizationId: orgId };
-    const tadBase = { organizationId: orgId };
+    const bondBase = { };
+    const tadBase = { };
     if (caseIds !== null) {
         bondBase.caseId = { $in: caseIds };
         tadBase.caseId = { $in: caseIds };
@@ -537,7 +535,8 @@ async function getCriticalAlerts(req, ctx) {
     const orgId = req.context.organizationId;
     const caseIds = ctx.caseIds;
 
-    const match = { organizationId: orgId, severity: "critical" };
+    // ClinicalEvent no longer carries organizationId — per-org DB is the boundary.
+    const match = { severity: "critical" };
     if (caseIds !== null) match.caseId = { $in: caseIds };
 
     const rows = await ClinicalEvent.find(match)
@@ -549,7 +548,7 @@ async function getCriticalAlerts(req, ctx) {
     // ClinicalEvent has no patientId — resolve patient via the parent case.
     const caseIdsForAlerts = rows.map((r) => r.caseId).filter(Boolean);
     const cases = caseIdsForAlerts.length
-        ? await OrthoCase.find({ _id: { $in: caseIdsForAlerts }, organizationId: orgId })
+        ? await OrthoCase.find({ _id: { $in: caseIdsForAlerts }, })
               .select("_id patientId")
               .lean()
         : [];

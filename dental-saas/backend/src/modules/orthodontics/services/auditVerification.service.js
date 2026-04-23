@@ -73,7 +73,6 @@ async function verifyAuditEvent(req, { caseId, eventId, expectedType }) {
     const ClinicalEvent = _getModel(req);
 
     const doc = await ClinicalEvent.findOne({
-      organizationId: orgId,
       caseId,
       eventId,
     }).lean();
@@ -198,7 +197,6 @@ async function verifyAuditTrailIntegrity(req, caseId, { fromSequence, toSequence
 
     // Fetch all events in the range, sorted by sequence
     const events = await ClinicalEvent.find({
-      organizationId: orgId,
       caseId,
       sequence: { $gte: fromSequence, $lte: toSequence },
     })
@@ -306,7 +304,6 @@ async function verifyEventMatchesState(req, { eventId, expectedPayloadKeys }) {
     const ClinicalEvent = _getModel(req);
 
     const doc = await ClinicalEvent.findOne({
-      organizationId: orgId,
       eventId,
     }).lean();
 

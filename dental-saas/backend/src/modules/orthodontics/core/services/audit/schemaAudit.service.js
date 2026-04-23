@@ -45,9 +45,11 @@ async function checkSchema(req) {
     try {
         const OrthodonticCase = getModel(req.dbConnection, OrthodonticCaseDef);
         results.push(check("OrthodonticCase model registered", true));
+        // Step 5c Commit 1b: organizationId assertion removed — per-org DB IS the
+        // tenant boundary. Tenant docs no longer carry organizationId.
         results.push(check(
-            "OrthodonticCase.organizationId field exists",
-            hasField(OrthodonticCase.schema, "organizationId")
+            "OrthodonticCase.organizationId field is ABSENT (per-org DB boundary)",
+            !hasField(OrthodonticCase.schema, "organizationId")
         ));
         results.push(check(
             "OrthodonticCase.patientId field exists",

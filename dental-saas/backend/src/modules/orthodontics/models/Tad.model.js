@@ -39,11 +39,6 @@ const TadEventSchema = new mongoose.Schema(
 // ─── Main Schema: TAD Record ──────────────────────────────────────────────────
 const TadSchema = new mongoose.Schema(
   {
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true,
-    },
     caseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OrthodonticCase",
@@ -110,8 +105,8 @@ const TadSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ──────────────────────────────────────────────────────────────────
-TadSchema.index({ organizationId: 1, caseId: 1 });
-TadSchema.index({ organizationId: 1, patientId: 1, status: 1 });
+TadSchema.index({ caseId: 1 });
+TadSchema.index({ patientId: 1, status: 1 });
 TadSchema.index(
   { scheduledReinsertAt: 1 },
   { partialFilterExpression: { scheduledReinsertAt: { $type: "date" } } }
