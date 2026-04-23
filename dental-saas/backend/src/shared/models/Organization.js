@@ -39,7 +39,18 @@ const organizationSchema = new mongoose.Schema(
         },
         // Sprint 4: billingCountry + billingCurrency moved to OrgContract domain.
         // Optional on org — populated if/when contract is activated.
-        billingCountry: { type: String, default: null },  // ISO code — set by OrgContract on activation
+        //
+        // Pre-Phase-8 hardening: the country is normalised to UPPERCASE at
+        // write time (via setter). This closes a silent-inequality risk in
+        // the EG→Kashier policy — `"eg"` from any upstream is turned into
+        // `"EG"` before it is persisted, so the strict `=== "EG"` check
+        // can never miss a lowercase straggler.
+        billingCountry: {
+            type: String,
+            default: null,
+            trim: true,
+            set: (v) => (typeof v === "string" ? v.toUpperCase() : v)
+        },
         billingCurrency: { type: String, default: null }, // Locked on first contract
 
         // Sprint 4: regionCode optional at creation — assigned by provisioning or left null for global orgs.
@@ -107,12 +118,63 @@ const organizationSchema = new mongoose.Schema(
             // ── Provider Integration (runtime, not commercial) ──
             paymentProvider: {
                 type: String,
-                enum: ["stripe", "paymob", "paypal"],
+                enum: ["stripe", "paymob", "paypal", "kashier"],
                 default: "stripe"
             },
             providerCustomerId: { type: String },
             providerSubscriptionId: { type: String },
             lastProviderPaymentId: { type: String, default: null },
+
+            // ── Phase 2 — Manual Billing (Kashier) ──────────────────────────
+            // Distinguishes provider-driven subscriptions ("auto": Stripe pushes
+            // renewals via webhooks) from one-time payments that we renew
+            // ourselves ("manual": Kashier today; cron extends the period
+            // after each successful one-off payment).
+            billingMode: {
+                type: String,
+                enum: ["auto", "manual"],
+                default: "auto"
+            },
+            // When `billingMode === "manual"`, renewals are driven by our own
+            // job, not the provider. "provider" = rely on provider webhooks.
+            renewalStrategy: {
+                type: String,
+                enum: ["provider", "internal"],
+                default: "provider"
+            },
+            // Next billing date for the internal renewal scheduler. Mirrors
+            // currentPeriodEnd at activation time; diverges only if
+            // a grace-period extension is applied.
+            nextBillingDate: { type: Date, default: null },
+
+            // ── Phase 2 Hardening — Canonical post-activation fields ─────────
+            // `provider` is the new canonical field written by the manual
+            // activation pipeline. `paymentProvider` (above) is retained for
+            // back-compat with existing readers; both are kept in sync during
+            // the transition window.
+            provider: {
+                type: String,
+                enum: ["stripe", "paymob", "paypal", "kashier", null],
+                default: null
+            },
+            // Billing cadence for the current period. Populated on activation,
+            // read by the internal renewal scheduler.
+            interval: {
+                type: String,
+                enum: ["monthly", "yearly", "biennial", null],
+                default: null
+            },
+            // Snapshot of the PlanVersion this subscription was activated on.
+            // Lets the renewal job (internal) recompute price without scanning
+            // OrgContract history.
+            planVersionId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "PlanVersion",
+                default: null
+            },
+            // Last successful provider payment ID. Mirrors
+            // `lastProviderPaymentId` (legacy); new code should read `lastPaymentId`.
+            lastPaymentId: { type: String, default: null },
 
             // ── Plan Version Snapshot (for renewal mismatch detection) ──
             planVersion: { type: Number, default: 0 },
@@ -325,6 +387,91 @@ const organizationSchema = new mongoose.Schema(
             message: { type: String, default: null },
             phase: { type: String, default: null },
             timestamp: { type: Date, default: null },
+        },
+
+        // ─── 3-Layer DB Routing — Cluster + Migration State ───────────────────────
+        // Step 2 of the 3-layer refactor. Day-1 these fields are populated by the
+        // new provisioning flow (clusterAssignment.service.js) but dbManager has
+        // NOT yet been flipped to consume them — routing still goes through the
+        // legacy path. Step 5 flips the resolver.
+        //
+        // NOT required at schema level yet (existing orgs from older provisioning
+        // won't have `cluster`). A backfill script + Guardian invariant tightens
+        // this in Step 5.
+
+        // Cluster key (e.g. "MEA-EG-1"). Must match an entry in CLUSTER_REGISTRY
+        // (seeded from ENV, not DB). Set ONCE at provisioning by
+        // clusterAssignment.service.js; mutated only by the Phase 8 migration
+        // flow (with writeLocked protection + epoch bump).
+        cluster: {
+            type: String,
+            default: null,
+            index: true,
+        },
+
+        // Records WHICH assignment algorithm placed this org on its cluster.
+        //   1 = priority-first-ACTIVE (Day-1)
+        //   2 = load-based (future)
+        //   3 = geo-latency (future)
+        // Bumped alongside `cluster` at cutover so "why is this org here?" is
+        // always answerable from a single doc read.
+        routingVersion: {
+            type: Number,
+            default: 1,
+        },
+
+        // Cache-key versioning to defeat cutover split-brain.
+        // dbManager cache key = `${cluster}:${orgId}:${routingEpoch}`.
+        // Incremented atomically with every CUTOVER. In-flight requests
+        // holding the old org doc keep reading from the old cluster via the
+        // old key (safe); new requests resolve the new key (correct).
+        // No coordinated cache invalidation needed for correctness.
+        routingEpoch: {
+            type: Number,
+            default: 1,
+            min: 1,
+        },
+
+        // ─── Phase 8 Migration Seams (Day-1 fields, never flipped yet) ────────
+        // Present in the schema so migration tooling can land later without
+        // another schema change. Default values make them inert for Day-1.
+
+        // FSM state during a cluster migration. null = steady state.
+        migrationState: {
+            type: String,
+            enum: [
+                null,
+                "PREPARING",
+                "SYNCING",
+                "CUTOVER_PENDING",
+                "CUTOVER",
+                "VERIFYING",
+                "COMPLETE",
+                "FAILED",
+            ],
+            default: null,
+        },
+
+        // Target cluster during a migration. Cleared on COMPLETE/FAILED.
+        targetCluster: {
+            type: String,
+            default: null,
+        },
+
+        // Write lock — flipped to true during CUTOVER. Middleware + DB-level
+        // guard reject mutating requests while this is true. See
+        // orgWriteLock.middleware.js and assertWriteAllowed.js.
+        writeLocked: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+
+        // Correlates with MigrationLog entries for this migration run.
+        // Set when migrationState becomes "PREPARING", cleared on COMPLETE.
+        migrationId: {
+            type: String,
+            default: null,
         },
     },
     { timestamps: true }

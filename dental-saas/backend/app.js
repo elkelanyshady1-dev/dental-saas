@@ -29,6 +29,34 @@ const { register } = require("./src/infrastructure/metrics/metrics");
 const { registerRouter } = require("./src/integrity/routerRegistry");
 
 
+// ─── TEMP DEBUG — GLOBAL REQUEST LOGGER (FIRST MIDDLEWARE) ────────────────────
+// Fires on EVERY inbound request BEFORE any other middleware can intercept.
+// If this log is missing while the browser still gets a 503, the request isn't
+// reaching this Node process at all (wrong port / proxy / different instance).
+// Remove after root cause identified.
+app.use((req, res, next) => {
+    console.log(
+        "📥 INCOMING",
+        req.method,
+        req.originalUrl,
+        "| host:", req.headers.host,
+        "| x-forwarded-host:", req.headers["x-forwarded-host"] || "<none>",
+        "| origin:", req.headers.origin || "<none>"
+    );
+    // Also trace the outgoing status so we can correlate INCOMING → status.
+    res.on("finish", () => {
+        console.log(
+            "📤 OUTGOING",
+            req.method,
+            req.originalUrl,
+            "→",
+            res.statusCode,
+            res.statusMessage || ""
+        );
+    });
+    next();
+});
+
 let shuttingDown = false;
 
 // 🛡️ v11.0 Hardening — Shutdown Guard
@@ -74,6 +102,23 @@ app.post(
     handleCommunicationJob
 );
 
+// ─── Kashier Webhook Raw Body ────────────────────────────────────────────────
+// Kashier signs the raw request bytes with HMAC-SHA256; the controller
+// (kashier.webhook.controller.handleKashierWebhook) hard-fails on
+// `RAW_BODY_REQUIRED` when `req.rawBody` is missing. Route-scoped json with a
+// `verify` hook gives us BOTH the parsed `req.body` (for `parseEvent`) and
+// `req.rawBody` (for signature verification). Mounted BEFORE the global
+// express.json so no earlier parser can swallow the bytes.
+const { handleKashierWebhook } = require("./src/platform/billing/controllers/kashier.webhook.controller");
+app.post(
+    "/api/public/webhooks/kashier",
+    express.json({
+        limit: "1mb",
+        verify: (req, _res, buf) => { req.rawBody = buf; }
+    }),
+    handleKashierWebhook
+);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(mongoSanitize); // v30.0 — Express 5-safe NoSQL injection prevention (custom middleware)
@@ -112,6 +157,24 @@ const bookingLimiter = createLimiter({
 });
 
 const authRoutes = require("./src/routes/authRoutes");
+
+let otpRoutes;
+try {
+    otpRoutes = require("./src/modules/auth/otp.routes");
+    console.log("✅ OTP routes loaded");
+} catch (err) {
+    console.error("❌ Failed to load OTP routes:", err.message);
+    process.exit(1);
+}
+
+let magicRoutes;
+try {
+    magicRoutes = require("./src/modules/auth/magic.routes");
+    console.log("✅ Magic-link routes loaded");
+} catch (err) {
+    console.error("❌ Failed to load Magic-link routes:", err.message);
+    process.exit(1);
+}
 const platformRoutes = require("./src/routes/platform");
 const organizationRoutes = require("./src/routes/organizationRoutes");
 const platformPublicRoutes = require("./src/shared/routes/platformPublicRoutes");
@@ -144,6 +207,10 @@ const unifiedCapabilityMiddleware = require("./src/middleware/unifiedCapabilityM
 const orgSubscriptionGuard = require("./src/middleware/orgSubscriptionGuard");
 // Phase F: RLS Context — attaches frozen row-level security scope to every org request
 const rlsContext = require("./src/middleware/rlsContext");
+// Phase 8 Seam: org write lock — HTTP-level rejection during cutover migrations.
+// Day-1 never fires (no org is ever locked). Mounted now so the enforcement
+// point is live the moment Phase 8 tooling flips a writeLocked flag.
+const orgWriteLock = require("./src/middleware/orgWriteLock.middleware");
 // Phase F.10: secureFlowMiddleware removed — per-org DB isolation is the sole tenant boundary
 // No query-level drift detection needed when each org has its own database.
 const secureFlowMiddleware = () => (req, res, next) => next();
@@ -182,6 +249,13 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/uploads", express.static(path.join(__dirname, "src", "uploads")));
 
 app.use("/api/health", healthRoutes);
+
+// ─── Meta endpoints (public, no auth) ────────────────────────────────────────
+// GET /api/meta/country → IP-suggested country for the registration dropdown.
+// Suggestion only — the registration controller uses the USER-CONFIRMED value
+// from the request body as the source of truth.
+const metaRoutes = require("./src/routes/meta.routes");
+app.use("/api/meta", metaRoutes);
 
 // ─── Phase 10: Contract-Driven API Documentation ─────────────────────────────
 // Serves OpenAPI spec generated from Zod response schemas (SSOT)
@@ -270,6 +344,7 @@ const orgV1Routes = require("./src/routes/orgV1Routes");
 //   branchContextMiddleware      → resolves branch from JWT/query → req.context.branchId
 //   unifiedCapabilityMiddleware  → merges req.planCapabilities + req.featureFlags → req.capabilities (SSOT)
 //                                  requireEntitlement() in moduleLoader reads req.capabilities.modules
+//   orgWriteLock                 → Phase 8 seam: 503 on mutating methods when org.writeLocked (inert Day-1)
 //   rlsContext                   → Phase F: attaches frozen req.rls (organizationId, branchId, userId)
 //   secureFlowMiddleware         → Phase F.10: no-op (per-org DB isolation is sole tenant boundary)
 //   orgV1Routes                  → all controllers read req.capabilities + req.context
@@ -277,6 +352,7 @@ v1Router.use("/org", protect, featureFlagMiddleware,
     orgSubscriptionGuard,
     branchContextMiddleware,
     unifiedCapabilityMiddleware,
+    orgWriteLock,
     rlsContext, secureFlowMiddleware(), orgV1Routes);
 // Phase S2: /org/addons moved inside orgV1Routes — no separate mount needed
 
@@ -487,6 +563,9 @@ app.get("/admin/queue-health", platformProtectMw, superAdminOnlyMw, async (req, 
 // Auth routes are required at /api/auth for the frontend's current baseURL.
 app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", otpRoutes);
+app.use("/api/auth", magicRoutes);
+console.log("✅ OTP routes mounted at /api/auth");
 app.use("/api/organizations", organizationRoutes);
 app.use("/api/platform", platformRoutes);
 // registerRouter calls for metadata

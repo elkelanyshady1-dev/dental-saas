@@ -214,4 +214,57 @@ module.exports = [
       ],
     },
   },
+
+  // ── 3-Layer DB Architecture Guards (WARN — Step 5a rollout) ─────────────
+  // New violations are flagged as warnings while the ~179 existing call sites
+  // are migrated. Flipped to "error" at the end of Step 5 once the sweep
+  // is complete. The rules catch fresh drift even while legacy code is still
+  // being cleaned up.
+  {
+    files: ["src/**/*.js"],
+    ignores: [
+      // getModel.js legitimately calls `connection.model(...)` — not mongoose.model
+      // (the rule below only flags `mongoose.model(...)`, so getModel is safe).
+      // Listed here as a reviewable anchor, not because it triggers.
+      "src/core/db/getModel.js",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector:
+            "CallExpression[callee.object.name='mongoose'][callee.property.name='model']",
+          message:
+            "[3-Layer DB] mongoose.model(...) compiles on the global root connection and breaks per-org isolation. " +
+            "Export { modelName, schema } and compile via getModel(req.dbConnection, Def) / getPlatformModel(Def) / getSharedModel(Def) instead. " +
+            "See CLAUDE.md §2.1 and DB_3_LAYER_ARCHITECTURE_PLAN.md.",
+        },
+      ],
+    },
+  },
+
+  // ── organizationId-in-tenant-schema guard (WARN) ────────────────────────
+  // Tenant DB is per-org — organizationId on a tenant document is a redundant
+  // filter at best and a cross-tenant leak vector at worst. Applied narrowly
+  // to model files under the two tenant-plane folders.
+  {
+    files: [
+      "src/modules/**/models/**/*.js",
+      "src/modules/**/*.model.js",
+      "src/organization/**/models/**/*.js",
+      "src/organization/**/*.model.js",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector:
+            "Property[key.name='organizationId'][value.type='ObjectExpression']",
+          message:
+            "[3-Layer DB] organizationId must not appear in tenant schemas — each org has its own DB, so the field is redundant. " +
+            "Phase 4 of the refactor will remove existing occurrences after a per-file keep/remove approval pass.",
+        },
+      ],
+    },
+  },
 ];

@@ -48,17 +48,29 @@ function resolveConnection(orgId) {
 
 /**
  * getPlatformConnection
- * Returns the platform (global) Mongoose connection.
+ * Returns the platform Mongoose connection.
+ *
+ * 3-Layer Rollout (Step 5a):
+ *   Returns the dedicated `platformConnection` sibling (from platformConnection.js)
+ *   when initialized. Falls back to the legacy `mongoose.connection` root while
+ *   the sibling is still booting. Day-1 both resolve to the same Mongo URI so
+ *   there is no behavioral change; the swap lets us move platform collections
+ *   off the global root progressively.
  *
  * Platform-plane code (Guardian, billing, provisioning) must ALWAYS
  * use this function — never mongoose.connection directly in new code.
  *
- * This makes the intent explicit and future-proofs for scenarios where
- * the global connection might differ from the platform connection.
- *
  * @returns {mongoose.Connection}
  */
 function getPlatformConnection() {
+    try {
+        const platformConnection = require("./platformConnection");
+        if (platformConnection.isReady()) {
+            return platformConnection.get();
+        }
+    } catch (_) {
+        // Fall through to legacy if sibling not yet initialized at require time.
+    }
     return mongoose.connection;
 }
 

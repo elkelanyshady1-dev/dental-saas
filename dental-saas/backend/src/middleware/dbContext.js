@@ -80,6 +80,29 @@ async function dbContext(req, res, next) {
             return next();
         }
 
+        // ─── 3-Layer Rollout, Step 3 — Cluster-aware fallback path ──────
+        // When authMiddleware didn't bind (e.g., this middleware runs on a
+        // route without full auth) AND the cluster layer flag is on,
+        // resolve via clusterConnections using the cached org→cluster map.
+        // Else fall through to the legacy dbManager path below.
+        if (process.env.DB_USE_CLUSTER_LAYER === "true") {
+            const { clusterForOrg } = require("@core/db/clusterForOrg");
+            const clusterConnections = require("@core/db/clusterConnections");
+            const clusterKey = await clusterForOrg(String(orgId));
+            const clusterRoot = clusterConnections.getSync(clusterKey);
+            req.dbConnection = clusterRoot.useDb(`dental_org_${orgId}`, {
+                useCache: true,
+                noListener: true,
+            });
+            req._clusterKey = clusterKey;
+            req._dbViaCluster = true;
+            if (ENABLE_DEBUG) {
+                console.log("Using DB:", req.dbConnection.name, "via cluster:", clusterKey);
+            }
+            // No dbManager release handler — cluster path doesn't use inUseCount.
+            return next();
+        }
+
         // resolveConnection delegates to dbManager.getConnection internally.
         // dbManager increments inUseCount on cache hit/creation.
         req.dbConnection = resolveConnection(orgId);

@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 const asyncHandler = require("../utils/asyncHandler");
+const platformConnection = require("@core/db/platformConnection");
+const sharedConnection = require("@core/db/sharedConnection");
+const dbManager = require("@core/db/dbManager");
 
 exports.getHealthStatus = asyncHandler(async (req, res) => {
     // 1. Check MongoDB Connection
@@ -32,6 +35,51 @@ exports.getHealthStatus = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(responsePayload);
+});
+
+/**
+ * getDbHealth
+ * 3-Layer DB health endpoint.
+ *
+ * Day-1 (Step 1) surface: the two sibling connections (platform, shared) plus
+ * a partial cluster view derived from dbManager's cache stats. Tenant cluster
+ * keys + per-cluster active connection counts come online in Step 2 when
+ * clusterConnections + clusterRegistry land.
+ *
+ * Returns:
+ *   - HTTP 503 if platform or shared is disconnected.
+ *   - HTTP 200 with status breakdown otherwise.
+ */
+exports.getDbHealth = asyncHandler(async (req, res) => {
+    const platformReady = platformConnection.isReady();
+    const sharedReady = sharedConnection.isReady();
+
+    // Aggregate per-cluster tenant-connection counts from dbManager.
+    // Until Step 2 there is effectively one "cluster" (the legacy global root),
+    // so this groups all cached org connections together.
+    const stats = dbManager.getStats();
+    const clusters = [
+        {
+            key: "default",
+            region: null,
+            status: platformReady ? "connected" : "disconnected",
+            activeOrgConnections: stats.activeConnections ?? 0,
+            idleOrgConnections: stats.idleConnections ?? 0,
+            reuseRate: stats.connectionReuseRate ?? "N/A",
+            avgResolutionTimeMs: stats.avgResolutionTimeMs ?? 0,
+        },
+    ];
+
+    const payload = {
+        success: platformReady && sharedReady,
+        platform: platformReady ? "connected" : "disconnected",
+        shared: sharedReady ? "connected" : "disconnected",
+        clusters,
+        shutdownInProgress: stats.isShutdown === true,
+    };
+
+    const httpStatus = (platformReady && sharedReady) ? 200 : 503;
+    return res.status(httpStatus).json(payload);
 });
 
 /**

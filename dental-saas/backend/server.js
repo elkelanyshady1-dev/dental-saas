@@ -1,3 +1,6 @@
+console.log("🚀 BACKEND BOOTED — TRACE ACTIVE (" + new Date().toISOString() + ")");
+console.log("🚀 server.js PID:", process.pid, "cwd:", process.cwd());
+
 require('module-alias/register');
 require("dotenv").config();
 
@@ -8,6 +11,30 @@ if (!process.env.NODE_ENV) {
 }
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
+
+// ── Pre-Phase-8 final hardening — Section 10: Kashier prod-readiness assert.
+// Refuse to start the process if ENABLE_KASHIER=true and any of the required
+// Kashier integration secrets are missing. Better to fail at boot than to
+// have the first EG checkout discover a missing API key in production.
+if (process.env.ENABLE_KASHIER === "true") {
+    const required = [
+        "KASHIER_API_KEY",
+        "KASHIER_MERCHANT_ID",
+        "KASHIER_WEBHOOK_SECRET"
+    ];
+    const missing = required.filter((k) => !process.env[k]);
+    if (missing.length > 0) {
+        console.error(
+            `FATAL: ENABLE_KASHIER=true but missing required env vars: ${missing.join(", ")}. Aborting startup.`
+        );
+        throw new Error(`Missing env: ${missing[0]}`);
+    }
+    console.log("[BOOT] Kashier integration env vars present — flag is live.");
+    console.info(
+        "[BOOT] Kashier webhook rawBody verification is required. " +
+        "/api/public/webhooks/kashier is mounted with express.json({verify}) in app.js."
+    );
+}
 const logger = require("./src/utils/logger");
 logger.info({ service: "server", action: "init" }, "Server file loaded");
 
@@ -35,6 +62,36 @@ if (setRedisEnv.length > 0) {
         { service: "server", action: "startup_abort", event: "BOOT_BLOCK_REDIS_ENV", setKeys: setRedisEnv },
         `CRITICAL: Redis env var(s) set but this deployment is Redis-free (Phase 6): ${setRedisEnv.join(", ")}. ` +
         `Remove them from the environment or deployment template. Aborting startup.`
+    );
+    process.exit(1);
+}
+
+// 🛡️ 3-Layer DB — Dev-single-URI guard.
+// MONGO_URI_DEV_SINGLE collapses all three DB layers onto one URI for local
+// dev convenience. It must NEVER be present in production — that would defeat
+// platform/shared/tenant isolation and let a single cluster outage take the
+// whole system down. Fail boot so the misconfiguration is impossible to miss.
+if (process.env.NODE_ENV === "production" && process.env.MONGO_URI_DEV_SINGLE) {
+    logger.error(
+        { service: "server", action: "startup_abort", event: "BOOT_BLOCK_DEV_SINGLE_IN_PROD" },
+        "CRITICAL: MONGO_URI_DEV_SINGLE is set in production. This collapses " +
+        "platform/shared/tenant DB isolation and is forbidden in prod. Remove it " +
+        "from the environment and configure MONGO_URI_PLATFORM + MONGO_URI_SHARED " +
+        "+ MONGO_URI_<cluster> separately. Aborting startup."
+    );
+    process.exit(1);
+}
+
+// 🛡️ R2 storage guard.
+// Uploads land in R2 in production. A misconfigured STORAGE_PROVIDER (left
+// unset, or pointing at local disk) on a production deployment means customer
+// files silently go to ephemeral container storage and disappear on redeploy.
+// Fail at boot rather than discovering it after the first upload.
+if (process.env.NODE_ENV === "production" && process.env.STORAGE_PROVIDER !== "r2") {
+    logger.error(
+        { service: "server", action: "startup_abort", event: "BOOT_BLOCK_STORAGE_PROVIDER", value: process.env.STORAGE_PROVIDER || "<unset>" },
+        "CRITICAL: STORAGE_PROVIDER must be \"r2\" in production. Got: " +
+        (process.env.STORAGE_PROVIDER || "<unset>") + ". Aborting startup."
     );
     process.exit(1);
 }
@@ -277,7 +334,7 @@ connectDB().then(async () => {
     try {
         // Dev auto-seed: ensure regions exist before loading registry
         if (process.env.NODE_ENV === "development") {
-            const Region = require("./src/platform/domain/models/Region.model");
+            const Region = require("./src/platform/domain/models/Region.model").default;
             const REQUIRED_REGIONS = ["EU", "US", "MEA", "APAC"];
             const controlPlaneUri = process.env.MONGO_URI || process.env.MONGODB_URI;
             const defaultRedis = process.env.REDIS_URL || "redis://localhost:6379";
@@ -319,6 +376,20 @@ connectDB().then(async () => {
             logger.error({ service: "server" }, "[BOOT] FATAL: Region registry failed in production. Aborting.");
             process.exit(1);
         }
+    }
+
+    // ── U-CAP Self-Worker: boot-time asset-job recovery ─────────────────────
+    // Per enterprise hardening §1.1 — any jobs left in pending/failed after
+    // a previous crash or graceful shutdown are re-enqueued here. The sweep
+    // is fire-and-forget (defers to setImmediate inside the worker) so it
+    // never blocks the HTTP listener coming up.
+    try {
+        const { startAssetJobRecovery } = require("./src/infrastructure/workers/assetJobRecovery.worker");
+        startAssetJobRecovery().catch((err) => {
+            logger.warn({ service: "server", action: "asset_recovery_failed", err: err.message });
+        });
+    } catch (err) {
+        logger.warn({ service: "server", action: "asset_recovery_load_failed", err: err.message });
     }
 
     // ── Phase 12.1: Feature Registry — Seed from static registry ────────────
@@ -526,6 +597,7 @@ const server = app.listen(PORT, () => {
         { service: "server", action: "started", port: PORT },
         `Server running on port ${PORT}`
     );
+    console.log("🚀 LISTENING on port", PORT, "— PID:", process.pid);
 
     // ── AUTH_TRACE: Environment Audit ──────────────────────────────
     if (process.env.AUTH_TRACE === "true") {
@@ -545,6 +617,36 @@ const server = app.listen(PORT, () => {
     }
 });
 
+// ─── Port Guard — fail fast with a clear message if port is held ───────────
+// Catches EADDRINUSE from app.listen() above. Prints the holding PID on
+// Windows (if netstat is available) so the operator knows exactly what to
+// kill. No probe-listen-close race window — we attach directly to the real
+// server instance, so the check and the bind are the same operation.
+server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+        console.error("");
+        console.error("❌ FATAL: port", PORT, "is already in use.");
+        console.error("   Another Node process (almost certainly a prior backend run) is holding it.");
+        if (process.platform === "win32") {
+            try {
+                const { execSync } = require("child_process");
+                const out = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, { encoding: "utf8" });
+                console.error("   netstat says:");
+                out.split(/\r?\n/).filter(Boolean).forEach((l) => console.error("    ", l.trim()));
+                console.error(`   Kill it with:  taskkill /F /PID <PID>    (use the last column from netstat)`);
+            } catch {
+                console.error(`   Run:  netstat -ano | findstr :${PORT}    to find the PID, then  taskkill /F /PID <pid>`);
+            }
+        } else {
+            console.error(`   Run:  lsof -i :${PORT}    to find the PID, then  kill -9 <pid>`);
+        }
+        console.error("");
+        process.exit(1);
+    }
+    // Let other server errors bubble via default behaviour
+    throw err;
+});
+
 // Initialize Socket.io (v1.6.0)
 initSocket(server);
 
@@ -559,6 +661,31 @@ initGuardianSocket(server);
 // corruption: overlapping active contracts, null lockedPrice, orphan drafts, etc.
 // Uses setInterval with unref() — will not block graceful shutdown.
 startRuntimeGuardian(5 * 60 * 1000);
+
+// ── Phase 3 — Subscription Lifecycle Engine ────────────────────────────────
+// Hourly sweep: flips `active` subscriptions whose currentPeriodEnd has passed
+// to either `expired` (internal renewal / Kashier) or `past_due` (provider
+// renewal / Stripe). Never charges a card — expiry transitions only.
+let subscriptionLifecycleInterval = null;
+if (process.env.NODE_ENV !== "test") {
+    const {
+        runSubscriptionLifecycle
+    } = require("./src/platform/billing/jobs/subscriptionLifecycle.job");
+    const LIFECYCLE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+    subscriptionLifecycleInterval = setInterval(() => {
+        runSubscriptionLifecycle().catch((err) => {
+            logger.error({
+                service: "server",
+                action: "subscription_lifecycle_failed",
+                err: err.message
+            }, "[subscriptionLifecycle] job run failed");
+        });
+    }, LIFECYCLE_INTERVAL_MS);
+    // Don't block graceful shutdown on this interval.
+    if (typeof subscriptionLifecycleInterval.unref === "function") {
+        subscriptionLifecycleInterval.unref();
+    }
+}
 
 /* =====================================================
    GRACEFUL SHUTDOWN
@@ -578,6 +705,10 @@ async function gracefulShutdown(signal) {
     if (slaTask) slaTask.stop();
     stopRuntimeGuardian();
     stopContractExpiryScheduler();    // ← STUCK_EXPIRED_CONTRACTS recovery cron
+    if (subscriptionLifecycleInterval) {
+        clearInterval(subscriptionLifecycleInterval);
+        subscriptionLifecycleInterval = null;
+    }
     closeGuardianSocket();
     const { stopRegistryRefresh } = require("./src/infrastructure/regions/regionRegistry");
     stopRegistryRefresh();
@@ -589,10 +720,27 @@ async function gracefulShutdown(signal) {
         logger.info({ service: "server", action: "http_closed" }, "HTTP server closed (requests drained).");
 
         try {
-            // 3. Database Cleanup — Close org connections first, then platform
+            // 3. Database Cleanup — Close org connections first, then siblings, then global
             const dbManager = require("./src/core/db/dbManager");
             await dbManager.shutdown();
             logger.info({ service: "server", action: "org_connections_closed" }, "All org database connections closed.");
+
+            // Close the 3-layer sibling connections (Step 1).
+            // Wrapped individually so a failure closing one still closes the rest.
+            try {
+                const platformConnection = require("./src/core/db/platformConnection");
+                await platformConnection.close();
+                logger.info({ service: "server", action: "platform_connection_closed" }, "Platform sibling connection closed.");
+            } catch (pcErr) {
+                logger.warn({ err: pcErr.message }, "Platform sibling close error (non-fatal)");
+            }
+            try {
+                const sharedConnection = require("./src/core/db/sharedConnection");
+                await sharedConnection.close();
+                logger.info({ service: "server", action: "shared_connection_closed" }, "Shared sibling connection closed.");
+            } catch (scErr) {
+                logger.warn({ err: scErr.message }, "Shared sibling close error (non-fatal)");
+            }
 
             await mongoose.connection.close();
             logger.info({ service: "server", action: "db_closed" }, "Platform MongoDB connection closed.");
