@@ -320,7 +320,7 @@ exports.verifyOtp = async (req, res) => {
                             email: devEmail.toLowerCase().trim(),
                             otp: emailOtp,
                             name: devEmail.split("@")[0],
-                            subject: "Verify Your Email — DentalSaaS",
+                            subject: "Verify Your Email — OrthoNoe",
                         },
                     });
 
@@ -435,7 +435,7 @@ exports.verifyOtp = async (req, res) => {
                         email: email.toLowerCase().trim(),
                         otp: emailOtp,
                         name: email.split("@")[0],
-                        subject: "Verify Your Email — DentalSaaS",
+                        subject: "Verify Your Email — OrthoNoe",
                     },
                 });
 

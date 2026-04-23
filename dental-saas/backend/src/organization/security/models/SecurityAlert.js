@@ -18,103 +18,95 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const ALERT_TYPES = [
-    "HIGH_DENIAL_RATE",
-    "SUSPICIOUS_ACCESS",
-    "BRUTE_FORCE_ATTEMPT",
-    "PRIVILEGE_ESCALATION",
-    "POLICY_VIOLATION",
-];
-
+const ALERT_TYPES = ["HIGH_DENIAL_RATE", "SUSPICIOUS_ACCESS", "BRUTE_FORCE_ATTEMPT", "PRIVILEGE_ESCALATION", "POLICY_VIOLATION"];
 const ALERT_SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const ALERT_STATUSES = ["active", "acknowledged", "resolved"];
-
-const securityAlertSchema = new mongoose.Schema(
-    {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            index: true,
-        },
-        type: {
-            type: String,
-            enum: ALERT_TYPES,
-            required: true,
-        },
-        severity: {
-            type: String,
-            enum: ALERT_SEVERITIES,
-            required: true,
-        },
-        status: {
-            type: String,
-            enum: ALERT_STATUSES,
-            default: "active",
-        },
-        message: {
-            type: String,
-            required: true,
-        },
-        details: {
-            type: mongoose.Schema.Types.Mixed,
-            default: {},
-        },
-        // The user who triggered the alert (if applicable)
-        triggeredByUserId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-        },
-        // The user who acknowledged the alert
-        acknowledgedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-        },
-        acknowledgedAt: {
-            type: Date,
-            default: null,
-        },
-        // The user who resolved the alert
-        resolvedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-        },
-        resolvedAt: {
-            type: Date,
-            default: null,
-        },
-        // Deduplication: window key to prevent flood of identical alerts
-        deduplicationKey: {
-            type: String,
-            default: null,
-        },
-    },
-    {
-        timestamps: true,
-    }
-);
+const securityAlertSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ALERT_TYPES,
+    required: true
+  },
+  severity: {
+    type: String,
+    enum: ALERT_SEVERITIES,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ALERT_STATUSES,
+    default: "active"
+  },
+  message: {
+    type: String,
+    required: true
+  },
+  details: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  // The user who triggered the alert (if applicable)
+  triggeredByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+  // The user who acknowledged the alert
+  acknowledgedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+  acknowledgedAt: {
+    type: Date,
+    default: null
+  },
+  // The user who resolved the alert
+  resolvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
+  resolvedAt: {
+    type: Date,
+    default: null
+  },
+  // Deduplication: window key to prevent flood of identical alerts
+  deduplicationKey: {
+    type: String,
+    default: null
+  }
+}, {
+  timestamps: true
+});
 
 // ─── Indexes ────────────────────────────────────────────────────────────────
 
-securityAlertSchema.index({ organizationId: 1, createdAt: -1 });
-securityAlertSchema.index({ organizationId: 1, status: 1 });
-securityAlertSchema.index({ organizationId: 1, type: 1, createdAt: -1 });
-securityAlertSchema.index({ organizationId: 1, severity: 1, status: 1 });
-securityAlertSchema.index(
-    { deduplicationKey: 1 },
-    { sparse: true, unique: true }
-);
-
+securityAlertSchema.index({
+  createdAt: -1
+});
+securityAlertSchema.index({
+  status: 1
+});
+securityAlertSchema.index({
+  type: 1,
+  createdAt: -1
+});
+securityAlertSchema.index({
+  severity: 1,
+  status: 1
+});
+securityAlertSchema.index({
+  deduplicationKey: 1
+}, {
+  sparse: true,
+  unique: true
+});
 const modelName = "SecurityAlert";
-
 module.exports = {
-    modelName,
-    schema: securityAlertSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, securityAlertSchema),
+  modelName,
+  schema: securityAlertSchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, securityAlertSchema)
 };
 module.exports.ALERT_TYPES = ALERT_TYPES;
 module.exports.ALERT_SEVERITIES = ALERT_SEVERITIES;

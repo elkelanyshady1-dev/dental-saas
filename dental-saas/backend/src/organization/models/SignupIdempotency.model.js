@@ -24,61 +24,64 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const signupIdempotencySchema = new mongoose.Schema(
-    {
-        // Client-supplied idempotency key (typically UUID v4)
-        idempotencyKey: {
-            type: String,
-            required: true,
-            unique: true,
-            index: true
-        },
-
-        // Processing status
-        status: {
-            type: String,
-            enum: ["processing", "completed", "failed"],
-            default: "processing"
-        },
-
-        // ID of the created organization (null if failed)
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            default: null
-        },
-
-        // Cached HTTP response (for replay)
-        response: {
-            statusCode: { type: Number },
-            body: { type: mongoose.Schema.Types.Mixed }
-        },
-
-        // Request fingerprint for safety validation
-        requestFingerprint: {
-            email: { type: String },
-            slug: { type: String },
-            phoneNumber: { type: String }
-        },
-
-        // Client metadata
-        ipAddress: { type: String, default: null },
-        userAgent: { type: String, default: null },
+const signupIdempotencySchema = new mongoose.Schema({
+  // Client-supplied idempotency key (typically UUID v4)
+  idempotencyKey: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
+  // Processing status
+  status: {
+    type: String,
+    enum: ["processing", "completed", "failed"],
+    default: "processing"
+  },
+  // Cached HTTP response (for replay)
+  response: {
+    statusCode: {
+      type: Number
     },
-    {
-        timestamps: true,
-        collection: "signupidempotency"
+    body: {
+      type: mongoose.Schema.Types.Mixed
     }
-);
+  },
+  // Request fingerprint for safety validation
+  requestFingerprint: {
+    email: {
+      type: String
+    },
+    slug: {
+      type: String
+    },
+    phoneNumber: {
+      type: String
+    }
+  },
+  // Client metadata
+  ipAddress: {
+    type: String,
+    default: null
+  },
+  userAgent: {
+    type: String,
+    default: null
+  }
+}, {
+  timestamps: true,
+  collection: "signupidempotency"
+});
 
 // TTL: auto-expire after 24 hours
-signupIdempotencySchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
-
+signupIdempotencySchema.index({
+  createdAt: 1
+}, {
+  expireAfterSeconds: 86400
+});
 const modelName = "SignupIdempotency";
-
 module.exports = {
-    modelName,
-    schema: signupIdempotencySchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, signupIdempotencySchema),
+  modelName,
+  schema: signupIdempotencySchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, signupIdempotencySchema)
 };

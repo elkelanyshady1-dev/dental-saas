@@ -51,47 +51,48 @@ const logger = require("@utils/logger");
  * @param {Object} ctx.capabilities - Resolved capability map from req.capabilities
  * @returns {Promise<Object>} Settings summary
  */
-async function getSettingsSummary({ dbConnection, organizationId, capabilities }) {
-    if (!dbConnection) {
-        throw new Error("[SettingsHub] dbConnection is REQUIRED — cannot use global Mongoose");
-    }
+async function getSettingsSummary({
+  dbConnection,
+  organizationId,
+  capabilities
+}) {
+  if (!dbConnection) {
+    throw new Error("[SettingsHub] dbConnection is REQUIRED — cannot use global Mongoose");
+  }
+  logger.info({
+    service: "settingsHub",
+    orgId: organizationId
+  }, "[SettingsHub] Fetching settings summary");
 
-    logger.info(
-        { service: "settingsHub", orgId: organizationId },
-        "[SettingsHub] Fetching settings summary"
-    );
+  // ── Entitlement snapshot from capabilities (already resolved by middleware) ──
+  const planModules = capabilities?.modules || {};
+  const planLimits = capabilities?.limits || {};
 
-    // ── Entitlement snapshot from capabilities (already resolved by middleware) ──
-    const planModules = capabilities?.modules || {};
-    const planLimits = capabilities?.limits || {};
+  // ── Module state summary (no DB read — derived from capabilities) ───────────
+  const modulesSummary = {
+    patients: Boolean(planModules.patients),
+    appointments: Boolean(planModules.appointments),
+    finance: Boolean(planModules.finance),
+    orthodontics: Boolean(planModules.orthodontics),
+    analytics: Boolean(planModules.analytics),
+    inventory: Boolean(planModules.inventory),
+    booking: Boolean(planModules.booking)
+  };
 
-    // ── Module state summary (no DB read — derived from capabilities) ───────────
-    const modulesSummary = {
-        patients:      Boolean(planModules.patients),
-        appointments:  Boolean(planModules.appointments),
-        finance:       Boolean(planModules.finance),
-        orthodontics:  Boolean(planModules.orthodontics),
-        analytics:     Boolean(planModules.analytics),
-        inventory:     Boolean(planModules.inventory),
-        booking:       Boolean(planModules.booking),
-    };
-
-    // ── Limits snapshot ─────────────────────────────────────────────────────────
-    const limitsSummary = {
-        maxUsers:      planLimits.maxUsers    ?? null,
-        maxBranches:   planLimits.maxBranches ?? null,
-        maxPatients:   planLimits.maxPatients ?? null,
-        storageMB:     capabilities?.quotas?.storageMB ?? planLimits.maxStorageMB ?? null,
-    };
-
-    return {
-        organizationId,
-        modules: modulesSummary,
-        limits: limitsSummary,
-        // Extend with domain-specific snapshots as needed:
-        // security: await securityService.getSnapshot({ dbConnection })
-        // features: await featuresService.getSnapshot({ dbConnection })
-    };
+  // ── Limits snapshot ─────────────────────────────────────────────────────────
+  const limitsSummary = {
+    maxUsers: planLimits.maxUsers ?? null,
+    maxBranches: planLimits.maxBranches ?? null,
+    maxPatients: planLimits.maxPatients ?? null,
+    storageMB: capabilities?.quotas?.storageMB ?? planLimits.maxStorageMB ?? null
+  };
+  return {
+    modules: modulesSummary,
+    limits: limitsSummary
+    // Extend with domain-specific snapshots as needed:
+    // security: await securityService.getSnapshot({ dbConnection })
+    // features: await featuresService.getSnapshot({ dbConnection })
+  };
 }
 
 // ─── Settings Domain Audit ───────────────────────────────────────────────────
@@ -115,43 +116,49 @@ async function getSettingsSummary({ dbConnection, organizationId, capabilities }
  * @param {string} [ctx.reason] - Optional human-readable reason
  */
 async function logSettingsChange({
+  dbConnection,
+  userId,
+  orgId,
+  module,
+  action,
+  previousState,
+  newState,
+  reason
+}) {
+  if (!dbConnection) {
+    throw new Error("[SettingsHub] dbConnection is REQUIRED for audit logging");
+  }
+
+  // Delegate to the org's audit logger (hash-chained, immutable)
+  // Import lazily to avoid boot-time circular deps
+  const {
+    auditLogger
+  } = require("../../core/audit/auditLogger");
+  await auditLogger.log({
     dbConnection,
+    action,
+    module: `settings.${module}`,
     userId,
     orgId,
+    changes: {
+      previousState,
+      newState
+    },
+    reason: reason || null
+    // Hash chaining is enforced inside auditLogger — not duplicated here
+  });
+  logger.info({
+    service: "settingsHub",
     module,
     action,
-    previousState,
-    newState,
-    reason,
-}) {
-    if (!dbConnection) {
-        throw new Error("[SettingsHub] dbConnection is REQUIRED for audit logging");
-    }
-
-    // Delegate to the org's audit logger (hash-chained, immutable)
-    // Import lazily to avoid boot-time circular deps
-    const { auditLogger } = require("../../core/audit/auditLogger");
-
-    await auditLogger.log({
-        dbConnection,
-        action,
-        module: `settings.${module}`,
-        userId,
-        orgId,
-        changes: { previousState, newState },
-        reason: reason || null,
-        // Hash chaining is enforced inside auditLogger — not duplicated here
-    });
-
-    logger.info(
-        { service: "settingsHub", module, action, userId, orgId },
-        `[SettingsHub] Settings change logged: ${module}.${action}`
-    );
+    userId,
+    orgId
+  }, `[SettingsHub] Settings change logged: ${module}.${action}`);
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
-    getSettingsSummary,
-    logSettingsChange,
+  getSettingsSummary,
+  logSettingsChange
 };

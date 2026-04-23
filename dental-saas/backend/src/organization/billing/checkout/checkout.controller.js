@@ -14,9 +14,14 @@
 
 "use strict";
 
-const { createCheckoutSession } = require("./checkoutOrchestrator.service");
+const {
+  createCheckoutSession,
+  createUnifiedCheckout
+} = require("./checkoutOrchestrator.service");
 const logger = require("../../../utils/logger");
-const { authorize } = require("../../../utils/authorize");
+const {
+  authorize
+} = require("../../../utils/authorize");
 
 /**
  * @swagger
@@ -118,69 +123,114 @@ const { authorize } = require("../../../utils/authorize");
  *         description: Internal error — checkout session creation failed
  */
 exports.createSession = async (req, res) => {
-    authorize(req, "accounting.create");
-    // organizationId is ALWAYS from the verified org JWT — never from body
-    const organizationId = req.context.organizationId;
+  authorize(req, "accounting.create");
+  // organizationId is ALWAYS from the verified org JWT — never from body
+  const organizationId = req.context.organizationId;
+  const {
+    planVersionId,
+    billingInterval,
+    provider,
+    country,
+    coupon,
+    taxRate
+  } = req.body;
 
-    const {
-        planVersionId,
-        billingInterval,
-        provider,
-        country,
-        coupon,
-        taxRate
-    } = req.body;
+  // ── Input guard ───────────────────────────────────────────────────────────
+  if (!planVersionId || !billingInterval || !provider) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "MISSING_REQUIRED_FIELDS",
+        message: "planVersionId, billingInterval, and provider are required"
+      }
+    });
+  }
+  try {
+    const result = await createCheckoutSession({
+      planVersionId,
+      billingInterval,
+      provider,
+      country: country || null,
+      coupon: coupon || null,
+      taxRate: typeof taxRate === "number" ? taxRate : 0
+    });
+    logger.info({
+      organizationId,
+      planVersionId,
+      billingInterval,
+      provider,
+      contractId: result.contractId,
+      invoiceId: result.invoiceId
+    }, "[CheckoutController] Checkout session created");
+    return res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    const status = err.status || 500;
+    const code = err.code || "CHECKOUT_ERROR";
+    logger.error({
+      err,
+      organizationId,
+      planVersionId,
+      provider
+    }, "[CheckoutController] Checkout session creation failed");
+    return res.status(status).json({
+      success: false,
+      error: {
+        code,
+        message: err.message
+      }
+    });
+  }
+};
 
-    // ── Input guard ───────────────────────────────────────────────────────────
-    if (!planVersionId || !billingInterval || !provider) {
-        return res.status(400).json({
-            success: false,
-            error: {
-                code: "MISSING_REQUIRED_FIELDS",
-                message: "planVersionId, billingInterval, and provider are required"
-            }
-        });
-    }
+// ═════════════════════════════════════════════════════════════════════════════
+// Phase 4 — Unified Checkout (single pipeline, provider-agnostic)
+// ═════════════════════════════════════════════════════════════════════════════
 
-    try {
-        const result = await createCheckoutSession({
-            organizationId,
-            planVersionId,
-            billingInterval,
-            provider,
-            country: country || null,
-            coupon: coupon || null,
-            taxRate: typeof taxRate === "number" ? taxRate : 0
-        });
-
-        logger.info({
-            organizationId,
-            planVersionId,
-            billingInterval,
-            provider,
-            contractId: result.contractId,
-            invoiceId: result.invoiceId
-        }, "[CheckoutController] Checkout session created");
-
-        return res.status(200).json({
-            success: true,
-            data: result
-        });
-
-    } catch (err) {
-        const status = err.status || 500;
-        const code = err.code || "CHECKOUT_ERROR";
-
-        logger.error({
-            err,
-            organizationId,
-            planVersionId,
-            provider
-        }, "[CheckoutController] Checkout session creation failed");
-
-        return res.status(status).json({
-            success: false,
-            error: { code, message: err.message }
-        });
-    }
+/**
+ * createUnified
+ *
+ * POST /api/org/v1/checkout
+ * Body: { planVersionId, interval, provider }
+ *
+ * Guard: orgProtect (org JWT required — organizationId from req.context)
+ */
+exports.createUnified = async (req, res) => {
+  authorize(req, "accounting.create");
+  const organizationId = req.context.organizationId;
+  const {
+    planVersionId,
+    interval,
+    provider
+  } = req.body || {};
+  try {
+    const result = await createUnifiedCheckout({
+      planVersionId,
+      billingInterval: interval,
+      provider
+    });
+    return res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    const status = err.status || 500;
+    const code = err.code || "CHECKOUT_ERROR";
+    logger.error({
+      err,
+      organizationId,
+      planVersionId,
+      interval,
+      provider
+    }, "[CheckoutController] unified checkout creation failed");
+    return res.status(status).json({
+      success: false,
+      error: {
+        code,
+        message: err.message
+      }
+    });
+  }
 };

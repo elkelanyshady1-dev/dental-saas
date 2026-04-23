@@ -20,7 +20,6 @@
 
 "use strict";
 
-
 const SecurityAlert = require("./models/SecurityAlert").default;
 const logger = require("@utils/logger");
 
