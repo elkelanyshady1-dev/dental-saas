@@ -26,13 +26,25 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformNotificationDef = require("../platform/models/PlatformNotification");
-const PlatformNotification = getPlatformModel(PlatformNotificationDef);
+let _PlatformNotification_cache = null;
+function PlatformNotification() {
+    return _PlatformNotification_cache || (_PlatformNotification_cache = getPlatformModel(PlatformNotificationDef));
+}
 const {
   getBillingSettings
 } = require("../platform/billing/services/billingSettings.service");
@@ -62,7 +74,7 @@ async function processDunningContracts() {
   }, "[DunningProcessor] Starting dunning scan");
 
   // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-  const dueCAndContracts = await OrgContract.find({
+  const dueCAndContracts = await OrgContract().find({
     contractStatus: "active",
     "dunning.nextRetryAt": {
       $lte: now
@@ -108,7 +120,7 @@ async function _processRetry(contract, {
 }) {
   // Find the open invoice for this contract's current billing cycle
   // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-  const invoice = await PlatformInvoice.findOne({
+  const invoice = await PlatformInvoice().findOne({
     contractId: contract._id,
     status: "open"
   });
@@ -116,7 +128,7 @@ async function _processRetry(contract, {
     logger.info({
       contractId: contract._id
     }, "[DunningProcessor] No open invoice found for dunning contract — clearing dunning");
-    await OrgContract.findByIdAndUpdate(contract._id, {
+    await OrgContract().findByIdAndUpdate(contract._id, {
       $set: {
         dunning: null
       }
@@ -176,9 +188,9 @@ async function _onDunningRecovered(contract, invoice, {
     session.startTransaction();
 
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lc = await OrgContract.findById(contract._id).session(session);
+    const lc = await OrgContract().findById(contract._id).session(session);
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lInv = await PlatformInvoice.findById(invoice._id).session(session);
+    const lInv = await PlatformInvoice().findById(invoice._id).session(session);
     if (!lc || !lInv) {
       await session.abortTransaction();
       session.endSession();
@@ -195,7 +207,7 @@ async function _onDunningRecovered(contract, invoice, {
 
     // Create new contract for next period (same commercial terms)
     const billingEnd = lInv.billingCycleEnd;
-    const newContract = new OrgContract({
+    const newContract = new (OrgContract())({
       organizationId: lc.organizationId,
       planVersionId: lc.planVersionId,
       planCode: lc.planCode,
@@ -225,7 +237,7 @@ async function _onDunningRecovered(contract, invoice, {
     });
 
     // Supersede old contract
-    await OrgContract.findByIdAndUpdate(lc._id, {
+    await OrgContract().findByIdAndUpdate(lc._id, {
       $set: {
         contractStatus: "superseded",
         supersededById: newContract._id,
@@ -237,7 +249,7 @@ async function _onDunningRecovered(contract, invoice, {
     });
 
     // Update org pointer
-    await Organization.findByIdAndUpdate(lc.organizationId, {
+    await Organization().findByIdAndUpdate(lc.organizationId, {
       $set: {
         currentContractId: newContract._id,
         status: "active"
@@ -317,9 +329,9 @@ async function _onDunningRetryFailed(contract, invoice, {
     session.startTransaction();
 
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lc = await OrgContract.findById(contract._id).session(session);
+    const lc = await OrgContract().findById(contract._id).session(session);
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lInv = await PlatformInvoice.findById(invoice._id).session(session);
+    const lInv = await PlatformInvoice().findById(invoice._id).session(session);
     if (!lc || !lInv) {
       await session.abortTransaction();
       session.endSession();
@@ -336,7 +348,7 @@ async function _onDunningRetryFailed(contract, invoice, {
         suspendedAt: null,
         lastFailureReason: failureReason
       };
-      await PlatformNotification.create([{
+      await PlatformNotification().create([{
         type: "RETRY_EXHAUSTED",
         title: "Payment Retries Exhausted",
         organizationId: lc.organizationId,
@@ -363,7 +375,7 @@ async function _onDunningRetryFailed(contract, invoice, {
     await lInv.save({
       session
     });
-    await OrgContract.findByIdAndUpdate(lc._id, {
+    await OrgContract().findByIdAndUpdate(lc._id, {
       $set: {
         dunning: newDunning
       }
@@ -427,11 +439,11 @@ async function _onDunningRetryFailed(contract, invoice, {
  */
 async function reactivateOnPayment(invoiceId) {
   // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-  const invoice = await PlatformInvoice.findById(invoiceId);
+  const invoice = await PlatformInvoice().findById(invoiceId);
   if (!invoice || !invoice.contractId) return;
 
   // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-  const contract = await OrgContract.findById(invoice.contractId);
+  const contract = await OrgContract().findById(invoice.contractId);
   if (!contract) return;
   const wasInDunning = !!contract.dunning;
   const wasSuspended = !!contract.dunning?.suspendedAt;
@@ -444,7 +456,7 @@ async function reactivateOnPayment(invoiceId) {
 
     // Mark invoice paid (idempotent)
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lInv = await PlatformInvoice.findById(invoice._id).session(session);
+    const lInv = await PlatformInvoice().findById(invoice._id).session(session);
     if (lInv && lInv.status !== "paid") {
       lInv.status = "paid";
       lInv.paidAt = now;
@@ -455,7 +467,7 @@ async function reactivateOnPayment(invoiceId) {
 
     // Reactivate contract if expired or in dunning
     // @rls-platform-cron — cross-org dunning workflow, no org-scoped req
-    const lc = await OrgContract.findById(contract._id).session(session);
+    const lc = await OrgContract().findById(contract._id).session(session);
     if (lc) {
       lc.contractStatus = "active";
       lc.dunning = null;
@@ -466,7 +478,7 @@ async function reactivateOnPayment(invoiceId) {
 
     // Reactivate organization
     if (wasSuspended || wasExpired) {
-      await Organization.findByIdAndUpdate(contract.organizationId, {
+      await Organization().findByIdAndUpdate(contract.organizationId, {
         $set: {
           status: "active"
         }

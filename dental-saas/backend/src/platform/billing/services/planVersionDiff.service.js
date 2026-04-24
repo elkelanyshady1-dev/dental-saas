@@ -26,7 +26,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef); // ── Helpers ──────────────────────────────────────────────────────────────────
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+} // ── Helpers ──────────────────────────────────────────────────────────────────
 /**
  * Normalize a value for comparison — flatten objects to JSON string
  * so booleans, numbers, and nested objects can all be diffed the same way.
@@ -158,7 +161,7 @@ async function comparePlanVersions(versionAId, versionBId) {
   const toOid = id => typeof id === "string" ? new mongoose.Types.ObjectId(id) : id;
 
   // Load both versions in parallel
-  const [vA, vB] = await Promise.all([PlanVersion.findById(toOid(versionAId)).select("versionTag label templateCode pricing limits modules trialDays inflationPolicy").lean(), PlanVersion.findById(toOid(versionBId)).select("versionTag label templateCode pricing limits modules trialDays inflationPolicy").lean()]);
+  const [vA, vB] = await Promise.all([PlanVersion().findById(toOid(versionAId)).select("versionTag label templateCode pricing limits modules trialDays inflationPolicy").lean(), PlanVersion().findById(toOid(versionBId)).select("versionTag label templateCode pricing limits modules trialDays inflationPolicy").lean()]);
   if (!vA) throw new Error(`PlanVersion A not found: ${versionAId}`);
   if (!vB) throw new Error(`PlanVersion B not found: ${versionBId}`);
 

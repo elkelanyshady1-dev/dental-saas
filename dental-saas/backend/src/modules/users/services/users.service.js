@@ -23,7 +23,10 @@ const {
 const orgUsageService = require("@core/usage/orgUsage.service");
 const logger = require("@utils/logger");
 const OrganizationDef = require("../../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const BCRYPT_ROUNDS = 10;
 
 // ── Email Provisioning Helpers ─────────────────────────────────────────────────
@@ -35,7 +38,7 @@ const BCRYPT_ROUNDS = 10;
  * @returns {Promise<string>} slug (e.g. "smilecare")
  */
 async function fetchOrgSlug(organizationId) {
-  const org = await Organization.findById(organizationId).select("slug").lean();
+  const org = await Organization().findById(organizationId).select("slug").lean();
   if (!org || !org.slug) {
     throw Object.assign(new Error("Organization slug not configured — cannot generate staff email"), {
       statusCode: 500,

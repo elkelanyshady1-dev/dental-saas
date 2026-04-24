@@ -24,7 +24,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingControlDef = require("../models/BillingControl.model");
-const BillingControl = getPlatformModel(BillingControlDef);
+let _BillingControl_cache = null;
+function BillingControl() {
+    return _BillingControl_cache || (_BillingControl_cache = getPlatformModel(BillingControlDef));
+}
 const logger = require("@utils/logger");
 
 // ─── In-process cache ─────────────────────────────────────────────────────────
@@ -59,12 +62,12 @@ function invalidateCache() {
  * @returns {Promise<import('../models/BillingControl.model').default>}
  */
 async function _getOrCreateControl() {
-  let doc = await BillingControl.findOne({
+  let doc = await BillingControl().findOne({
     singleton: "global"
   });
   if (!doc) {
     // First boot — create safe default (kill switch OFF)
-    doc = await BillingControl.findOneAndUpdate({
+    doc = await BillingControl().findOneAndUpdate({
       singleton: "global"
     }, {
       $setOnInsert: {
@@ -153,7 +156,7 @@ async function activateBillingKillSwitch(reason, source = "manual", actor = "sys
     source,
     changedAt: now
   };
-  const doc = await BillingControl.findOneAndUpdate({
+  const doc = await BillingControl().findOneAndUpdate({
     singleton: "global"
   }, {
     $set: {
@@ -203,7 +206,7 @@ async function deactivateBillingKillSwitch(actor = "system") {
     source: "manual",
     changedAt: now
   };
-  const doc = await BillingControl.findOneAndUpdate({
+  const doc = await BillingControl().findOneAndUpdate({
     singleton: "global"
   }, {
     $set: {

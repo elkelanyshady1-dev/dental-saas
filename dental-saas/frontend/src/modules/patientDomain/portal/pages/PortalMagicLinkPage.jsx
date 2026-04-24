@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { portalAccessApi } from "../services/portalAccess.api";
+import { BRAND } from "@/config/brand";
 
 const BrandIcon = () => (
     <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -89,7 +90,7 @@ export default function PortalMagicLinkPage() {
                     <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20">
                         <BrandIcon />
                     </div>
-                    <span className="text-white font-bold text-2xl tracking-tight">DentalSaaS</span>
+                    <span className="text-white font-bold text-2xl tracking-tight">{BRAND.name}</span>
                 </div>
 
                 {/* Status card */}

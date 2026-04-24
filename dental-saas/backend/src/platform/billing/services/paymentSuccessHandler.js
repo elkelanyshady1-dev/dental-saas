@@ -27,9 +27,15 @@ const {
   activateProviderSubscription
 } = require("./subscription.service");
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Top-level dispatcher ────────────────────────────────────────────────────
@@ -85,7 +91,7 @@ async function handlePaymentSuccess(event) {
   //    against out-of-band replays — e.g. admin manually fires
   //    handlePaymentSuccess with the same paymentId. If the contract's
   //    lastPaymentId already matches, short-circuit cleanly.
-  const existingContract = await OrgContract.findById(event.contractId).lean();
+  const existingContract = await OrgContract().findById(event.contractId).lean();
   if (!existingContract) {
     // Dispatcher-level CONTRACT_NOT_FOUND — webhook controller should
     // already catch this but we want the dispatcher to fail loudly
@@ -151,7 +157,7 @@ async function handlePaymentSuccess(event) {
   // but do NOT throw — the payment has already been applied.
   if (event.invoiceId) {
     try {
-      const reloadedInvoice = await PlatformInvoice.findById(event.invoiceId).lean();
+      const reloadedInvoice = await PlatformInvoice().findById(event.invoiceId).lean();
       const contractAmountMinor = typeof existingContract.lockedPrice === "number" ? Math.round(existingContract.lockedPrice * 100) : null;
       const invoiceAmountMinor = reloadedInvoice?.totalAmountMinor ?? null;
       if (reloadedInvoice && contractAmountMinor !== null && invoiceAmountMinor !== null && invoiceAmountMinor !== contractAmountMinor) {
@@ -201,7 +207,7 @@ async function handlePaymentSuccess(event) {
 async function markInvoicePaid(invoiceId, paymentId) {
   if (!invoiceId) return;
   try {
-    const invoice = await PlatformInvoice.findById(invoiceId);
+    const invoice = await PlatformInvoice().findById(invoiceId);
     if (!invoice) {
       logger.warn({
         event: "INVOICE_MARK_PAID_MISSING",
@@ -224,7 +230,7 @@ async function markInvoicePaid(invoiceId, paymentId) {
       paidAt: new Date()
     };
     if (paymentId) update.providerPaymentId = paymentId;
-    await PlatformInvoice.findByIdAndUpdate(invoiceId, update);
+    await PlatformInvoice().findByIdAndUpdate(invoiceId, update);
     logger.info({
       event: "INVOICE_MARKED_PAID",
       invoiceId: String(invoiceId),

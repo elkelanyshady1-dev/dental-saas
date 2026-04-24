@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Lock, Eye, EyeOff, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { usePlatformAuth } from "./PlatformAuthContext";
+import { BRAND } from "@/config/brand";
 import platformApi from "./platformApi";
 
 export default function PlatformChangePasswordPage() {
@@ -72,7 +73,7 @@ export default function PlatformChangePasswordPage() {
                                 <Shield className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">DentalSaaS Platform</p>
+                                <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">{BRAND.platform.name}</p>
                                 <h1 className="text-lg font-bold text-slate-800 leading-tight">Set Your Password</h1>
                             </div>
                         </div>

@@ -15,6 +15,7 @@ import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { publicApi } from "@/services/api";
 import { Button, Input, Card } from "@/design-system";
+import { BRAND } from "@/config/brand";
 
 export default function ResetPasswordPage() {
     const [params] = useSearchParams();
@@ -90,7 +91,7 @@ export default function ResetPasswordPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="font-extrabold text-slate-800 text-[15px]">DentalSaaS Platform</span>
+                        <span className="font-extrabold text-slate-800 text-[15px]">{BRAND.name}</span>
                     </Link>
                 </div>
 
@@ -201,7 +202,7 @@ function PageShell({ children }) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
-                    <div className="font-extrabold text-2xl text-slate-800 tracking-tight">DentalSaaS Platform</div>
+                    <div className="font-extrabold text-2xl text-slate-800 tracking-tight">{BRAND.name}</div>
                 </Link>
 
                 <h1 className="text-5xl font-bold leading-tight text-slate-900 mt-2">

@@ -7,7 +7,10 @@ const {
   signPlatformToken
 } = require("@core/auth/jwtManager");
 const PlatformUserDef = require("@platform/models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef);
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+}
 const {
   assertUserLimit
 } = require("@core/subscription/planEnforcement");
@@ -392,7 +395,7 @@ exports.refreshToken = async (token, ipAddress, userAgent, organizationId) => {
 
       // @rls-auth-flow — cross-org credential lookup, pre-authentication (no JWT context)
       const userModel = User || (orgId ? _resolveOrgModels(orgId).User : null);
-      const targetUser = userModel ? await userModel.findById(refreshDoc.userId) : await PlatformUser.findById(refreshDoc.userId);
+      const targetUser = userModel ? await userModel.findById(refreshDoc.userId) : await PlatformUser().findById(refreshDoc.userId);
       if (targetUser) {
         targetUser.tokenVersion += 1;
         await targetUser.save();
@@ -422,7 +425,7 @@ exports.refreshToken = async (token, ipAddress, userAgent, organizationId) => {
     user = await User.findById(refreshDoc.userId).populate("organizationId").populate("roleId");
   }
   if (!user) {
-    user = await PlatformUser.findById(refreshDoc.userId);
+    user = await PlatformUser().findById(refreshDoc.userId);
   }
   if (!user || !user.isActive || user.organizationId && !user.organizationId.isActive) {
     let err = new Error("Account is no longer active");

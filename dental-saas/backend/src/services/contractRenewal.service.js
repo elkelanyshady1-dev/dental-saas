@@ -39,15 +39,30 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformConfigDef = require("../platform/models/PlatformConfig");
-const PlatformConfig = getPlatformModel(PlatformConfigDef);
+let _PlatformConfig_cache = null;
+function PlatformConfig() {
+    return _PlatformConfig_cache || (_PlatformConfig_cache = getPlatformModel(PlatformConfigDef));
+}
 const PlatformNotificationDef = require("../platform/models/PlatformNotification");
-const PlatformNotification = getPlatformModel(PlatformNotificationDef);
+let _PlatformNotification_cache = null;
+function PlatformNotification() {
+    return _PlatformNotification_cache || (_PlatformNotification_cache = getPlatformModel(PlatformNotificationDef));
+}
 const {
   getBillingSettings
 } = require("../platform/billing/services/billingSettings.service");
@@ -201,7 +216,7 @@ async function renewExpiringContracts(opts = {}) {
   }, "[ContractRenewal] Starting renewal scan");
 
   // @rls-platform-cron — cross-org contract lifecycle processing, no org-scoped req
-  const expiredContracts = await OrgContract.find({
+  const expiredContracts = await OrgContract().find({
     contractStatus: "active",
     effectiveTo: {
       $lte: now
@@ -261,7 +276,7 @@ async function _processOne(contract, {
 }) {
   // Gate 1: autoRenew=false or canceled → expire immediately
   if (!contract.autoRenew || contract.contractStatus === "canceled") {
-    await OrgContract.findByIdAndUpdate(contract._id, {
+    await OrgContract().findByIdAndUpdate(contract._id, {
       $set: {
         contractStatus: "expired",
         terminatedAt: now,
@@ -312,7 +327,7 @@ async function _processOne(contract, {
   const idempotencyKey = `renewal-${contract._id}-${billingStart.toISOString().slice(0, 10)}`;
 
   // @rls-platform-cron — cross-org contract lifecycle processing, no org-scoped req
-  const existing = await PlatformInvoice.findOne({
+  const existing = await PlatformInvoice().findOne({
     idempotencyKey
   }).lean();
   if (existing) {
@@ -369,13 +384,13 @@ async function _handleSalesManaged(contract, {
     session.startTransaction();
 
     // @rls-platform-cron — cross-org contract lifecycle processing, no org-scoped req
-    const lc = await OrgContract.findById(contract._id).session(session);
+    const lc = await OrgContract().findById(contract._id).session(session);
     if (!lc || lc.contractStatus !== "active") {
       await session.abortTransaction();
       session.endSession();
       return "expired";
     }
-    const invoice = new PlatformInvoice({
+    const invoice = new (PlatformInvoice())({
       organizationId: contract.organizationId,
       contractId: contract._id,
       planVersionId: contract.planVersionId || null,
@@ -399,7 +414,7 @@ async function _handleSalesManaged(contract, {
     });
 
     // Set dunning state on contract: grace window only
-    await OrgContract.findByIdAndUpdate(lc._id, {
+    await OrgContract().findByIdAndUpdate(lc._id, {
       $set: {
         effectiveTo: gracePeriodEndsAt,
         dunning: {
@@ -489,7 +504,7 @@ async function _handleSelfService(contract, {
     session.startTransaction();
 
     // @rls-platform-cron — cross-org contract lifecycle processing, no org-scoped req
-    const lc = await OrgContract.findById(contract._id).session(session);
+    const lc = await OrgContract().findById(contract._id).session(session);
     if (!lc || lc.contractStatus !== "active") {
       await session.abortTransaction();
       session.endSession();
@@ -497,7 +512,7 @@ async function _handleSelfService(contract, {
     }
     if (chargeResult?.status === "succeeded" || chargeResult?.status === "paid") {
       // ── SUCCESS PATH ─────────────────────────────────────────────────────
-      const invoice = new PlatformInvoice({
+      const invoice = new (PlatformInvoice())({
         organizationId: contract.organizationId,
         contractId: contract._id,
         planVersionId: contract.planVersionId || null,
@@ -521,7 +536,7 @@ async function _handleSelfService(contract, {
       });
 
       // Create new contract for next period
-      const newContract = new OrgContract({
+      const newContract = new (OrgContract())({
         organizationId: lc.organizationId,
         planVersionId: lc.planVersionId,
         planCode: lc.planCode,
@@ -551,7 +566,7 @@ async function _handleSelfService(contract, {
       await newContract.save({
         session
       });
-      await OrgContract.findByIdAndUpdate(lc._id, {
+      await OrgContract().findByIdAndUpdate(lc._id, {
         $set: {
           contractStatus: "superseded",
           supersededById: newContract._id,
@@ -560,7 +575,7 @@ async function _handleSelfService(contract, {
       }, {
         session
       });
-      await Organization.findByIdAndUpdate(lc.organizationId, {
+      await Organization().findByIdAndUpdate(lc.organizationId, {
         $set: {
           currentContractId: newContract._id
         }
@@ -568,7 +583,7 @@ async function _handleSelfService(contract, {
         session
       });
       if (price.validCoupon) {
-        await OrgContract.findByIdAndUpdate(newContract._id, {
+        await OrgContract().findByIdAndUpdate(newContract._id, {
           $inc: {
             "appliedCoupon.usedCount": 1
           }
@@ -676,7 +691,7 @@ async function _handleSelfService(contract, {
       const firstRetryDay = settings.retryScheduleDays[0] || 1;
       const firstRetryAt = addDays(now, firstRetryDay);
       const failureReason = chargeError?.message || "provider_declined";
-      const invoice = new PlatformInvoice({
+      const invoice = new (PlatformInvoice())({
         organizationId: contract.organizationId,
         contractId: contract._id,
         planVersionId: contract.planVersionId || null,
@@ -700,7 +715,7 @@ async function _handleSelfService(contract, {
       });
 
       // Initialize dunning state on contract
-      await OrgContract.findByIdAndUpdate(lc._id, {
+      await OrgContract().findByIdAndUpdate(lc._id, {
         $set: {
           effectiveTo: gracePeriodEndsAt,
           dunning: {

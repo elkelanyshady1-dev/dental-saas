@@ -21,7 +21,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const AuditLogDef = require("@shared/models/AuditLog");
-const AuditLog = getPlatformModel(AuditLogDef);
+let _AuditLog_cache = null;
+function AuditLog() {
+    return _AuditLog_cache || (_AuditLog_cache = getPlatformModel(AuditLogDef));
+}
 const {
   generateHash
 } = require("../../services/auditService");
@@ -126,9 +129,9 @@ exports.getAuditLogs = async (req, res) => {
     const limit = intQ(req.query.limit, 50, 200);
     const skip = (page - 1) * limit;
     const filter = _buildFilter(req.query);
-    const [logs, total] = await Promise.all([AuditLog.find(filter).sort({
+    const [logs, total] = await Promise.all([AuditLog().find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), AuditLog.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), AuditLog().countDocuments(filter)]);
     return res.json({
       success: true,
       data: logs,
@@ -186,7 +189,7 @@ exports.getEntityAuditTimeline = async (req, res) => {
     const limit = intQ(req.query.limit, 100, 500);
 
     // Scope to platform plane (GLOBAL) only — org planes have separate audit logs
-    const logs = await AuditLog.find({
+    const logs = await AuditLog().find({
       regionCode: "GLOBAL",
       entityId: new mongoose.Types.ObjectId(entityId),
       ...(entityType ? {
@@ -244,7 +247,7 @@ exports.exportAuditLogs = async (req, res) => {
     const filter = _buildFilter(req.query);
 
     // Cap export at 10,000 rows to prevent abuse
-    const logs = await AuditLog.find(filter).sort({
+    const logs = await AuditLog().find(filter).sort({
       createdAt: -1
     }).limit(10000).lean();
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
@@ -319,7 +322,7 @@ exports.verifyChain = async (req, res) => {
         }
       });
     }
-    const entries = await AuditLog.find({
+    const entries = await AuditLog().find({
       regionCode
     }).sort({
       createdAt: 1

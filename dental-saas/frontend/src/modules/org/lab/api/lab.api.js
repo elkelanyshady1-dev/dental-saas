@@ -20,6 +20,7 @@ export const labApi = {
     getDashboard:   ()          => api.get("/org/lab-cases/dashboard"),
     getCase:        (id)        => api.get(`/org/lab-cases/${id}`),
     createCase:     (data)      => api.post("/org/lab-cases",            data),
+    updateCase:     (id, data)  => api.put(`/org/lab-cases/${id}`,        data),
     updateStatus:   (id, data)  => api.patch(`/org/lab-cases/${id}/status`, data),
 
     // ── Messages ──────────────────────────────────────────────────────────────

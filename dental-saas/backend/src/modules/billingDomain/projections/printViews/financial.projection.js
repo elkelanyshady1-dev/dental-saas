@@ -38,7 +38,6 @@ function _getSnapshot(connection) {
  * Standardized Financial Summary Projection (Snapshot-Backed)
  */
 async function buildPatientFinancialSummary({
-  organizationId,
   patientId,
   connection
 }) {
@@ -71,7 +70,6 @@ async function buildPatientFinancialSummary({
  */
 async function buildInvoicePrintView({
   invoiceId,
-  organizationId,
   connection
 }) {
   const PatientInvoice = _getInvoice(connection);
@@ -120,7 +118,6 @@ async function buildInvoicePrintView({
  */
 async function buildPaymentPrintView({
   paymentId,
-  organizationId,
   connection
 }) {
   const PatientPayment = _getPayment(connection);

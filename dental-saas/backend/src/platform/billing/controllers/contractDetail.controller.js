@@ -14,9 +14,15 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const logger = require("@utils/logger");
 exports.getContractById = async (req, res) => {
   try {
@@ -29,7 +35,7 @@ exports.getContractById = async (req, res) => {
         error: "Invalid contract ID"
       });
     }
-    const contract = await OrgContract.findById(id).populate("organizationId", "name country regionCode").lean();
+    const contract = await OrgContract().findById(id).populate("organizationId", "name country regionCode").lean();
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -38,7 +44,7 @@ exports.getContractById = async (req, res) => {
     }
 
     // Fetch related invoices for this contract
-    const invoices = await PlatformInvoice.find({
+    const invoices = await PlatformInvoice().find({
       contractId: id
     }).sort({
       createdAt: -1

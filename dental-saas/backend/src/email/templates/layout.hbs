@@ -6,143 +6,202 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>{{subject}}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
   <style>
+    /* Reset */
+    body, table, td, p, a, li, blockquote {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
     body {
       margin: 0;
       padding: 0;
-      background: #f4f6f9;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      color: #1a1a2e;
+      background: #f1f5f9;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+      color: #111827;
+      line-height: 1.6;
     }
+    img { border: 0; outline: none; text-decoration: none; }
 
     .wrapper {
       max-width: 600px;
       margin: 40px auto;
       background: #ffffff;
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.06);
     }
 
+    /* ── Header ── */
     .header {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-      padding: 32px 40px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2563eb 100%);
+      padding: 36px 40px;
       text-align: center;
     }
-
-    .header h1 {
-      margin: 0;
+    .header-logo {
+      font-size: 24px;
+      font-weight: 800;
       color: #ffffff;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .header-logo span {
+      color: #60a5fa;
+    }
+    .header-tagline {
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 600;
     }
 
-    .header p {
-      margin: 6px 0 0;
-      color: rgba(255, 255, 255, 0.75);
-      font-size: 13px;
-    }
-
+    /* ── Body ── */
     .body {
       padding: 40px;
     }
 
+    /* ── Footer ── */
     .footer {
-      background: #f4f6f9;
-      padding: 24px 40px;
+      background: #f8fafc;
+      padding: 28px 40px;
       text-align: center;
       font-size: 12px;
-      color: #888;
-      border-top: 1px solid #e9ecef;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
     }
-
     .footer a {
       color: #2563eb;
       text-decoration: none;
+      font-weight: 600;
+    }
+    .footer-brand {
+      font-weight: 700;
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 6px;
     }
 
+    /* ── Reusable Components ── */
     .btn {
       display: inline-block;
       margin: 24px 0;
-      padding: 14px 32px;
+      padding: 16px 36px;
       background: #2563eb;
       color: #ffffff !important;
-      border-radius: 8px;
+      border-radius: 10px;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 15px;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
     }
+    .btn:hover { background: #1d4ed8; }
 
-    .btn:hover {
-      background: #1d4ed8;
+    .btn-emerald {
+      background: #10b981;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
     }
+    .btn-emerald:hover { background: #059669; }
 
     .divider {
       border: none;
-      border-top: 1px solid #e9ecef;
-      margin: 24px 0;
+      border-top: 1px solid #e2e8f0;
+      margin: 28px 0;
     }
 
     .pill {
       display: inline-block;
-      padding: 4px 12px;
+      padding: 4px 14px;
       border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
-
-    .pill-blue {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-    .pill-green {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .pill-red {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .pill-amber {
-      background: #fef3c7;
-      color: #92400e;
-    }
+    .pill-blue { background: #dbeafe; color: #1d4ed8; }
+    .pill-green { background: #d1fae5; color: #065f46; }
+    .pill-red { background: #fee2e2; color: #991b1b; }
+    .pill-amber { background: #fef3c7; color: #92400e; }
 
     table.data {
       width: 100%;
       border-collapse: collapse;
       margin: 16px 0;
     }
-
     table.data th {
       background: #f8fafc;
-      padding: 10px 14px;
+      padding: 10px 16px;
       text-align: left;
-      font-size: 12px;
+      font-size: 11px;
       color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+      border-bottom: 2px solid #e2e8f0;
     }
-
     table.data td {
-      padding: 12px 14px;
+      padding: 12px 16px;
       border-bottom: 1px solid #f1f5f9;
       font-size: 14px;
+      color: #334155;
     }
-
-    table.data tr:last-child td {
-      border-bottom: none;
-    }
+    table.data tr:last-child td { border-bottom: none; }
 
     .amount-row {
       font-size: 20px;
-      font-weight: 700;
-      color: #1e3a5f;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+
+    .warning-box {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #92400e;
+      line-height: 1.6;
+    }
+
+    .security-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #991b1b;
+      line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media only screen and (max-width: 620px) {
+      .wrapper { margin: 0 !important; border-radius: 0 !important; }
+      .body { padding: 24px !important; }
+      .header { padding: 28px 24px !important; }
+      .footer { padding: 20px 24px !important; }
     }
   </style>
 </head>
@@ -150,17 +209,18 @@
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>{{platformName}}</h1>
-      <p>Clinic Management Platform</p>
+      <p class="header-logo">Ortho<span>Noe</span></p>
+      <p class="header-tagline">Modern Orthodontic Platform</p>
     </div>
     <div class="body">
       {{> body}}
     </div>
     <div class="footer">
-      <p>© {{year}} {{platformName}}. All rights reserved.</p>
-      <p>This is an automated message. Please do not reply directly to this email.</p>
+      <p class="footer-brand">OrthoNoe</p>
+      <p>&copy; {{year}} OrthoNoe Platform Inc. All rights reserved.</p>
+      <p>This is an automated message. Please do not reply directly.</p>
       {{#if supportEmail}}
-      <p>Questions? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+      <p style="margin-top:12px;">Questions? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
       {{/if}}
     </div>
   </div>

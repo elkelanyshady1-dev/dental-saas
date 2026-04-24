@@ -1,6 +1,9 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const FeatureDefinitionDef = require("../shared/models/FeatureDefinition");
-const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
+let _FeatureDefinition_cache = null;
+function FeatureDefinition() {
+    return _FeatureDefinition_cache || (_FeatureDefinition_cache = getPlatformModel(FeatureDefinitionDef));
+}
 /**
  * Merges FeatureDefinitions with an organizational feature object.
  *
@@ -15,7 +18,7 @@ const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
  */
 async function computeOrgFeatures(org) {
   // @rls-platform-service — global feature definitions, no org-scoped req
-  const definitions = await FeatureDefinition.find({});
+  const definitions = await FeatureDefinition().find({});
   const computedFeatures = {};
   const currentPlan = org.subscription?.plan || "basic";
 

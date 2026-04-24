@@ -41,11 +41,20 @@ const {
   computePrice
 } = require("../pricing/pricingEngine.service");
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // ── Engine imports (lazy to avoid circular dep at module load time) ──────────
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // ── Engine imports (lazy to avoid circular dep at module load time) ──────────
 let _sub, _inv, _pay, _led;
 function sub() {
   if (!_sub) _sub = require("../services/contractEngine.service");
@@ -371,7 +380,7 @@ const BillingOrchestrator = {
     }, "[Orchestrator] previewUpgradePrice");
 
     // Fetch org for country-based region resolution
-    const org = await Organization.findById(organizationId).select("country billingCountry").lean();
+    const org = await Organization().findById(organizationId).select("country billingCountry").lean();
     if (!org) {
       const err = new Error(`Organization ${organizationId} not found`);
       err.status = 404;
@@ -379,7 +388,7 @@ const BillingOrchestrator = {
     }
 
     // Fetch plan version
-    const pv = await PlanVersion.findById(planVersionId).lean();
+    const pv = await PlanVersion().findById(planVersionId).lean();
     if (!pv) {
       const err = new Error(`PlanVersion ${planVersionId} not found`);
       err.status = 404;
@@ -527,7 +536,7 @@ const BillingOrchestrator = {
     log("start");
 
     // ── Pre-flight: resolve plan version + org outside transaction ────────────
-    const [org, pv] = await Promise.all([Organization.findById(organizationId).select("country billingCountry isArchived name").lean(), PlanVersion.findById(planVersionId).lean()]);
+    const [org, pv] = await Promise.all([Organization().findById(organizationId).select("country billingCountry isArchived name").lean(), PlanVersion().findById(planVersionId).lean()]);
     if (!org) {
       const e = new Error(`Organization ${organizationId} not found`);
       e.status = 404;
@@ -562,7 +571,7 @@ const BillingOrchestrator = {
     // ── Section 10: CONTRACT_ALREADY_PENDING_PAYMENT guard ──────────────────
     // Per Section 10: if org already has a pending_payment contract (any plan),
     // reject to prevent multiple open invoices simultaneously.
-    const existingPendingPayment = await OrgContract.findOne({
+    const existingPendingPayment = await OrgContract().findOne({
       organizationId,
       contractStatus: "pending_payment"
     }).select("_id planVersionId").lean();
@@ -1015,7 +1024,7 @@ const BillingOrchestrator = {
     // return the existing contract immediately — no DB writes, no transaction.
     const idempotencyKey = requestId || null;
     if (idempotencyKey) {
-      const existing = await OrgContract.findOne({
+      const existing = await OrgContract().findOne({
         idempotencyKey
       }).select("_id contractStatus accessType").lean();
       if (existing) {
@@ -1053,7 +1062,7 @@ const BillingOrchestrator = {
         // DB unique index (unique_active_contract_per_org) is the hard stop.
         // This application-layer check fires BEFORE the index, giving a clean
         // diagnostic error instead of a raw MongoServerError E11000.
-        const activeCount = await OrgContract.countDocuments({
+        const activeCount = await OrgContract().countDocuments({
           organizationId,
           contractStatus: "active"
         }).session(session);
@@ -1098,7 +1107,7 @@ const BillingOrchestrator = {
         // ── [5] FAIL-FAST: Contract must be "active" after activation ─────
         // Reload within session — reads the DB state set by activateContract,
         // not just the in-memory document that was passed by reference.
-        const confirmedContract = await OrgContract.findById(contract._id).select("contractStatus").session(session).lean();
+        const confirmedContract = await OrgContract().findById(contract._id).select("contractStatus").session(session).lean();
         if (!confirmedContract || confirmedContract.contractStatus !== "active") {
           throw new Error(`INVARIANT_VIOLATION: Contract ${contract._id} should be "active" after activation ` + `but got status="${confirmedContract?.contractStatus ?? "NOT_FOUND"}"`);
         }
@@ -1112,14 +1121,14 @@ const BillingOrchestrator = {
       // ── [6] POST-COMMIT VERIFICATION ──────────────────────────────────────
       // Query OUTSIDE the session — confirms what MongoDB actually committed,
       // not what was visible inside the transaction snapshot.
-      const committedOrg = await Organization.findById(organizationId).select("currentContractId").lean();
+      const committedOrg = await Organization().findById(organizationId).select("currentContractId").lean();
       if (!committedOrg) {
         throw new Error(`POST_COMMIT_INVARIANT: Organization ${organizationId} not found after commit`);
       }
       if (!committedOrg.currentContractId || String(committedOrg.currentContractId) !== String(contract._id)) {
         throw new Error(`POST_COMMIT_INVARIANT: org.currentContractId=${committedOrg.currentContractId} ` + `does not point to new contract ${contract._id} after commit`);
       }
-      const committedContract = await OrgContract.findById(contract._id).select("contractStatus").lean();
+      const committedContract = await OrgContract().findById(contract._id).select("contractStatus").lean();
       if (!committedContract || committedContract.contractStatus !== "active") {
         throw new Error(`POST_COMMIT_INVARIANT: Contract ${contract._id} not "active" after commit ` + `(got "${committedContract?.contractStatus ?? "NOT_FOUND"}")`);
       }
@@ -1133,7 +1142,7 @@ const BillingOrchestrator = {
       setImmediate(async () => {
         try {
           // [10] Guardian: UNIQUE_ACTIVE_CONTRACT_PER_ORG
-          const dupeCount = await OrgContract.countDocuments({
+          const dupeCount = await OrgContract().countDocuments({
             organizationId,
             contractStatus: "active"
           });
@@ -1146,8 +1155,8 @@ const BillingOrchestrator = {
           }
 
           // [10] Guardian: ORG_CURRENT_CONTRACT_POINTER_INTEGRITY
-          const orgCheck = await Organization.findById(organizationId).select("currentContractId").lean();
-          const ptrContract = orgCheck?.currentContractId ? await OrgContract.findById(orgCheck.currentContractId).select("contractStatus").lean() : null;
+          const orgCheck = await Organization().findById(organizationId).select("currentContractId").lean();
+          const ptrContract = orgCheck?.currentContractId ? await OrgContract().findById(orgCheck.currentContractId).select("contractStatus").lean() : null;
           if (!ptrContract || ptrContract.contractStatus !== "active") {
             logger.error({
               organizationId,

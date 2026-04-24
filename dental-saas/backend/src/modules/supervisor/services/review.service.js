@@ -58,7 +58,6 @@ class ReviewService {
    */
   async createReviewStage({
     caseId,
-    organizationId,
     stageType,
     requestedBy,
     snapshotId

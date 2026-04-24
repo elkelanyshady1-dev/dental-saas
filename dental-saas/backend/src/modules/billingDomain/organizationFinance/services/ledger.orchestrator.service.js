@@ -579,7 +579,6 @@ class FinancialOrchestrator {
    */
   async creditWallet(params) {
     const {
-      organizationId,
       patientId,
       amount,
       branchId,

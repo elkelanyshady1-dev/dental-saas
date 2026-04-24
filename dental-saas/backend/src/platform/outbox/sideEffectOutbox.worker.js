@@ -28,7 +28,10 @@
 
 const getSharedModel      = require("@core/db/getSharedModel");
 const SideEffectOutboxDef = require("./SideEffectOutbox.model");
-const SideEffectOutbox    = getSharedModel(SideEffectOutboxDef);
+let _SideEffectOutbox_cache = null;
+function SideEffectOutbox() {
+    return _SideEffectOutbox_cache || (_SideEffectOutbox_cache = getSharedModel(SideEffectOutboxDef));
+}
 const { dispatchSideEffect } = require("./outbox.dispatcher");
 const logger              = require("@utils/logger");
 
@@ -64,7 +67,7 @@ async function processBatch() {
 
     try {
         // Fetch pending events (FIFO)
-        const events = await SideEffectOutbox.find({
+        const events = await SideEffectOutbox().find({
             status:     "pending",
             retryCount: { $lt: 5 }, // safety — also checked per-event
         })
@@ -95,7 +98,7 @@ async function processBatch() {
 async function processEvent(event) {
     try {
         // ── STEP 1: Atomic claim — prevents duplicate processing ─────────
-        const locked = await SideEffectOutbox.findOneAndUpdate(
+        const locked = await SideEffectOutbox().findOneAndUpdate(
             {
                 _id:    event._id,
                 status: "pending",
@@ -115,7 +118,7 @@ async function processEvent(event) {
         const result = await dispatchSideEffect(locked);
 
         // ── STEP 3: Mark completed ───────────────────────────────────────
-        await SideEffectOutbox.updateOne(
+        await SideEffectOutbox().updateOne(
             { _id: locked._id },
             {
                 $set: {
@@ -142,7 +145,7 @@ async function processEvent(event) {
 
         if (newRetryCount >= maxRetries || err.code === "UNKNOWN_EVENT_TYPE") {
             // Dead letter — exhausted retries or unknown type
-            await SideEffectOutbox.updateOne(
+            await SideEffectOutbox().updateOne(
                 { _id: event._id },
                 {
                     $set: {
@@ -165,7 +168,7 @@ async function processEvent(event) {
 
         } else {
             // Return to pending for retry
-            await SideEffectOutbox.updateOne(
+            await SideEffectOutbox().updateOne(
                 { _id: event._id },
                 {
                     $set: {

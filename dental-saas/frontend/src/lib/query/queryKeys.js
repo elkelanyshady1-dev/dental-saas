@@ -93,6 +93,16 @@ const orthodontics = {
     // Situation Room — single aggregation key. Parameterless: the backend
     // derives scope from JWT, so the cache is per-user automatically.
     dashboard: ()        => [...orthodontics.all, 'dashboard'],
+
+    // ── Phase 1+2 — Case Assets (Photo SSOT) ──────────────────────────────
+    // Logical pool scoped per case. Record-set / visit pools derive from the
+    // photo list on the client; backend filtering happens via link arrays
+    // already present on each Photo doc.
+    photos:      (caseId)             => [...orthodontics.detail(caseId), 'photos'],
+    photo:       (caseId, photoId)    => [...orthodontics.photos(caseId), photoId],
+    recordSets:  (caseId)             => [...orthodontics.detail(caseId), 'record-sets'],
+    recordSet:   (caseId, recordSetId)=> [...orthodontics.recordSets(caseId), recordSetId],
+    visits:      (caseId)             => [...orthodontics.detail(caseId), 'visits'],
 };
 
 // ── Settings Hub: Billing ─────────────────────────────────────────────────

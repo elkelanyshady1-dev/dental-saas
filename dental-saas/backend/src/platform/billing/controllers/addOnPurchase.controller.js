@@ -21,7 +21,10 @@ const {
   createAuditRecord
 } = require("../../../services/auditService");
 const OrganizationDef = require("../../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 /**
  * purchaseAddOn
  * POST /api/org/addons/purchase
@@ -35,7 +38,7 @@ exports.purchaseAddOn = async (req, res) => {
       addOnCode,
       interval = "monthly"
     } = req.body;
-    const [org, addOn] = await Promise.all([Organization.findById(organizationId), addOnService.getAddOnByCode(addOnCode)]);
+    const [org, addOn] = await Promise.all([Organization().findById(organizationId), addOnService.getAddOnByCode(addOnCode)]);
     if (!org || !addOn) {
       return res.status(404).json({
         message: "Organization or Add-On not found"

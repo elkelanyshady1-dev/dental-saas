@@ -1,0 +1,5 @@
+# This directory stores MongoDB backups produced by scripts/backup.sh
+# Backup folders are git-ignored (see .gitignore) — only this placeholder is tracked.
+#
+# To create a backup:   bash scripts/backup.sh
+# To restore a backup:  bash scripts/restore.sh <backup-folder-name>

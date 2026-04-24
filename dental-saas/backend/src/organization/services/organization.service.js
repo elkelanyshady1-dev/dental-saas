@@ -1,7 +1,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const featureService = require("@services/featureService");
 const initializeRolesForOrganization = require("@utils/roleInitializer");
 const bcrypt = require("bcryptjs");
@@ -29,12 +32,21 @@ const {
   activateContract
 } = require("@billing/services/contractActivation.service");
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef); // ─── Hybrid Onboarding Billing (Sprint 8) ────────────────────────────────────
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+} // ─── Hybrid Onboarding Billing (Sprint 8) ────────────────────────────────────
 // Post-trial pending contract scheduling + billing timeline events.
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const {
   computePrice
 } = require("@billing/pricing/pricingEngine.service");
@@ -187,7 +199,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
   try {
     // 1. Validate uniqueness
     // @rls-platform-service — org creation/provisioning, no org-scoped req context
-    const existingOrg = await Organization.findOne({
+    const existingOrg = await Organization().findOne({
       $or: [{
         name: organizationName
       }, ...(slug ? [{
@@ -237,7 +249,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
 
     // ─── 2c. Resolve PlanVersion for trial contract ──────────────────────────
     // @rls-platform-service — org creation/provisioning, no org-scoped req context
-    trialPlanVersion = await PlanVersion.findOne({
+    trialPlanVersion = await PlanVersion().findOne({
       templateCode: trialPlanCode,
       status: "active"
     }).session(session).lean();
@@ -248,7 +260,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
     // ─── 2d. Eagerly resolve post-trial PlanVersion (if scheduled) ───────────
     if (postTrialPlanVersionId) {
       // @rls-platform-service — org creation/provisioning, no org-scoped req context
-      selectedPlan = await PlanVersion.findById(postTrialPlanVersionId).session(session).lean();
+      selectedPlan = await PlanVersion().findById(postTrialPlanVersionId).session(session).lean();
       if (!selectedPlan) {
         throw new Error(`[Provision] POST_TRIAL_PLAN_NOT_FOUND: PlanVersion ${postTrialPlanVersionId} not found.`);
       }
@@ -259,7 +271,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
 
     // ─── 2e. Create Organization document ────────────────────────────────────
     trialEndDate = new Date(now.getTime() + trialPeriod * 24 * 60 * 60 * 1000);
-    [organization] = await Organization.create([{
+    [organization] = await Organization().create([{
       name: organizationName,
       slug: slug || undefined,
       ownerId: platformUserId,
@@ -318,7 +330,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
     }, "[Provision] Trial draft contract created");
 
     // 9b. Create $0 trial invoice — pre-marked as "paid"
-    const [trialInvoice] = await PlatformInvoice.create([{
+    const [trialInvoice] = await PlatformInvoice().create([{
       contractId: draftContract._id,
       planVersionId: trialPlanVersion._id,
       invoiceType: "initial",
@@ -414,7 +426,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
         }, "[Provision] Pricing missing — defaulting to 0 (non-production)");
         preview.finalPrice = 0;
       }
-      pendingContract = new OrgContract({
+      pendingContract = new (OrgContract())({
         planVersionId: selectedPlan._id,
         planCode: selectedPlan.templateCode,
         planVersionTag: selectedPlan.versionTag,
@@ -568,7 +580,7 @@ exports.provisionOrganization = async (data, platformUserId, ip, userAgent) => {
       phase: "B_ORG_BOOTSTRAP"
     }, `[Provision] CRITICAL: Phase B org bootstrap failed for ${organizationName}. Platform entities are committed. Marking org as PROVISION_FAILED.`);
     try {
-      await Organization.findByIdAndUpdate(organization._id, {
+      await Organization().findByIdAndUpdate(organization._id, {
         $set: {
           "subscription.status": "provision_failed",
           "provisionError": {

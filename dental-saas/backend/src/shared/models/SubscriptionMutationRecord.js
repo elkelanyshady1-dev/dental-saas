@@ -7,6 +7,6 @@
  */
 "use strict";
 
-const getPlatformModel = require("@core/db/getPlatformModel");
+const { makeLazyPlatformModel } = require("@core/db/lazyModelProxy");
 const SubscriptionMutationRecordDef = require("../../platform/billing/models/SubscriptionMutationRecord.model");
-module.exports = getPlatformModel(SubscriptionMutationRecordDef);
+module.exports = makeLazyPlatformModel(SubscriptionMutationRecordDef);

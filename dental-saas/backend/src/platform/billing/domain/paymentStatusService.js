@@ -20,7 +20,10 @@ const {
   assertValidTransition
 } = require("./paymentStateMachine");
 const PlatformInvoiceDef = require("../../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const auditService = require("../../../services/auditService");
 const logger = require("@utils/logger");
 
@@ -49,7 +52,7 @@ async function updatePaymentStatus({
   metadata = {}
 }) {
   // 1. Load the payment record
-  const invoice = await PlatformInvoice.findById(paymentId).session(session || null);
+  const invoice = await PlatformInvoice().findById(paymentId).session(session || null);
   if (!invoice) {
     throw new Error(`[paymentStatusService] Payment not found: ${paymentId}`);
   }
@@ -116,7 +119,7 @@ async function updatePaymentStatusByProviderPaymentId({
   nextStatus,
   ...rest
 }) {
-  const invoice = await PlatformInvoice.findOne({
+  const invoice = await PlatformInvoice().findOne({
     providerPaymentId
   });
   if (!invoice) {

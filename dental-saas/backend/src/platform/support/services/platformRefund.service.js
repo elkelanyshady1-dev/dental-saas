@@ -20,7 +20,10 @@ const {
   ticketSchema
 } = require("@shared/models/Ticket");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   invoiceSchema
 } = require("@shared/models/BillingInvoice");
@@ -40,7 +43,7 @@ class RefundService {
       mongooseConnection
     } = await getRegionContext(regionCode);
     // Resolve provider from the organization's subscription.paymentProvider field
-    const org = await Organization.findOne({
+    const org = await Organization().findOne({
       _id: (await mongooseConnection.model("Ticket", ticketSchema).findById(ticketId))?.organizationId
     });
     const provider = getProvider(org?.subscription?.paymentProvider || "stripe");

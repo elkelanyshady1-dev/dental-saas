@@ -26,7 +26,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationEntitlementDef = require("../models/OrganizationEntitlement.model");
-const OrganizationEntitlement = getPlatformModel(OrganizationEntitlementDef);
+let _OrganizationEntitlement_cache = null;
+function OrganizationEntitlement() {
+    return _OrganizationEntitlement_cache || (_OrganizationEntitlement_cache = getPlatformModel(OrganizationEntitlementDef));
+}
 const {
   buildEffectivePlan
 } = require("../../../core/subscription/effectivePlanBuilder");
@@ -141,7 +144,7 @@ async function resolveOrganizationEntitlements(orgId, planVersion) {
     }
 
     // ── 3. DB lookup — current entitlement (effectiveUntil = null) ────────
-    const override = await OrganizationEntitlement.findOne({
+    const override = await OrganizationEntitlement().findOne({
       organizationId: orgId,
       effectiveUntil: null
     }).lean().maxTimeMS(3000); // Hard timeout — never hangs a request

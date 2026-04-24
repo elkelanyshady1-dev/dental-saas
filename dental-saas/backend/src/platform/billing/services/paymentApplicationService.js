@@ -24,11 +24,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const PaymentAttemptDef = require("../models/PaymentAttempt.model");
-const PaymentAttempt = getPlatformModel(PaymentAttemptDef);
+let _PaymentAttempt_cache = null;
+function PaymentAttempt() {
+    return _PaymentAttempt_cache || (_PaymentAttempt_cache = getPlatformModel(PaymentAttemptDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -115,11 +124,11 @@ async function applyPayment({
   // If the same Idempotency-Key arrives again (API retry / network timeout),
   // return the original result without touching the DB a second time.
   if (idempotencyKey) {
-    const existing = await PaymentAttempt.findOne({
+    const existing = await PaymentAttempt().findOne({
       idempotencyKey
     }).lean();
     if (existing) {
-      const existingInvoice = await PlatformInvoice.findById(existing.invoiceId).lean();
+      const existingInvoice = await PlatformInvoice().findById(existing.invoiceId).lean();
       logger.info({
         idempotencyKey,
         paymentId: existing._id,
@@ -143,7 +152,7 @@ async function applyPayment({
   if (ownsSession) session.startTransaction();
   try {
     // ── Load invoice ──────────────────────────────────────────────────────
-    const invoice = await PlatformInvoice.findById(invoiceId).session(session);
+    const invoice = await PlatformInvoice().findById(invoiceId).session(session);
     if (!invoice) {
       throw Object.assign(new Error("Invoice not found"), {
         statusCode: 404
@@ -170,7 +179,7 @@ async function applyPayment({
     }
 
     // ── Create PaymentAttempt ────────────────────────────────────────────────────────────
-    const [payment] = await PaymentAttempt.create([{
+    const [payment] = await PaymentAttempt().create([{
       invoiceId: invoice._id,
       contractId: invoice.contractId,
       organizationId: invoice.organizationId,
@@ -308,7 +317,7 @@ async function applyPayment({
     if (newStatus === "paid" && activateContract) {
       setImmediate(async () => {
         try {
-          const contract = await OrgContract.findById(invoice.contractId);
+          const contract = await OrgContract().findById(invoice.contractId);
           if (!contract) return;
           if (contract.contractStatus === "pending_payment") {
             // ── Primary invoice-first path: pending_payment → active ────────
@@ -427,7 +436,7 @@ async function refundPayment({
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const payment = await PaymentAttempt.findById(paymentId).session(session);
+    const payment = await PaymentAttempt().findById(paymentId).session(session);
     if (!payment) {
       throw Object.assign(new Error("Payment not found"), {
         statusCode: 404
@@ -459,7 +468,7 @@ async function refundPayment({
     });
 
     // Update invoice amountPaid
-    const invoice = await PlatformInvoice.findById(payment.invoiceId).session(session);
+    const invoice = await PlatformInvoice().findById(payment.invoiceId).session(session);
     if (!invoice) {
       throw Object.assign(new Error("Associated invoice not found"), {
         statusCode: 404

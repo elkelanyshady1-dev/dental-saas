@@ -26,6 +26,7 @@ import platformApi from '../auth/platformApi';
 import { toast } from 'sonner';
 import { getPlatformToken } from '../auth/PlatformAuthContext';
 import RequireCapability from '../core/guards/RequireCapability';
+import { BRAND } from '@/config/brand';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -306,14 +307,14 @@ const EMAIL_PRESETS = [
 ];
 
 const SMS_PRESETS = [
-    { label: 'OTP', type: 'OTP', payload: { phone: '+1234567890', code: '123456', expiresInMinutes: 10, platformName: 'DentalSaaS' } },
+    { label: 'OTP', type: 'OTP', payload: { phone: '+1234567890', code: '123456', expiresInMinutes: 10, platformName: BRAND.name } },
     { label: 'Appt Reminder', type: 'APPOINTMENT_REMINDER', payload: { phone: '+1234567890', clinicName: 'Demo Clinic', date: '2026-03-08', time: '10:00 AM' } },
-    { label: 'Grace SMS', type: 'GRACE_SMS', payload: { phone: '+1234567890', platformName: 'DentalSaaS' } },
+    { label: 'Grace SMS', type: 'GRACE_SMS', payload: { phone: '+1234567890', platformName: BRAND.name } },
 ];
 
 const WHATSAPP_PRESETS = [
     { label: 'Appointment', type: 'APPOINTMENT_CONFIRM', payload: { phone: '+1234567890', body: 'Your appointment is confirmed for tomorrow at 10am. Reply YES to confirm.' } },
-    { label: 'Payment', type: 'PAYMENT_RECEIPT', payload: { phone: '+1234567890', body: 'Payment received: $99.00 for DentalSaaS Pro Plan. Thank you!' } },
+    { label: 'Payment', type: 'PAYMENT_RECEIPT', payload: { phone: '+1234567890', body: `Payment received: $99.00 for ${BRAND.name} Pro Plan. Thank you!` } },
 ];
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────

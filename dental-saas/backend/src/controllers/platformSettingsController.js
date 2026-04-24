@@ -1,11 +1,14 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlatformConfigDef = require("../platform/models/PlatformConfig");
-const PlatformConfig = getPlatformModel(PlatformConfigDef); // There should only be one config document. We find the first one, or create it.
+let _PlatformConfig_cache = null;
+function PlatformConfig() {
+    return _PlatformConfig_cache || (_PlatformConfig_cache = getPlatformModel(PlatformConfigDef));
+} // There should only be one config document. We find the first one, or create it.
 exports.getSettings = async (req, res) => {
   try {
-    let config = await PlatformConfig.findOne();
+    let config = await PlatformConfig().findOne();
     if (!config) {
-      config = await PlatformConfig.create({});
+      config = await PlatformConfig().create({});
     }
     res.json(config);
   } catch (err) {
@@ -17,9 +20,9 @@ exports.getSettings = async (req, res) => {
 };
 exports.updateSettings = async (req, res) => {
   try {
-    let config = await PlatformConfig.findOne();
+    let config = await PlatformConfig().findOne();
     if (!config) {
-      config = await PlatformConfig.create(req.body);
+      config = await PlatformConfig().create(req.body);
     } else {
       // Update existing config
       Object.assign(config, req.body);

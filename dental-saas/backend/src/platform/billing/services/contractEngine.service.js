@@ -25,11 +25,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const logger = require("@utils/logger");
 const {
   assertValidTransition
@@ -177,7 +186,7 @@ async function createContract(data, actorId, options = {}) {
   }
 
   // Validate: org must exist
-  const org = await Organization.findById(organizationId).select("_id name isArchived").session(session || null);
+  const org = await Organization().findById(organizationId).select("_id name isArchived").session(session || null);
   if (!org) {
     throw new ContractEngineError(`Organization ${organizationId} not found`, "ORG_NOT_FOUND", 404);
   }
@@ -188,7 +197,7 @@ async function createContract(data, actorId, options = {}) {
   // Validate: only one draft per org allowed (prevent duplicates)
   // Skip this check when initialStatus is provided — the caller manages its own duplicate guard.
   if (!initialStatus) {
-    const existingDraft = await OrgContract.findOne({
+    const existingDraft = await OrgContract().findOne({
       organizationId,
       contractStatus: "draft"
     }).session(session || null);
@@ -223,7 +232,7 @@ async function createContract(data, actorId, options = {}) {
     const isPaidContract = trialDays === 0;
     if (isPaidContract) {
       const now = new Date();
-      const activeTrial = await OrgContract.findOne({
+      const activeTrial = await OrgContract().findOne({
         organizationId,
         contractStatus: "active",
         trialDays: {
@@ -236,7 +245,7 @@ async function createContract(data, actorId, options = {}) {
       if (activeTrial) {
         // Check no pending_activation already exists — DB index enforces uniqueness,
         // but give a clean error message before hitting the Mongo duplicate key error.
-        const existingPending = await OrgContract.findOne({
+        const existingPending = await OrgContract().findOne({
           organizationId,
           contractStatus: "pending_activation"
         }).session(session || null);
@@ -259,7 +268,7 @@ async function createContract(data, actorId, options = {}) {
   // Also validates plan version eligibility for contract creation.
   let resolvedTag = planVersionTag;
   if (planVersionId) {
-    const pv = await PlanVersion.findById(planVersionId).select("versionTag status visibility").lean();
+    const pv = await PlanVersion().findById(planVersionId).select("versionTag status visibility").lean();
     if (!pv) {
       throw new ContractEngineError(`PlanVersion ${planVersionId} not found`, "PLAN_VERSION_NOT_FOUND", 404);
     }
@@ -344,7 +353,7 @@ async function createContract(data, actorId, options = {}) {
   //          its own timeline via atomic session supersession).
   if (!initialStatus && resolvedEffectiveFrom) {
     const TERMINAL_STATUSES = ["superseded", "terminated", "expired", "canceled", "void"];
-    const overlappingContract = await OrgContract.findOne({
+    const overlappingContract = await OrgContract().findOne({
       organizationId,
       contractStatus: {
         $nin: TERMINAL_STATUSES
@@ -361,7 +370,7 @@ async function createContract(data, actorId, options = {}) {
   const opts = session ? {
     session
   } : {};
-  const [contract] = await OrgContract.create([contractData], opts);
+  const [contract] = await OrgContract().create([contractData], opts);
 
   // v23.0: Debug log — confirm accessType is what the orchestrator resolved.
   // This log MUST show the correct value (e.g. "promo") not the Mongoose default.
@@ -408,7 +417,7 @@ async function replaceContract(sourceContractId, updates, actorId, options = {})
   const {
     session
   } = options;
-  const source = await OrgContract.findById(sourceContractId).session(session || null);
+  const source = await OrgContract().findById(sourceContractId).session(session || null);
   if (!source) {
     throw new ContractEngineError(`Contract ${sourceContractId} not found`, "CONTRACT_NOT_FOUND", 404);
   }
@@ -417,7 +426,7 @@ async function replaceContract(sourceContractId, updates, actorId, options = {})
   }
 
   // Guard: one pending replacement per org
-  const existingDraft = await OrgContract.findOne({
+  const existingDraft = await OrgContract().findOne({
     organizationId: source.organizationId,
     contractStatus: "draft"
   }).session(session || null);
@@ -452,7 +461,7 @@ async function replaceContract(sourceContractId, updates, actorId, options = {})
   const opts = session ? {
     session
   } : {};
-  const [replacement] = await OrgContract.create([newContractData], opts);
+  const [replacement] = await OrgContract().create([newContractData], opts);
   logger.info({
     replacementId: replacement._id,
     sourceContractId,
@@ -534,7 +543,7 @@ async function expireContract(contractId, reason, actorId, options = {}) {
   const {
     session
   } = options;
-  const contract = await OrgContract.findById(contractId).session(session || null);
+  const contract = await OrgContract().findById(contractId).session(session || null);
   if (!contract) {
     throw new ContractEngineError(`Contract ${contractId} not found`, "CONTRACT_NOT_FOUND", 404);
   }
@@ -563,7 +572,7 @@ async function expireContract(contractId, reason, actorId, options = {}) {
 
   // If this was the active contract, clear org.currentContractId
   if (wasActive) {
-    await Organization.findByIdAndUpdate(contract.organizationId, {
+    await Organization().findByIdAndUpdate(contract.organizationId, {
       $set: {
         currentContractId: null
       }

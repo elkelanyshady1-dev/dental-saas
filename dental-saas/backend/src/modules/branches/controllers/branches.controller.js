@@ -146,7 +146,6 @@ exports.getChairs = asyncHandler(async (req, res) => {
 });
 
 
-
 /**
  * GET /api/v1/branches/:id/chair-analytics
  * Returns per-chair analytics for a branch: utilization %, revenue, appointment count.

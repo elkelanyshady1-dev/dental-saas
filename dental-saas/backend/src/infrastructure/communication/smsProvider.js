@@ -1,18 +1,19 @@
 /**
  * smsProvider.js
  * Platform Infrastructure — SMS Provider Abstraction
- * v1.0
+ * v1.1 — SMSMisr registered as an additional provider
  *
  * Wraps SMS delivery behind a provider-agnostic interface.
  * Environment switching:
  *   development → Console log (no real send)
  *   staging     → Twilio Test Credentials (free)
- *   production  → Twilio or Vonage (configurable via SMS_PROVIDER env)
+ *   production  → Twilio | Vonage | SMSMisr (via SMS_PROVIDER env)
  *
  * Env vars:
- *   SMS_PROVIDER=twilio|vonage|console (default: console in dev)
+ *   SMS_PROVIDER=twilio|vonage|smsmisr|console (default: console in dev)
  *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
  *   VONAGE_API_KEY, VONAGE_API_SECRET, VONAGE_FROM_NUMBER
+ *   SMSMISR_USERNAME, SMSMISR_PASSWORD, SMSMISR_SENDER, SMSMISR_TEMPLATE, SMSMISR_LANGUAGE
  *   SMS_FROM_NUMBER (fallback)
  *
  * PLANE: Platform / Infrastructure
@@ -21,6 +22,7 @@
 "use strict";
 
 const logger = require("../../utils/logger");
+const smsmisrProvider = require("./providers/sms/smsmisr.provider");
 
 /**
  * sendSms
@@ -65,6 +67,18 @@ async function sendSms({ to, body, type = "GENERIC" }) {
         }
     }
 
+    // ── SMSMisr ─────────────────────────────────────────────────────────────
+    if (provider === "smsmisr") {
+        try {
+            const result = await smsmisrProvider.send({ to, body, type });
+            logger.info({ messageId: result.messageId, to, type }, "[SMS:SMSMisr] Message sent");
+            return { messageId: result.messageId, provider: result.provider };
+        } catch (err) {
+            logger.error({ err: err.message, to, type }, "[SMS:SMSMisr] Send failed");
+            throw err;
+        }
+    }
+
     // ── Vonage ──────────────────────────────────────────────────────────────
     if (provider === "vonage") {
         try {
@@ -75,7 +89,7 @@ async function sendSms({ to, body, type = "GENERIC" }) {
             });
             return new Promise((resolve, reject) => {
                 vonage.message.sendSms(
-                    process.env.VONAGE_FROM_NUMBER || process.env.SMS_FROM_NUMBER || "DentalSaaS",
+                    process.env.VONAGE_FROM_NUMBER || process.env.SMS_FROM_NUMBER || "OrthoNoe",
                     to,
                     body,
                     (err, response) => {
@@ -96,7 +110,7 @@ async function sendSms({ to, body, type = "GENERIC" }) {
         }
     }
 
-    throw new Error(`[SMS] Unknown provider: "${provider}". Set SMS_PROVIDER=twilio|vonage|console`);
+    throw new Error(`[SMS] Unknown provider: "${provider}". Set SMS_PROVIDER=twilio|vonage|smsmisr|console`);
 }
 
 module.exports = { sendSms };

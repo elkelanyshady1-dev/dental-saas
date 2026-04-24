@@ -54,7 +54,10 @@ const {
 } = require("./replayEngine");
 const logger = require("@utils/logger");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // ─── Config ──────────────────────────────────────────────────────────────────
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // ─── Config ──────────────────────────────────────────────────────────────────
 const MAX_RETRIES = parseInt(process.env.MAX_RETRIES || "5", 10);
 const RETRY_BATCH_SIZE = parseInt(process.env.RETRY_BATCH_SIZE || "20", 10);
 const STALE_THRESHOLD_MS = parseInt(process.env.RETRY_STALE_THRESHOLD_MS || "60000", 10);
@@ -406,7 +409,7 @@ async function runCycle() {
   // ── Tenant DBs ──────────────────────────────────────────────────────
   let orgs = [];
   try {
-    orgs = await Organization.find({}, {
+    orgs = await Organization().find({}, {
       _id: 1
     }).lean();
   } catch (err) {

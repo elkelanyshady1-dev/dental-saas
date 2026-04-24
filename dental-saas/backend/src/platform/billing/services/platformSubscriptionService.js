@@ -7,7 +7,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   getRegionContext
 } = require("@infra/regionRouter");
@@ -84,7 +87,7 @@ exports.cancelSubscription = async ({
   if (lockToken) {
     try {
       // 2. Load Org and Validate (Control Plane read)
-      const org = await Organization.findById(orgId);
+      const org = await Organization().findById(orgId);
       if (!org) throw new Error("Organization not found");
       if (!org.regionCode) throw new Error("Organization region context missing.");
       const regionCode = org.regionCode;
@@ -131,7 +134,7 @@ exports.cancelSubscription = async ({
       const session = await mongooseConnection.startSession();
       try {
         const transactionLogic = async sess => {
-          await Organization.updateOne({
+          await Organization().updateOne({
             _id: orgId
           }, {
             $set: {
@@ -244,7 +247,7 @@ exports.adjustCredits = async ({
   const lockToken = await distributedLock.acquire(lockKey, 30000);
   if (lockToken) {
     try {
-      const org = await Organization.findById(orgId);
+      const org = await Organization().findById(orgId);
       if (!org) throw new Error("Organization not found");
       if (!org.regionCode) throw new Error("Organization region context missing.");
       const regionCode = org.regionCode;
@@ -273,7 +276,7 @@ exports.adjustCredits = async ({
       const session = await mongooseConnection.startSession();
       try {
         const transactionLogic = async sess => {
-          const updatedOrg = await Organization.findOneAndUpdate({
+          const updatedOrg = await Organization().findOneAndUpdate({
             _id: orgId
           },
           // Sprint 4: subscription.creditBalance removed — credit now lives on OrgContract
@@ -402,7 +405,7 @@ exports.executeRefund = async ({
   const lockToken = await distributedLock.acquire(lockKey, 30000);
   if (lockToken) {
     try {
-      const org = await Organization.findById(orgId);
+      const org = await Organization().findById(orgId);
       if (!org) throw new Error("Organization not found");
       if (!org.regionCode) throw new Error("Organization region context missing.");
       const regionCode = org.regionCode;

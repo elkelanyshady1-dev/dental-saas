@@ -86,6 +86,14 @@ export const useCreateLabCase = () => {
     return useMutation({ mutationFn: (d) => labApi.createCase(d).then(r => r.data), onSuccess: inv });
 };
 
+export const useUpdateLabCase = (caseId) => {
+    const inv = useInvalidateCase(caseId);
+    return useMutation({
+        mutationFn: (d) => labApi.updateCase(caseId, d).then(r => r.data),
+        onSuccess:  inv,
+    });
+};
+
 export const useUpdateCaseStatus = (caseId) => {
     const inv = useInvalidateCase(caseId);
     return useMutation({ mutationFn: (d) => labApi.updateStatus(caseId, d).then(r => r.data), onSuccess: inv });

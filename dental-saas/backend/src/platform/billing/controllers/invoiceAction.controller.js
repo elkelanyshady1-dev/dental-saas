@@ -24,11 +24,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const PaymentAttemptDef = require("../models/PaymentAttempt.model");
-const PaymentAttempt = getPlatformModel(PaymentAttemptDef);
+let _PaymentAttempt_cache = null;
+function PaymentAttempt() {
+    return _PaymentAttempt_cache || (_PaymentAttempt_cache = getPlatformModel(PaymentAttemptDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -101,14 +110,14 @@ exports.getInvoice = async (req, res) => {
         error: "Invalid invoiceId"
       });
     }
-    const invoice = await PlatformInvoice.findById(invoiceId).populate("contractId", "planCode planVersionTag lockedPrice currency contractStatus").populate("planVersionId", "versionTag templateCode").lean();
+    const invoice = await PlatformInvoice().findById(invoiceId).populate("contractId", "planCode planVersionTag lockedPrice currency contractStatus").populate("planVersionId", "versionTag templateCode").lean();
     if (!invoice) {
       return res.status(404).json({
         success: false,
         error: "Invoice not found"
       });
     }
-    const organization = await Organization.findById(invoice.organizationId).select("name billingCountry regionCode").lean();
+    const organization = await Organization().findById(invoice.organizationId).select("name billingCountry regionCode").lean();
     const summary = deriveInvoiceSummary(invoice);
     const lineItems = _resolveLineItems(invoice);
     return res.json({
@@ -184,7 +193,7 @@ exports.voidInvoice = async (req, res) => {
         error: "Invalid invoiceId"
       });
     }
-    const invoice = await PlatformInvoice.findById(invoiceId);
+    const invoice = await PlatformInvoice().findById(invoiceId);
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -345,7 +354,7 @@ exports.markUncollectible = async (req, res) => {
         error: "Invalid invoiceId"
       });
     }
-    const invoice = await PlatformInvoice.findById(invoiceId);
+    const invoice = await PlatformInvoice().findById(invoiceId);
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -495,7 +504,7 @@ exports.applyPayment = async (req, res) => {
     const {
       invoiceId
     } = req.params;
-    const actorId = req.platformUser?._id?.toString();
+    const actorId = req.platformUser?._id?.toString()();
     const requestId = req.requestId;
     if (!mongoose.isValidObjectId(invoiceId)) {
       return res.status(400).json({
@@ -616,7 +625,7 @@ exports.listInvoicePayments = async (req, res) => {
     }
 
     // Verify invoice exists
-    const invoiceExists = await PlatformInvoice.exists({
+    const invoiceExists = await PlatformInvoice().exists({
       _id: invoiceId
     });
     if (!invoiceExists) {
@@ -625,7 +634,7 @@ exports.listInvoicePayments = async (req, res) => {
         error: "Invoice not found"
       });
     }
-    const payments = await PaymentAttempt.find({
+    const payments = await PaymentAttempt().find({
       invoiceId: new mongoose.Types.ObjectId(invoiceId)
     }).sort({
       createdAt: -1
@@ -684,7 +693,7 @@ exports.getPublicInvoice = async (req, res) => {
         error: "Invalid invoice reference"
       });
     }
-    const invoice = await PlatformInvoice.findById(invoiceId).select("invoiceNumber status paymentStatus currency " + "lineItems subtotalAmount taxPercent taxAmount totalAmount " + "couponCode couponDiscountAmount creditApplied " + "billingCycleStart billingCycleEnd dueDate paidAt createdAt " + "organizationId invoiceType").lean();
+    const invoice = await PlatformInvoice().findById(invoiceId).select("invoiceNumber status paymentStatus currency " + "lineItems subtotalAmount taxPercent taxAmount totalAmount " + "couponCode couponDiscountAmount creditApplied " + "billingCycleStart billingCycleEnd dueDate paidAt createdAt " + "organizationId invoiceType").lean();
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -693,7 +702,7 @@ exports.getPublicInvoice = async (req, res) => {
     }
 
     // Only expose org name + country — never internal IDs or internal fields
-    const org = await Organization.findById(invoice.organizationId).select("name billingCountry").lean();
+    const org = await Organization().findById(invoice.organizationId).select("name billingCountry").lean();
     const lineItems = _resolveLineItems(invoice);
     const summary = deriveInvoiceSummary(invoice);
 

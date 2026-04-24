@@ -24,7 +24,10 @@
 
 const getSharedModel = require("@core/db/getSharedModel");
 const RateLimitEntryDef = require("./rateLimiter.model");
-const RateLimitEntry = getSharedModel(RateLimitEntryDef);
+let _RateLimitEntry_cache = null;
+function RateLimitEntry() {
+    return _RateLimitEntry_cache || (_RateLimitEntry_cache = getSharedModel(RateLimitEntryDef));
+}
 const logger = require("@utils/logger");
 
 // ── Default limits per action type ───────────────────────────────────────────
@@ -58,7 +61,7 @@ async function checkRateLimit(action, identifier, overrides = {}) {
     const windowStart = new Date(now.getTime() - windowMs);
 
     // Try to find an active entry within the current window
-    const entry = await RateLimitEntry.findOne({
+    const entry = await RateLimitEntry().findOne({
         key,
         windowStart: { $gte: windowStart },
     });
@@ -83,11 +86,11 @@ async function checkRateLimit(action, identifier, overrides = {}) {
         }
 
         // Increment count atomically
-        await RateLimitEntry.updateOne({ _id: entry._id }, { $inc: { count: 1 } });
+        await RateLimitEntry().updateOne({ _id: entry._id }, { $inc: { count: 1 } });
     } else {
         // Start a new window — upsert to handle race conditions
         try {
-            await RateLimitEntry.findOneAndUpdate(
+            await RateLimitEntry().findOneAndUpdate(
                 { key },
                 {
                     $set: {
@@ -115,7 +118,7 @@ async function checkRateLimit(action, identifier, overrides = {}) {
  */
 async function resetRateLimit(action, identifier) {
     const key = `${action}:${identifier.toLowerCase().trim()}`;
-    await RateLimitEntry.deleteMany({ key });
+    await RateLimitEntry().deleteMany({ key });
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────

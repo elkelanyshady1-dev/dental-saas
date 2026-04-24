@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { LayoutGrid, Plus, Smile, Calendar, Activity, ChevronRight, Eye, Edit3, XCircle, ArrowLeft, X, Save, FileText, Share2, Download, Printer, Loader2, GitCompare, Trash2 } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { LayoutGrid, Plus, Smile, Calendar, Activity, ChevronRight, Eye, Edit3, XCircle, ArrowLeft, X, Save, FileText, Share2, Download, Printer, Loader2, GitCompare, Trash2, Images, Workflow, Box, Activity as ActivityIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Case, RecordSet } from '../../types';
 import CaseWorkflowContainer, { OrthoActions } from './workflow/CaseWorkflowContainer';
@@ -8,6 +8,17 @@ import { caseApi as orthodonticsApi } from '../../api/case.api';
 import { useAuth } from '@/context/AuthContext';
 import { CompareEngine } from './compare';
 import AppModal from '@/components/ui/AppModal';
+
+// Phase 2 — Case Assets (Photo SSOT). Lazy so Three.js / Cornerstone bundles
+// only load when the user actually switches to an asset tab.
+const CasePhotosPanel = lazy(() =>
+  import('./case-photos/CasePhotosPanel').then((m) => ({ default: m.default }))
+);
+
+/** Flat tab surface for the case header. "workflow" renders the existing
+ *  multi-step workflow; the other values are passed to CasePhotosPanel as
+ *  the strict fileType filter. */
+type AssetView = 'workflow' | 'image' | 'pdf' | '3d' | 'dicom';
 
 interface OrthoCasesTabProps {
   patientId: string;
@@ -22,6 +33,11 @@ const OrthoCasesTab: React.FC<OrthoCasesTabProps> = ({ patientId, patientName, c
   const [selectedRecordSetId, setSelectedRecordSetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Flat asset tab — workflow (default) or one of the four file types.
+  // Lives at case-detail level so the selection persists while the user
+  // moves between record sets.
+  const [assetView, setAssetView] = useState<AssetView>('workflow');
 
   const [isAddRecordSetModalOpen, setIsAddRecordSetModalOpen] = useState(false);
   const [newRecordSetName, setNewRecordSetName] = useState('Mid-record');
@@ -535,62 +551,113 @@ const OrthoCasesTab: React.FC<OrthoCasesTabProps> = ({ patientId, patientName, c
           </div>
         </div>
 
-        {/* Record Sets Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide px-2">
-          {(selectedCase.recordSets || []).map((rs) => (
+        {/* Phase 2 — Unified Case Asset tab bar. Always visible at the
+            case-detail top so users can jump between the workflow and the
+            file-type pools without leaving the case. `assetView` controls
+            both which sub-surface is shown AND the strict fileType filter
+            passed to CasePhotosPanel. */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl mx-2 w-fit">
+          {([
+            { k: 'workflow', label: 'Workflow',  Icon: Workflow       },
+            { k: 'image',    label: 'Photos',    Icon: Images         },
+            { k: 'pdf',      label: 'Documents', Icon: FileText       },
+            { k: '3d',       label: '3D Models', Icon: Box            },
+            { k: 'dicom',    label: 'DICOM',     Icon: ActivityIcon   },
+          ] as const).map(({ k, label, Icon }) => (
             <button
-              key={rs.id}
-              onClick={() => setSelectedRecordSetId(rs.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
-                selectedRecordSetId === rs.id
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              key={k}
+              type="button"
+              onClick={() => setAssetView(k)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                assetView === k
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5 opacity-60" />
-              {rs.name}
-              <span className="text-[10px] opacity-60 font-medium">({rs.date})</span>
+              <Icon className="w-3.5 h-3.5" />
+              {label}
             </button>
           ))}
-          <button 
-            onClick={handleOpenAddRecordSetModal}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors border border-dashed border-slate-300"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Record Set
-          </button>
         </div>
 
-        {isLoadingWorkflow ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="ml-3 text-sm text-slate-500">Loading records…</span>
-          </div>
-        ) : activeRecordSet ? (
-          <CaseWorkflowContainer 
-            key={activeRecordSet.id} 
-            patientId={patientId}
-            patientName={patientName}
-            caseId={selectedCase?.id}
-            initialData={activeRecordSet} 
-            onUpdate={handleUpdateRecordSet}
-            registerActions={handleRegisterActions}
-          />
-        ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-              <LayoutGrid className="w-8 h-8" />
+        {assetView === 'workflow' ? (
+          <>
+            {/* Record Sets Tabs — shown only in Workflow mode */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide px-2">
+              {(selectedCase.recordSets || []).map((rs) => (
+                <button
+                  key={rs.id}
+                  onClick={() => setSelectedRecordSetId(rs.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    selectedRecordSetId === rs.id
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 opacity-60" />
+                  {rs.name}
+                  <span className="text-[10px] opacity-60 font-medium">({rs.date})</span>
+                </button>
+              ))}
+              <button
+                onClick={handleOpenAddRecordSetModal}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors border border-dashed border-slate-300"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Record Set
+              </button>
             </div>
-            <h4 className="text-lg font-bold text-slate-800 mb-2">No Record Sets Found</h4>
-            <p className="text-sm text-slate-500 mb-6">Start by adding a pre-record, mid-record, or post-record set.</p>
-            <button 
-              onClick={handleOpenAddRecordSetModal}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md"
-            >
-              <Plus className="w-4 h-4" />
 
-              Create First Record Set
-            </button>
+            {isLoadingWorkflow ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <span className="ml-3 text-sm text-slate-500">Loading records…</span>
+              </div>
+            ) : activeRecordSet ? (
+              <CaseWorkflowContainer
+                key={activeRecordSet.id}
+                patientId={patientId}
+                patientName={patientName}
+                caseId={selectedCase?.id}
+                initialData={activeRecordSet}
+                onUpdate={handleUpdateRecordSet}
+                registerActions={handleRegisterActions}
+              />
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                  <LayoutGrid className="w-8 h-8" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-800 mb-2">No Record Sets Found</h4>
+                <p className="text-sm text-slate-500 mb-6">Start by adding a pre-record, mid-record, or post-record set.</p>
+                <button
+                  onClick={handleOpenAddRecordSetModal}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create First Record Set
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Asset mode — render the Case Photo Pool with a strict file-type
+             filter. The panel itself owns the pool sidebar, grid/timeline
+             toggle, and drag-to-link gestures. */
+          <div className="px-2">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-20 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  Loading case assets…
+                </div>
+              }
+            >
+              <CasePhotosPanel
+                caseId={selectedCase.id}
+                fileTypeFilter={assetView}
+              />
+            </Suspense>
           </div>
         )}
 

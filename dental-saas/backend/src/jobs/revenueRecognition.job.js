@@ -22,9 +22,15 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const cron = require("node-cron");
 const mongoose = require("mongoose");
 const RevenueScheduleDef = require("../platform/finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const {
   logBillingEvent
 } = require("../platform/billing/services/billingAuditLog.service");
@@ -42,7 +48,7 @@ async function recognizeRevenue() {
     action: "revenue_recognition_start",
     now
   }, "[RevenueRecognition] Starting recognition pass");
-  const schedules = await RevenueSchedule.find({
+  const schedules = await RevenueSchedule().find({
     status: "active",
     deferredAmount: {
       $gt: 0
@@ -74,7 +80,7 @@ async function recognizeRevenue() {
       const session = await mongoose.startSession();
       try {
         session.startTransaction();
-        const ls = await RevenueSchedule.findById(sched._id).session(session);
+        const ls = await RevenueSchedule().findById(sched._id).session(session);
         if (!ls || ls.status !== "active") {
           await session.abortTransaction();
           session.endSession();
@@ -95,7 +101,7 @@ async function recognizeRevenue() {
         });
 
         // ── Sync PlatformInvoice (original amounts) ──────────────────
-        await PlatformInvoice.findByIdAndUpdate(sched.invoiceId, {
+        await PlatformInvoice().findByIdAndUpdate(sched.invoiceId, {
           $set: {
             recognizedRevenue: newRecognized,
             deferredRevenue: isFullyRecog ? 0 : newDeferred

@@ -1,7 +1,7 @@
 /**
  * sendEmail.js
  * Platform Email — Multi-Provider SMTP Dispatcher
- * v4.0 — Delegates to ProviderRouter for failover chain
+ * v5.0 — html-to-text integration + OrthoNoe rebrand
  *
  * All provider selection, account creation, and failover logic
  * is handled by providerRouter.js.
@@ -16,7 +16,18 @@
 "use strict";
 
 const { sendWithFailover } = require("./providerRouter");
+const { convert: htmlToText } = require("html-to-text");
 const logger = require("../../utils/logger");
+
+// ── html-to-text options (email-optimized) ────────────────────────────────────
+const HTML_TO_TEXT_OPTS = {
+    wordwrap: 80,
+    selectors: [
+        { selector: "a", options: { hideLinkHrefIfSameAsText: true } },
+        { selector: "img", format: "skip" },
+        { selector: "table.data", format: "dataTable" },
+    ],
+};
 
 /**
  * sendEmail
@@ -29,21 +40,21 @@ const logger = require("../../utils/logger");
  * @param {string}   opts.to            - Recipient address
  * @param {string}   opts.subject       - Email subject line
  * @param {string}   opts.html          - Rendered HTML body
- * @param {string}   [opts.text]        - Plain-text fallback (auto-stripped from HTML if omitted)
+ * @param {string}   [opts.text]        - Plain-text fallback (auto-generated from HTML if omitted)
  * @param {string}   [opts.replyTo]     - Reply-To address
  * @param {object[]} [opts.attachments] - Nodemailer attachment objects
  * @returns {Promise<object>} Nodemailer info + _previewUrl (dev only) + _provider + _providerChain
  */
 async function sendEmail({ to, subject, html, text, replyTo, attachments = [] }) {
     const fromAddress = process.env.SMTP_FROM_ADDRESS || "noreply@platform.local";
-    const fromName = process.env.SMTP_FROM_NAME || "DentalSaaS Platform";
+    const fromName = process.env.SMTP_FROM_NAME || "OrthoNoe";
 
     const mailOptions = {
         from: `"${fromName}" <${fromAddress}>`,
         to,
         subject,
         html,
-        text: text || _htmlToText(html),
+        text: text || htmlToText(html || "", HTML_TO_TEXT_OPTS),
         ...(replyTo ? { replyTo } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
     };
@@ -61,16 +72,6 @@ async function sendEmail({ to, subject, html, text, replyTo, attachments = [] })
     );
 
     return info;
-}
-
-// ─── _htmlToText ──────────────────────────────────────────────────────────────
-function _htmlToText(html) {
-    if (!html) return "";
-    return html
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
 }
 
 // ─── closeTransporter (backward compat — no-op in v4) ────────────────────────

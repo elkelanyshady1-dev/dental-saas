@@ -452,11 +452,11 @@ export declare class HttpClient<SecurityDataType = unknown> {
   }: FullRequestParams) => Promise<AxiosResponse<T>>;
 }
 /**
- * @title DentalSaaS Platform API
+ * @title OrthoNoe Platform API
  * @version 1.0.0
  * @baseUrl /api/platform
  *
- * Sovereign Platform Plane API for DentalSaaS.
+ * Sovereign Platform Plane API for OrthoNoe.
  * Governs multi-tenant administration, capability enforcement
  * and distributed governance (v19.3).
  */

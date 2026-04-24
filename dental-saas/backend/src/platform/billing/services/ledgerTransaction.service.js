@@ -50,7 +50,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const LedgerTransactionDef = require("../models/LedgerTransaction.model");
-const LedgerTransaction = getPlatformModel(LedgerTransactionDef);
+let _LedgerTransaction_cache = null;
+function LedgerTransaction() {
+    return _LedgerTransaction_cache || (_LedgerTransaction_cache = getPlatformModel(LedgerTransactionDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -88,7 +91,7 @@ async function writeLedgerTransaction(opts) {
       }, "[ledgerTransaction] LEDGER_TRANSACTION_UNBALANCED — transaction rejected");
       return null;
     }
-    const doc = await LedgerTransaction.create({
+    const doc = await LedgerTransaction().create({
       description: opts.description,
       referenceType: opts.referenceType,
       referenceId: opts.referenceId,
@@ -120,7 +123,7 @@ async function writeLedgerTransaction(opts) {
  * @returns {Promise<LedgerTransaction|null>}
  */
 async function getLedgerTransactionById(id) {
-  return LedgerTransaction.findById(id).lean();
+  return LedgerTransaction().findById(id).lean();
 }
 
 /**
@@ -133,7 +136,7 @@ async function getLedgerTransactionById(id) {
  * @returns {Promise<LedgerTransaction[]>}
  */
 async function getLedgerTransactionsByReference(referenceType, referenceId) {
-  return LedgerTransaction.find({
+  return LedgerTransaction().find({
     referenceType,
     referenceId
   }).sort({

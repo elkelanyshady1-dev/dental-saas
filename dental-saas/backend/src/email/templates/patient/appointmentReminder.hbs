@@ -1,0 +1,87 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<!--
+  Patient: Appointment Reminder
+  Sent to patients before their scheduled appointment.
+  Variables: patientName, date, time, doctorName, clinicName, clinicPhone, clinicAddress
+-->
+<div style="border-left: 4px solid #10b981; padding-left: 16px; margin-bottom: 28px;">
+    <p style="font-size: 12px; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 4px;">
+        Appointment Reminder
+    </p>
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">From your care team</p>
+</div>
+
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Hello <strong>{{patientName}}</strong>,</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    This is a friendly reminder about your upcoming appointment. We look forward to seeing you!
+</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; margin: 24px 0;">
+    <tr>
+        <td style="padding: 28px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #065f46; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Date</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 800; color: #0f172a;">{{date}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #065f46; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Time</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 800; color: #0f172a;">{{time}}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #065f46; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Doctor</p>
+                        <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #334155;">Dr. {{doctorName}}</p>
+                    </td>
+                </tr>
+                {{#if clinicName}}
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #065f46; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Location</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #334155;">{{clinicName}}</p>
+                        {{#if clinicAddress}}
+                        <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">{{clinicAddress}}</p>
+                        {{/if}}
+                    </td>
+                </tr>
+                {{/if}}
+            </table>
+        </td>
+    </tr>
+</table>
+
+{{#if portalUrl}}
+<div style="text-align: center;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+            <td style="background: #10b981; border-radius: 10px; box-shadow: 0 4px 14px rgba(16,185,129,0.3);">
+                <a href="{{portalUrl}}" style="display: inline-block; padding: 14px 36px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px;">
+                    View in Patient Portal
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>
+{{/if}}
+
+<hr class="divider" />
+
+<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px 20px;">
+    <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.6;">
+        <strong>Need to reschedule?</strong> Please contact us at least 24 hours before your appointment.
+        {{#if clinicPhone}}Call us at <strong>{{clinicPhone}}</strong>.{{/if}}
+    </p>
+</div>
+
+<div style="background: #f0fdf4; border-radius: 10px; padding: 14px 20px; margin-top: 16px;">
+    <p style="margin: 0; font-size: 12px; color: #065f46; line-height: 1.6;">
+        <strong>Your Privacy Matters</strong> — This email contains protected health information.
+    </p>
+</div>
+{{/inline}}
+{{/layout}}

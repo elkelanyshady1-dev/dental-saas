@@ -53,7 +53,10 @@
  */
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingTimelineDef = require("../models/BillingTimeline.model");
-const BillingTimeline = getPlatformModel(BillingTimelineDef);
+let _BillingTimeline_cache = null;
+function BillingTimeline() {
+    return _BillingTimeline_cache || (_BillingTimeline_cache = getPlatformModel(BillingTimelineDef));
+}
 const mongoose = require("mongoose");
 
 /**
@@ -70,7 +73,7 @@ exports.getContractTimeline = async (req, res) => {
       message: "Invalid contractId format"
     });
   }
-  const events = await BillingTimeline.find({
+  const events = await BillingTimeline().find({
     contractId
   }).sort({
     occurredAt: -1
@@ -122,7 +125,7 @@ exports.getOrgTimeline = async (req, res) => {
       message: "Invalid orgId format"
     });
   }
-  const events = await BillingTimeline.find({
+  const events = await BillingTimeline().find({
     organizationId: orgId
   }).sort({
     occurredAt: -1

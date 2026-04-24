@@ -28,9 +28,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("@platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("@platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const {
   resolveOrganizationEntitlements
 } = require("@platform/billing/services/entitlementResolver.service");
@@ -55,7 +61,7 @@ const logger = require("@utils/logger");
  */
 async function getActiveSubscription(req) {
   const orgId = extractOrgId(req);
-  const contract = await OrgContract.findOne({
+  const contract = await OrgContract().findOne({
     organizationId: orgId,
     contractStatus: "active"
   }).populate("planVersionId", "name tier modules limits").lean();
@@ -82,7 +88,7 @@ async function getInvoiceHistory(req, options = {}) {
   const orgId = extractOrgId(req);
   const limit = Math.min(options.limit || 20, 50); // Hard cap at 50
   const skip = Math.max(options.skip || 0, 0);
-  const invoices = await PlatformInvoice.find({
+  const invoices = await PlatformInvoice().find({
     organizationId: orgId
   }).sort({
     createdAt: -1
@@ -101,7 +107,7 @@ async function getUsageQuotas(req) {
   const orgId = extractOrgId(req);
 
   // Resolve the active contract to get plan version
-  const contract = await OrgContract.findOne({
+  const contract = await OrgContract().findOne({
     organizationId: orgId,
     contractStatus: "active"
   }).populate("planVersionId").lean();

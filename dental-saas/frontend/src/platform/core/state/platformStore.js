@@ -57,6 +57,6 @@ export const usePlatformStore = create(
                 storage: createJSONStorage(() => localStorage),
             }
         ),
-        { name: 'DentalSaaS_PlatformStore' } // 🛡️ v11.1 - DevTools Isolation
+        { name: 'OrthoNoe_PlatformStore' } // 🛡️ v11.1 - DevTools Isolation
     )
 );

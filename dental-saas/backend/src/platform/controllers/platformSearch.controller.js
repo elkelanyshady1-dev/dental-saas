@@ -21,13 +21,25 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformUserDef = require("../../platform/models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef);
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+}
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const {
   platformCapabilityResolver
 } = require("../../services/platformCapabilityResolver");
@@ -63,7 +75,7 @@ exports.search = async (req, res) => {
     };
     const [orgs, users, contracts, invoices] = await Promise.all([
     // Organizations — only if VIEW_ORGANIZATIONS
-    canViewOrgs ? Organization.find({
+    canViewOrgs ? Organization().find({
       $or: [{
         name: regex
       }, {
@@ -76,7 +88,7 @@ exports.search = async (req, res) => {
       }
     }).select("name slug country subscription.status isActive createdAt").limit(RESULT_LIMIT).lean() : [],
     // PlatformUsers — only if MANAGE_PLATFORM_USERS
-    canViewUsers ? PlatformUser.find({
+    canViewUsers ? PlatformUser().find({
       $or: [{
         name: regex
       }, {
@@ -84,7 +96,7 @@ exports.search = async (req, res) => {
       }]
     }).select("name email role isActive createdAt").limit(RESULT_LIMIT).lean() : [],
     // OrgContracts — only if VIEW_ORGANIZATIONS
-    canViewOrgs ? OrgContract.find({
+    canViewOrgs ? OrgContract().find({
       $or: [{
         planCode: regex
       }, {
@@ -92,7 +104,7 @@ exports.search = async (req, res) => {
       }]
     }).select("planCode contractStatus currency organizationId effectiveTo createdAt").limit(RESULT_LIMIT).lean() : [],
     // PlatformInvoices — only if VIEW_ORGANIZATIONS
-    canViewOrgs ? PlatformInvoice.find({
+    canViewOrgs ? PlatformInvoice().find({
       $or: [{
         invoiceNumber: regex
       }, {

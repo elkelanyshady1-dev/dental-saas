@@ -50,34 +50,38 @@ const UserDef = require("@shared/models/User");
 const RoleDef = require("@shared/models/Role");
 const getModel = require("@core/db/getModel");
 const logger = require("@utils/logger");
-const { P } = require("@rbac/orgPermissions");
-const { deriveModuleMap, PERMISSION_VERSION } = require("@rbac/permissionRegistry");
-const { buildRoleDTO, buildRoleListDTO } = require("./role.dto");
+const {
+  P
+} = require("@rbac/orgPermissions");
+const {
+  deriveModuleMap,
+  PERMISSION_VERSION
+} = require("@rbac/permissionRegistry");
+const {
+  buildRoleDTO,
+  buildRoleListDTO
+} = require("./role.dto");
 
 // ─── Error helper ───────────────────────────────────────────────────────────
 
 function httpError(message, statusCode, errorCode) {
-    const err = new Error(message);
-    err.statusCode = statusCode;
-    err.errorCode = errorCode;
-    return err;
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  err.errorCode = errorCode;
+  return err;
 }
 
 // ─── Model resolution (per-org DB) ──────────────────────────────────────────
 
 function _getModels(req) {
-    const conn = req.dbConnection;
-    if (!conn) {
-        throw httpError(
-            "No per-org DB connection on request",
-            500,
-            "DB_CONNECTION_MISSING",
-        );
-    }
-    return {
-        User: getModel(conn, UserDef),
-        Role: getModel(conn, RoleDef),
-    };
+  const conn = req.dbConnection;
+  if (!conn) {
+    throw httpError("No per-org DB connection on request", 500, "DB_CONNECTION_MISSING");
+  }
+  return {
+    User: getModel(conn, UserDef),
+    Role: getModel(conn, RoleDef)
+  };
 }
 
 // ─── Permission shape helpers ───────────────────────────────────────────────
@@ -98,29 +102,28 @@ function _getModels(req) {
  * @returns {Object} nested permissions object matching Role schema
  */
 function flatToNested(flat) {
-    const moduleMap = deriveModuleMap();
-    const nested = {};
+  const moduleMap = deriveModuleMap();
+  const nested = {};
 
-    // Seed every action to false so the write is a full replace, not a merge.
-    for (const [mod, actions] of Object.entries(moduleMap)) {
-        nested[mod] = {};
-        for (const action of actions) {
-            nested[mod][action] = false;
-        }
+  // Seed every action to false so the write is a full replace, not a merge.
+  for (const [mod, actions] of Object.entries(moduleMap)) {
+    nested[mod] = {};
+    for (const action of actions) {
+      nested[mod][action] = false;
     }
+  }
 
-    // Overlay the caller's grants.
-    for (const [key, value] of Object.entries(flat)) {
-        const dotIdx = key.indexOf(".");
-        if (dotIdx === -1) continue;
-        const mod = key.substring(0, dotIdx);
-        const action = key.substring(dotIdx + 1);
-        if (nested[mod] && Object.prototype.hasOwnProperty.call(nested[mod], action)) {
-            nested[mod][action] = value === true;
-        }
+  // Overlay the caller's grants.
+  for (const [key, value] of Object.entries(flat)) {
+    const dotIdx = key.indexOf(".");
+    if (dotIdx === -1) continue;
+    const mod = key.substring(0, dotIdx);
+    const action = key.substring(dotIdx + 1);
+    if (nested[mod] && Object.prototype.hasOwnProperty.call(nested[mod], action)) {
+      nested[mod][action] = value === true;
     }
-
-    return nested;
+  }
+  return nested;
 }
 
 // ─── Invariant helpers ──────────────────────────────────────────────────────
@@ -135,18 +138,17 @@ function flatToNested(flat) {
  * (c) relies on the unique index as the race-safe backstop in the caller.
  */
 async function assertUniqueName(Role, name, excludeId, session) {
-    const normalized = String(name).toLowerCase();
-    const q = { name: normalized };
-    if (excludeId) q._id = { $ne: excludeId };
-
-    const existing = await Role.findOne(q).session(session).lean();
-    if (existing) {
-        throw httpError(
-            `Role name "${normalized}" already exists in this organization`,
-            409,
-            "ROLE_NAME_DUPLICATE",
-        );
-    }
+  const normalized = String(name).toLowerCase();
+  const q = {
+    name: normalized
+  };
+  if (excludeId) q._id = {
+    $ne: excludeId
+  };
+  const existing = await Role.findOne(q).session(session).lean();
+  if (existing) {
+    throw httpError(`Role name "${normalized}" already exists in this organization`, 409, "ROLE_NAME_DUPLICATE");
+  }
 }
 
 /**
@@ -162,17 +164,12 @@ async function assertUniqueName(Role, name, excludeId, session) {
  * global check is the last line of defense.
  */
 async function assertStaffManageRoleStillExists(Role, session) {
-    const count = await Role.countDocuments({
-        "permissions.staff.manage": true,
-    }).session(session);
-
-    if (count === 0) {
-        throw httpError(
-            "Cannot perform this change — at least one role must grant staff.manage.",
-            409,
-            "LOCKOUT_PREVENTED_NO_STAFF_MANAGE_ROLE",
-        );
-    }
+  const count = await Role.countDocuments({
+    "permissions.staff.manage": true
+  }).session(session);
+  if (count === 0) {
+    throw httpError("Cannot perform this change — at least one role must grant staff.manage.", 409, "LOCKOUT_PREVENTED_NO_STAFF_MANAGE_ROLE");
+  }
 }
 
 /**
@@ -185,35 +182,27 @@ async function assertStaffManageRoleStillExists(Role, session) {
  * session so the check and the write are atomic.
  */
 async function assertStaffManageNotLockedOut(Role, User, excludeRoleId, session) {
-    const otherAdminRoles = await Role.find(
-        {
-            _id: { $ne: excludeRoleId },
-            "permissions.staff.manage": true,
-        },
-        { _id: 1 },
-    ).session(session).lean();
-
-    if (otherAdminRoles.length === 0) {
-        throw httpError(
-            "Cannot perform this change — no other role in the organization grants staff.manage.",
-            409,
-            "STAFF_MANAGE_LOCKOUT",
-        );
-    }
-
-    const otherAdminUserCount = await User.countDocuments({
-        roleId: { $in: otherAdminRoles.map((r) => r._id) },
-        isActive: true,
-        deletedAt: null,
-    }).session(session);
-
-    if (otherAdminUserCount === 0) {
-        throw httpError(
-            "Cannot perform this change — at least one other active user with staff.manage must exist.",
-            409,
-            "STAFF_MANAGE_LOCKOUT",
-        );
-    }
+  const otherAdminRoles = await Role.find({
+    _id: {
+      $ne: excludeRoleId
+    },
+    "permissions.staff.manage": true
+  }, {
+    _id: 1
+  }).session(session).lean();
+  if (otherAdminRoles.length === 0) {
+    throw httpError("Cannot perform this change — no other role in the organization grants staff.manage.", 409, "STAFF_MANAGE_LOCKOUT");
+  }
+  const otherAdminUserCount = await User.countDocuments({
+    roleId: {
+      $in: otherAdminRoles.map(r => r._id)
+    },
+    isActive: true,
+    deletedAt: null
+  }).session(session);
+  if (otherAdminUserCount === 0) {
+    throw httpError("Cannot perform this change — at least one other active user with staff.manage must exist.", 409, "STAFF_MANAGE_LOCKOUT");
+  }
 }
 
 /**
@@ -224,12 +213,17 @@ async function assertStaffManageNotLockedOut(Role, User, excludeRoleId, session)
  * Returns the number of users whose tokens were invalidated (for audit).
  */
 async function bumpAssignedUsersTokenVersion(User, roleId, session) {
-    const result = await User.updateMany(
-        { roleId, deletedAt: null },
-        { $inc: { tokenVersion: 1 } },
-        { session },
-    );
-    return result.modifiedCount || 0;
+  const result = await User.updateMany({
+    roleId,
+    deletedAt: null
+  }, {
+    $inc: {
+      tokenVersion: 1
+    }
+  }, {
+    session
+  });
+  return result.modifiedCount || 0;
 }
 
 // ─── createRole ─────────────────────────────────────────────────────────────
@@ -243,68 +237,66 @@ async function bumpAssignedUsersTokenVersion(User, roleId, session) {
  * @returns {Promise<Object>} lean role document
  */
 async function createRole(req, payload) {
-    const { User: _User, Role } = _getModels(req); // eslint-disable-line no-unused-vars
-    const organizationId = req.context.organizationId;
-    const actorId = req.context.userId;
-
-    const { name, description, permissions: flatPermissions } = payload;
-    const normalizedName = String(name).toLowerCase();
-
-    const nestedPermissions = flatToNested(flatPermissions);
-
-    const session = await req.dbConnection.startSession();
-    let created;
-    try {
-        await session.withTransaction(async () => {
-            // I2: unique name (soft check — the unique index below is the
-            // race-safe backstop)
-            await assertUniqueName(Role, normalizedName, null, session);
-
-            try {
-                // Create inside txn — create() with session requires the array form.
-                const docs = await Role.create(
-                    [{
-                        name: normalizedName,
-                        description: description || undefined,
-                        organizationId, // stamped for audit; DB is the tenant boundary
-                        isSystemRole: false, // custom roles are NEVER system roles
-                        permissions: nestedPermissions,
-                        permissionVersion: PERMISSION_VERSION,
-                    }],
-                    { session },
-                );
-                created = docs[0];
-            } catch (err) {
-                if (err && err.code === 11000) {
-                    throw httpError(
-                        "Role name already exists in this organization",
-                        409,
-                        "ROLE_NAME_ALREADY_EXISTS",
-                    );
-                }
-                throw err;
-            }
-
-            // Future-proof: even on create, assert the global invariant. This
-            // is defensive — create can't directly remove STAFF_MANAGE, but
-            // if a prior bad state exists (zero admin roles somehow), the
-            // create shouldn't silently succeed and hide the lockout.
-            await assertStaffManageRoleStillExists(Role, session);
+  const {
+    User: _User,
+    Role
+  } = _getModels(req); // eslint-disable-line no-unused-vars
+  const organizationId = req.context.organizationId;
+  const actorId = req.context.userId;
+  const {
+    name,
+    description,
+    permissions: flatPermissions
+  } = payload;
+  const normalizedName = String(name).toLowerCase();
+  const nestedPermissions = flatToNested(flatPermissions);
+  const session = await req.dbConnection.startSession();
+  let created;
+  try {
+    await session.withTransaction(async () => {
+      // I2: unique name (soft check — the unique index below is the
+      // race-safe backstop)
+      await assertUniqueName(Role, normalizedName, null, session);
+      try {
+        // Create inside txn — create() with session requires the array form.
+        const docs = await Role.create([{
+          name: normalizedName,
+          description: description || undefined,
+          // stamped for audit; DB is the tenant boundary
+          isSystemRole: false,
+          // custom roles are NEVER system roles
+          permissions: nestedPermissions,
+          permissionVersion: PERMISSION_VERSION
+        }], {
+          session
         });
-    } finally {
-        await session.endSession();
-    }
+        created = docs[0];
+      } catch (err) {
+        if (err && err.code === 11000) {
+          throw httpError("Role name already exists in this organization", 409, "ROLE_NAME_ALREADY_EXISTS");
+        }
+        throw err;
+      }
 
-    logger.info({
-        event: "ROLE_CREATED",
-        roleId: created._id,
-        roleName: created.name,
-        organizationId,
-        actorId,
-    }, `[RolesService] Role created: ${created.name}`);
+      // Future-proof: even on create, assert the global invariant. This
+      // is defensive — create can't directly remove STAFF_MANAGE, but
+      // if a prior bad state exists (zero admin roles somehow), the
+      // create shouldn't silently succeed and hide the lockout.
+      await assertStaffManageRoleStillExists(Role, session);
+    });
+  } finally {
+    await session.endSession();
+  }
+  logger.info({
+    event: "ROLE_CREATED",
+    roleId: created._id,
+    roleName: created.name,
+    organizationId,
+    actorId
+  }, `[RolesService] Role created: ${created.name}`);
 
-    // New role has zero users by definition.
-    return buildRoleDTO(created.toObject ? created.toObject() : created, 0);
+  // New role has zero users by definition.
+  return buildRoleDTO(created.toObject ? created.toObject() : created, 0);
 }
 
 // ─── updateRole ─────────────────────────────────────────────────────────────
@@ -324,126 +316,116 @@ async function createRole(req, payload) {
  *                           updateRoleSchema: { name?, description?, permissions? }
  * @returns {Promise<{ role: Object, invalidatedSessions: number }>}
  */
-async function updateRole(req, { roleId, patch }) {
-    const { User, Role } = _getModels(req);
-    const organizationId = req.context.organizationId;
-    const actorId = req.context.userId;
+async function updateRole(req, {
+  roleId,
+  patch
+}) {
+  const {
+    User,
+    Role
+  } = _getModels(req);
+  const organizationId = req.context.organizationId;
+  const actorId = req.context.userId;
+  const session = await req.dbConnection.startSession();
+  let updated;
+  let invalidatedSessions = 0;
+  let bumped = false; // did we actually run the tokenVersion bump?
 
-    const session = await req.dbConnection.startSession();
-    let updated;
-    let invalidatedSessions = 0;
-    let bumped = false; // did we actually run the tokenVersion bump?
+  try {
+    await session.withTransaction(async () => {
+      const role = await Role.findById(roleId).session(session);
+      if (!role) {
+        throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
+      }
 
-    try {
-        await session.withTransaction(async () => {
-            const role = await Role.findById(roleId).session(session);
-            if (!role) {
-                throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
-            }
+      // I1: system roles are immutable
+      if (role.isSystemRole === true) {
+        throw httpError("System roles cannot be modified", 403, "SYSTEM_ROLE_IMMUTABLE");
+      }
 
-            // I1: system roles are immutable
-            if (role.isSystemRole === true) {
-                throw httpError(
-                    "System roles cannot be modified",
-                    403,
-                    "SYSTEM_ROLE_IMMUTABLE",
-                );
-            }
+      // Track whether the change requires a JWT bump. Description-only
+      // edits are pure metadata and do NOT bump tokenVersion.
+      let shouldBumpTokens = false;
 
-            // Track whether the change requires a JWT bump. Description-only
-            // edits are pure metadata and do NOT bump tokenVersion.
-            let shouldBumpTokens = false;
+      // Rename path
+      const normalizedNewName = patch.name !== undefined ? String(patch.name).toLowerCase() : undefined;
+      if (normalizedNewName !== undefined && normalizedNewName !== role.name) {
+        await assertUniqueName(Role, normalizedNewName, role._id, session);
+        role.name = normalizedNewName;
+        shouldBumpTokens = true;
+      }
+      if (patch.description !== undefined) {
+        role.description = patch.description;
+      }
 
-            // Rename path
-            const normalizedNewName =
-                patch.name !== undefined ? String(patch.name).toLowerCase() : undefined;
+      // Permission-change path
+      if (patch.permissions !== undefined) {
+        const nested = flatToNested(patch.permissions);
 
-            if (normalizedNewName !== undefined && normalizedNewName !== role.name) {
-                await assertUniqueName(Role, normalizedNewName, role._id, session);
-                role.name = normalizedNewName;
-                shouldBumpTokens = true;
-            }
+        // I3a: local lockout check — only when STAFF_MANAGE is being
+        // REMOVED from THIS role. Cheap and gives a clear error.
+        const wasAdmin = role.permissions?.staff?.manage === true;
+        const willBeAdmin = nested.staff?.manage === true;
+        if (wasAdmin && !willBeAdmin) {
+          await assertStaffManageNotLockedOut(Role, User, role._id, session);
+        }
 
-            if (patch.description !== undefined) {
-                role.description = patch.description;
-            }
+        // Full replace semantic — flatToNested seeds every action
+        role.permissions = nested;
+        role.markModified("permissions");
+        role.permissionVersion = PERMISSION_VERSION;
+        shouldBumpTokens = true;
+      }
 
-            // Permission-change path
-            if (patch.permissions !== undefined) {
-                const nested = flatToNested(patch.permissions);
-
-                // I3a: local lockout check — only when STAFF_MANAGE is being
-                // REMOVED from THIS role. Cheap and gives a clear error.
-                const wasAdmin = role.permissions?.staff?.manage === true;
-                const willBeAdmin = nested.staff?.manage === true;
-                if (wasAdmin && !willBeAdmin) {
-                    await assertStaffManageNotLockedOut(Role, User, role._id, session);
-                }
-
-                // Full replace semantic — flatToNested seeds every action
-                role.permissions = nested;
-                role.markModified("permissions");
-                role.permissionVersion = PERMISSION_VERSION;
-                shouldBumpTokens = true;
-            }
-
-            // Race-safe save: the unique index on `name` is the authoritative
-            // collision guard (two concurrent renames could both pass the
-            // earlier findOne).
-            try {
-                await role.save({ session });
-            } catch (err) {
-                if (err && err.code === 11000) {
-                    throw httpError(
-                        "Role name already exists in this organization",
-                        409,
-                        "ROLE_NAME_ALREADY_EXISTS",
-                    );
-                }
-                throw err;
-            }
-
-            // I3b: GLOBAL lockout invariant — after the patch is persisted
-            // inside the txn, there must still be at least one STAFF_MANAGE
-            // role. This is the last line of defense.
-            await assertStaffManageRoleStillExists(Role, session);
-
-            // I4: invalidate JWTs for all users wearing this role, but only
-            // when permissions or name actually changed.
-            if (shouldBumpTokens) {
-                invalidatedSessions = await bumpAssignedUsersTokenVersion(
-                    User,
-                    role._id,
-                    session,
-                );
-                bumped = true;
-            }
-
-            updated = role;
+      // Race-safe save: the unique index on `name` is the authoritative
+      // collision guard (two concurrent renames could both pass the
+      // earlier findOne).
+      try {
+        await role.save({
+          session
         });
-    } finally {
-        await session.endSession();
-    }
+      } catch (err) {
+        if (err && err.code === 11000) {
+          throw httpError("Role name already exists in this organization", 409, "ROLE_NAME_ALREADY_EXISTS");
+        }
+        throw err;
+      }
 
-    logger.info({
-        event: "ROLE_UPDATED",
-        roleId: updated._id,
-        roleName: updated.name,
-        organizationId,
-        actorId,
-        invalidatedSessions,
-    }, `[RolesService] Role updated: ${updated.name} (invalidated ${invalidatedSessions} sessions)`);
+      // I3b: GLOBAL lockout invariant — after the patch is persisted
+      // inside the txn, there must still be at least one STAFF_MANAGE
+      // role. This is the last line of defense.
+      await assertStaffManageRoleStillExists(Role, session);
 
-    // userCount: if we bumped, the updateMany count is authoritative.
-    // Otherwise (description-only edit), query it explicitly.
-    const userCount = bumped
-        ? invalidatedSessions
-        : await User.countDocuments({ roleId: updated._id, deletedAt: null });
+      // I4: invalidate JWTs for all users wearing this role, but only
+      // when permissions or name actually changed.
+      if (shouldBumpTokens) {
+        invalidatedSessions = await bumpAssignedUsersTokenVersion(User, role._id, session);
+        bumped = true;
+      }
+      updated = role;
+    });
+  } finally {
+    await session.endSession();
+  }
+  logger.info({
+    event: "ROLE_UPDATED",
+    roleId: updated._id,
+    roleName: updated.name,
+    organizationId,
+    actorId,
+    invalidatedSessions
+  }, `[RolesService] Role updated: ${updated.name} (invalidated ${invalidatedSessions} sessions)`);
 
-    return {
-        role: buildRoleDTO(updated.toObject ? updated.toObject() : updated, userCount),
-        invalidatedSessions,
-    };
+  // userCount: if we bumped, the updateMany count is authoritative.
+  // Otherwise (description-only edit), query it explicitly.
+  const userCount = bumped ? invalidatedSessions : await User.countDocuments({
+    roleId: updated._id,
+    deletedAt: null
+  });
+  return {
+    role: buildRoleDTO(updated.toObject ? updated.toObject() : updated, userCount),
+    invalidatedSessions
+  };
 }
 
 // ─── deleteRole ─────────────────────────────────────────────────────────────
@@ -467,88 +449,82 @@ async function updateRole(req, { roleId, patch }) {
  * @param {Object} payload - { roleId }
  * @returns {Promise<{ roleId: string, name: string }>}
  */
-async function deleteRole(req, { roleId }) {
-    const { User, Role } = _getModels(req);
-    const organizationId = req.context.organizationId;
-    const actorId = req.context.userId;
+async function deleteRole(req, {
+  roleId
+}) {
+  const {
+    User,
+    Role
+  } = _getModels(req);
+  const organizationId = req.context.organizationId;
+  const actorId = req.context.userId;
+  const session = await req.dbConnection.startSession();
+  let deletedSnapshot;
+  try {
+    await session.withTransaction(async () => {
+      // D1
+      const role = await Role.findById(roleId).session(session);
+      if (!role) {
+        throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
+      }
 
-    const session = await req.dbConnection.startSession();
-    let deletedSnapshot;
+      // D2
+      if (role.isSystemRole === true) {
+        throw httpError("System roles cannot be deleted", 403, "SYSTEM_ROLE_IMMUTABLE");
+      }
 
-    try {
-        await session.withTransaction(async () => {
-            // D1
-            const role = await Role.findById(roleId).session(session);
-            if (!role) {
-                throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
-            }
+      // D3: zero users assigned (active users — soft-deleted users
+      // don't block deletion, they've already lost their session)
+      const assignedCount = await User.countDocuments({
+        roleId: role._id,
+        deletedAt: null
+      }).session(session);
+      if (assignedCount > 0) {
+        throw httpError(`Cannot delete role: ${assignedCount} user(s) are still assigned. Reassign them first.`, 409, "ROLE_HAS_USERS_ASSIGNED");
+      }
 
-            // D2
-            if (role.isSystemRole === true) {
-                throw httpError(
-                    "System roles cannot be deleted",
-                    403,
-                    "SYSTEM_ROLE_IMMUTABLE",
-                );
-            }
-
-            // D3: zero users assigned (active users — soft-deleted users
-            // don't block deletion, they've already lost their session)
-            const assignedCount = await User.countDocuments({
-                roleId: role._id,
-                deletedAt: null,
-            }).session(session);
-
-            if (assignedCount > 0) {
-                throw httpError(
-                    `Cannot delete role: ${assignedCount} user(s) are still assigned. Reassign them first.`,
-                    409,
-                    "ROLE_HAS_USERS_ASSIGNED",
-                );
-            }
-
-            // D4: STAFF_MANAGE lockout check — BEFORE the delete.
-            // If this role grants STAFF_MANAGE, simulate the removal by
-            // verifying at least one OTHER role also grants it. Using
-            // .exists() instead of countDocuments() is faster (stops at
-            // first match) and clearer in intent. Optional chaining guards
-            // against legacy/partial migration docs where `permissions` or
-            // `permissions.staff` may be absent.
-            if (role.permissions?.staff?.manage === true) {
-                const otherAdminRole = await Role.exists({
-                    _id: { $ne: role._id },
-                    "permissions.staff.manage": true,
-                }).session(session);
-
-                if (!otherAdminRole) {
-                    throw httpError(
-                        "Cannot delete — this is the last role granting staff.manage.",
-                        409,
-                        "LOCKOUT_PREVENTED_NO_STAFF_MANAGE_ROLE",
-                    );
-                }
-            }
-
-            deletedSnapshot = {
-                roleId: role._id.toString(),
-                name: role.name,
-            };
-
-            await Role.deleteOne({ _id: role._id }, { session });
-        });
-    } finally {
-        await session.endSession();
-    }
-
-    logger.info({
-        event: "ROLE_DELETED",
-        roleId: deletedSnapshot.roleId,
-        roleName: deletedSnapshot.name,
-        organizationId,
-        actorId,
-    }, `[RolesService] Role deleted: ${deletedSnapshot.name}`);
-
-    return { roleId: deletedSnapshot.roleId, name: deletedSnapshot.name };
+      // D4: STAFF_MANAGE lockout check — BEFORE the delete.
+      // If this role grants STAFF_MANAGE, simulate the removal by
+      // verifying at least one OTHER role also grants it. Using
+      // .exists() instead of countDocuments() is faster (stops at
+      // first match) and clearer in intent. Optional chaining guards
+      // against legacy/partial migration docs where `permissions` or
+      // `permissions.staff` may be absent.
+      if (role.permissions?.staff?.manage === true) {
+        const otherAdminRole = await Role.exists({
+          _id: {
+            $ne: role._id
+          },
+          "permissions.staff.manage": true
+        }).session(session);
+        if (!otherAdminRole) {
+          throw httpError("Cannot delete — this is the last role granting staff.manage.", 409, "LOCKOUT_PREVENTED_NO_STAFF_MANAGE_ROLE");
+        }
+      }
+      deletedSnapshot = {
+        roleId: role._id.toString(),
+        name: role.name
+      };
+      await Role.deleteOne({
+        _id: role._id
+      }, {
+        session
+      });
+    });
+  } finally {
+    await session.endSession();
+  }
+  logger.info({
+    event: "ROLE_DELETED",
+    roleId: deletedSnapshot.roleId,
+    roleName: deletedSnapshot.name,
+    organizationId,
+    actorId
+  }, `[RolesService] Role deleted: ${deletedSnapshot.name}`);
+  return {
+    roleId: deletedSnapshot.roleId,
+    name: deletedSnapshot.name
+  };
 }
 
 // ─── assignRoleToUser ───────────────────────────────────────────────────────
@@ -571,124 +547,119 @@ async function deleteRole(req, { roleId }) {
  * @param {Object} payload - { userId, roleId }
  * @returns {Promise<{ userId: string, roleId: string, forceRefresh: boolean }>}
  */
-async function assignRoleToUser(req, { userId, roleId }) {
-    const { User, Role } = _getModels(req);
-    const organizationId = req.context.organizationId;
-    const actorId = req.context.userId;
+async function assignRoleToUser(req, {
+  userId,
+  roleId
+}) {
+  const {
+    User,
+    Role
+  } = _getModels(req);
+  const organizationId = req.context.organizationId;
+  const actorId = req.context.userId;
+  const session = await req.dbConnection.startSession();
+  let result;
+  try {
+    await session.withTransaction(async () => {
+      // A1: fetch target user first — we need their current roleId to
+      // know which Role docs to pull.
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw httpError("User not found", 404, "USER_NOT_FOUND");
+      }
 
-    const session = await req.dbConnection.startSession();
-    let result;
+      // A2
+      if (user.deletedAt) {
+        throw httpError("Cannot assign a role to a deleted user", 400, "USER_DELETED");
+      }
 
-    try {
-        await session.withTransaction(async () => {
-            // A1: fetch target user first — we need their current roleId to
-            // know which Role docs to pull.
-            const user = await User.findById(userId).session(session);
-            if (!user) {
-                throw httpError("User not found", 404, "USER_NOT_FOUND");
-            }
+      // Single query for both new role and (if any) current role.
+      const roleIdsToFetch = [roleId];
+      if (user.roleId && user.roleId.toString() !== String(roleId)) {
+        roleIdsToFetch.push(user.roleId);
+      }
+      const rolesFetched = await Role.find({
+        _id: {
+          $in: roleIdsToFetch
+        }
+      }).session(session).lean();
+      const role = rolesFetched.find(r => r._id.toString() === String(roleId));
+      if (!role) {
+        throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
+      }
+      const currentRole = user.roleId ? rolesFetched.find(r => r._id.toString() === user.roleId.toString()) : null;
 
-            // A2
-            if (user.deletedAt) {
-                throw httpError(
-                    "Cannot assign a role to a deleted user",
-                    400,
-                    "USER_DELETED",
-                );
-            }
+      // No-op short-circuit
+      if (user.roleId && user.roleId.toString() === role._id.toString()) {
+        result = {
+          userId: user._id.toString(),
+          roleId: role._id.toString(),
+          forceRefresh: false,
+          noop: true
+        };
+        return;
+      }
+      const newRoleHasStaffManage = role.permissions?.staff?.manage === true;
+      const currentRoleHasStaffManage = currentRole?.permissions?.staff?.manage === true;
 
-            // Single query for both new role and (if any) current role.
-            const roleIdsToFetch = [roleId];
-            if (user.roleId && user.roleId.toString() !== String(roleId)) {
-                roleIdsToFetch.push(user.roleId);
-            }
-            const rolesFetched = await Role.find({
-                _id: { $in: roleIdsToFetch },
-            }).session(session).lean();
+      // A3: lockout — if this user currently has STAFF_MANAGE via their
+      // existing role, and the new role does NOT grant it, verify that
+      // at least one OTHER active user still has STAFF_MANAGE.
+      if (!newRoleHasStaffManage && currentRoleHasStaffManage) {
+        const adminRoleIds = await Role.find({
+          "permissions.staff.manage": true
+        }, {
+          _id: 1
+        }).session(session).lean();
+        const otherAdminCount = await User.countDocuments({
+          _id: {
+            $ne: user._id
+          },
+          roleId: {
+            $in: adminRoleIds.map(r => r._id)
+          },
+          isActive: true,
+          deletedAt: null
+        }).session(session);
+        if (otherAdminCount === 0) {
+          throw httpError("Cannot reassign — this user is the last active administrator.", 409, "STAFF_MANAGE_LOCKOUT");
+        }
+      }
 
-            const role = rolesFetched.find((r) => r._id.toString() === String(roleId));
-            if (!role) {
-                throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
-            }
-            const currentRole = user.roleId
-                ? rolesFetched.find((r) => r._id.toString() === user.roleId.toString())
-                : null;
+      // A4: apply the change + bump tokenVersion
+      user.roleId = role._id;
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
+      await user.save({
+        session
+      });
 
-            // No-op short-circuit
-            if (user.roleId && user.roleId.toString() === role._id.toString()) {
-                result = {
-                    userId: user._id.toString(),
-                    roleId: role._id.toString(),
-                    forceRefresh: false,
-                    noop: true,
-                };
-                return;
-            }
+      // A3b: GLOBAL STAFF_MANAGE invariant — after all writes, at least
+      // one role in the org must still grant staff.manage. Guards against
+      // race conditions and inconsistent prior state.
+      await assertStaffManageRoleStillExists(Role, session);
 
-            const newRoleHasStaffManage = role.permissions?.staff?.manage === true;
-            const currentRoleHasStaffManage =
-                currentRole?.permissions?.staff?.manage === true;
-
-            // A3: lockout — if this user currently has STAFF_MANAGE via their
-            // existing role, and the new role does NOT grant it, verify that
-            // at least one OTHER active user still has STAFF_MANAGE.
-            if (!newRoleHasStaffManage && currentRoleHasStaffManage) {
-                const adminRoleIds = await Role.find(
-                    { "permissions.staff.manage": true },
-                    { _id: 1 },
-                ).session(session).lean();
-
-                const otherAdminCount = await User.countDocuments({
-                    _id: { $ne: user._id },
-                    roleId: { $in: adminRoleIds.map((r) => r._id) },
-                    isActive: true,
-                    deletedAt: null,
-                }).session(session);
-
-                if (otherAdminCount === 0) {
-                    throw httpError(
-                        "Cannot reassign — this user is the last active administrator.",
-                        409,
-                        "STAFF_MANAGE_LOCKOUT",
-                    );
-                }
-            }
-
-            // A4: apply the change + bump tokenVersion
-            user.roleId = role._id;
-            user.tokenVersion = (user.tokenVersion || 0) + 1;
-            await user.save({ session });
-
-            // A3b: GLOBAL STAFF_MANAGE invariant — after all writes, at least
-            // one role in the org must still grant staff.manage. Guards against
-            // race conditions and inconsistent prior state.
-            await assertStaffManageRoleStillExists(Role, session);
-
-            // A5: self-assignment → force client re-auth
-            const isSelf = actorId && user._id.toString() === actorId.toString();
-
-            result = {
-                userId: user._id.toString(),
-                roleId: role._id.toString(),
-                forceRefresh: !!isSelf,
-                noop: false,
-            };
-        });
-    } finally {
-        await session.endSession();
-    }
-
-    logger.info({
-        event: "ROLE_ASSIGNED",
-        targetUserId: result.userId,
-        roleId: result.roleId,
-        organizationId,
-        actorId,
-        forceRefresh: result.forceRefresh,
-        noop: result.noop,
-    }, `[RolesService] Role ${result.roleId} assigned to user ${result.userId}`);
-
-    return result;
+      // A5: self-assignment → force client re-auth
+      const isSelf = actorId && user._id.toString() === actorId.toString();
+      result = {
+        userId: user._id.toString(),
+        roleId: role._id.toString(),
+        forceRefresh: !!isSelf,
+        noop: false
+      };
+    });
+  } finally {
+    await session.endSession();
+  }
+  logger.info({
+    event: "ROLE_ASSIGNED",
+    targetUserId: result.userId,
+    roleId: result.roleId,
+    organizationId,
+    actorId,
+    forceRefresh: result.forceRefresh,
+    noop: result.noop
+  }, `[RolesService] Role ${result.roleId} assigned to user ${result.userId}`);
+  return result;
 }
 
 // ─── getRoleById ────────────────────────────────────────────────────────────
@@ -700,20 +671,22 @@ async function assignRoleToUser(req, { userId, roleId }) {
  * @param {Object} req
  * @param {Object} payload - { roleId }
  */
-async function getRoleById(req, { roleId }) {
-    const { User, Role } = _getModels(req);
-
-    const role = await Role.findById(roleId).lean();
-    if (!role) {
-        throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
-    }
-
-    const userCount = await User.countDocuments({
-        roleId: role._id,
-        deletedAt: null,
-    });
-
-    return buildRoleDTO(role, userCount);
+async function getRoleById(req, {
+  roleId
+}) {
+  const {
+    User,
+    Role
+  } = _getModels(req);
+  const role = await Role.findById(roleId).lean();
+  if (!role) {
+    throw httpError("Role not found", 404, "ROLE_NOT_FOUND");
+  }
+  const userCount = await User.countDocuments({
+    roleId: role._id,
+    deletedAt: null
+  });
+  return buildRoleDTO(role, userCount);
 }
 
 // ─── listRoles ──────────────────────────────────────────────────────────────
@@ -729,55 +702,64 @@ async function getRoleById(req, { roleId }) {
  *                             a later pass; currently unused.
  */
 async function listRoles(req /* , payload */) {
-    const { User, Role } = _getModels(req);
+  const {
+    User,
+    Role
+  } = _getModels(req);
+  const roles = await Role.find({})
+  // Deterministic order: system roles first, then by name, with _id
+  // tiebreaker to guarantee stable ordering when names collide (which
+  // shouldn't happen thanks to the unique index, but the tiebreaker
+  // makes the UI flicker-proof regardless).
+  .sort({
+    isSystemRole: -1,
+    name: 1,
+    _id: 1
+  }).limit(200).lean();
+  if (roles.length === 0) return [];
 
-    const roles = await Role.find({})
-        // Deterministic order: system roles first, then by name, with _id
-        // tiebreaker to guarantee stable ordering when names collide (which
-        // shouldn't happen thanks to the unique index, but the tiebreaker
-        // makes the UI flicker-proof regardless).
-        .sort({ isSystemRole: -1, name: 1, _id: 1 })
-        .limit(200)
-        .lean();
-
-    if (roles.length === 0) return [];
-
-    // Efficient user count: one aggregation over User, grouped by roleId.
-    // NOTE: User model uses `deletedAt: Date|null` for soft delete (not
-    // `isDeleted`). The match below excludes soft-deleted users.
-    const counts = await User.aggregate([
-        { $match: { deletedAt: null, roleId: { $in: roles.map((r) => r._id) } } },
-        { $group: { _id: "$roleId", n: { $sum: 1 } } },
-    ]);
-
-    const countByRoleId = new Map(
-        counts.map((c) => [c._id?.toString(), c.n]),
-    );
-
-    const withCounts = roles.map((r) => ({
-        ...r,
-        userCount: countByRoleId.get(r._id.toString()) || 0,
-    }));
-
-    return buildRoleListDTO(withCounts);
+  // Efficient user count: one aggregation over User, grouped by roleId.
+  // NOTE: User model uses `deletedAt: Date|null` for soft delete (not
+  // `isDeleted`). The match below excludes soft-deleted users.
+  const counts = await User.aggregate([{
+    $match: {
+      deletedAt: null,
+      roleId: {
+        $in: roles.map(r => r._id)
+      }
+    }
+  }, {
+    $group: {
+      _id: "$roleId",
+      n: {
+        $sum: 1
+      }
+    }
+  }]);
+  const countByRoleId = new Map(counts.map(c => [c._id?.toString(), c.n]));
+  const withCounts = roles.map(r => ({
+    ...r,
+    userCount: countByRoleId.get(r._id.toString()) || 0
+  }));
+  return buildRoleListDTO(withCounts);
 }
 
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
-    createRole,
-    updateRole,
-    deleteRole,
-    assignRoleToUser,
-    getRoleById,
-    listRoles,
-    // exported for tests
-    _internals: {
-        flatToNested,
-        assertUniqueName,
-        assertStaffManageNotLockedOut,
-        assertStaffManageRoleStillExists,
-        bumpAssignedUsersTokenVersion,
-        httpError,
-    },
+  createRole,
+  updateRole,
+  deleteRole,
+  assignRoleToUser,
+  getRoleById,
+  listRoles,
+  // exported for tests
+  _internals: {
+    flatToNested,
+    assertUniqueName,
+    assertStaffManageNotLockedOut,
+    assertStaffManageRoleStillExists,
+    bumpAssignedUsersTokenVersion,
+    httpError
+  }
 };

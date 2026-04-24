@@ -20,11 +20,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const RefundExecutionRecordDef = require("@shared/models/RefundExecutionRecord");
-const RefundExecutionRecord = getPlatformModel(RefundExecutionRecordDef);
+let _RefundExecutionRecord_cache = null;
+function RefundExecutionRecord() {
+    return _RefundExecutionRecord_cache || (_RefundExecutionRecord_cache = getPlatformModel(RefundExecutionRecordDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   requestRefund,
   approveRefund,
@@ -37,7 +46,7 @@ const logger = require("@utils/logger");
 exports.requestRefund = async (req, res) => {
   try {
     const contractId = req.params.id;
-    const actorId = req.platformUser?._id?.toString() || SYSTEM_ACTOR;
+    const actorId = req.platformUser?._id?.toString()() || SYSTEM_ACTOR;
     const {
       invoiceId,
       amount,
@@ -95,7 +104,7 @@ exports.requestRefund = async (req, res) => {
 exports.approveRefund = async (req, res) => {
   try {
     const refundId = req.params.id;
-    const approvedBy = req.platformUser?._id?.toString();
+    const approvedBy = req.platformUser?._id?.toString()();
     const record = await approveRefund(refundId, approvedBy);
     return res.json({
       success: true,
@@ -124,7 +133,7 @@ exports.approveRefund = async (req, res) => {
 exports.rejectRefund = async (req, res) => {
   try {
     const refundId = req.params.id;
-    const rejectedBy = req.platformUser?._id?.toString();
+    const rejectedBy = req.platformUser?._id?.toString()();
     const {
       reason
     } = req.body;
@@ -156,7 +165,7 @@ exports.rejectRefund = async (req, res) => {
 exports.processRefund = async (req, res) => {
   try {
     const refundId = req.params.id;
-    const processedBy = req.platformUser?._id?.toString();
+    const processedBy = req.platformUser?._id?.toString()();
     const result = await processRefund(refundId, processedBy);
     return res.json({
       success: true,
@@ -186,7 +195,7 @@ exports.processRefund = async (req, res) => {
 // ─── GET /refunds/:id ─────────────────────────────────────────────────────────
 exports.getRefund = async (req, res) => {
   try {
-    const record = await RefundExecutionRecord.findById(req.params.id).populate("invoiceId", "invoiceNumber totalAmount currency status").lean();
+    const record = await RefundExecutionRecord().findById(req.params.id).populate("invoiceId", "invoiceNumber totalAmount currency status").lean();
     if (!record) {
       return res.status(404).json({
         success: false,
@@ -214,14 +223,14 @@ exports.listRefundsByInvoice = async (req, res) => {
     const {
       id
     } = req.params;
-    const invoice = await PlatformInvoice.findById(id).lean();
+    const invoice = await PlatformInvoice().findById(id).lean();
     if (!invoice) {
       return res.status(404).json({
         success: false,
         error: "Invoice not found"
       });
     }
-    const records = await RefundExecutionRecord.find({
+    const records = await RefundExecutionRecord().find({
       invoiceId: id
     }).sort({
       createdAt: -1
@@ -273,16 +282,16 @@ exports.listAllRefunds = async (req, res) => {
         $in: ["refund_requested", "refund_under_review", "refund_approved", "refund_processing"]
       };
     }
-    const [records, total] = await Promise.all([RefundExecutionRecord.find(filter).sort({
+    const [records, total] = await Promise.all([RefundExecutionRecord().find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), RefundExecutionRecord.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), RefundExecutionRecord().countDocuments(filter)]);
 
     // ── Enrich with org name (batch lookup) ───────────────────────────
     let data = records;
     try {
       const orgIds = [...new Set(records.map(r => r.organizationId).filter(Boolean).map(String))];
       if (orgIds.length > 0) {
-        const orgs = await Organization.find({
+        const orgs = await Organization().find({
           _id: {
             $in: orgIds
           }
@@ -301,7 +310,7 @@ exports.listAllRefunds = async (req, res) => {
     }
 
     // ── Pending count for sidebar badge ───────────────────────────────
-    const pendingCount = await RefundExecutionRecord.countDocuments({
+    const pendingCount = await RefundExecutionRecord().countDocuments({
       status: {
         $in: ["refund_requested", "refund_under_review", "refund_approved"]
       }

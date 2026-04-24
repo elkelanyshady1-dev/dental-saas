@@ -1,6 +1,9 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const CronLockDef = require("../shared/models/CronLock");
-const CronLock = getPlatformModel(CronLockDef);
+let _CronLock_cache = null;
+function CronLock() {
+    return _CronLock_cache || (_CronLock_cache = getPlatformModel(CronLockDef));
+}
 const os = require("os");
 const instanceId = `${process.pid}-${os.hostname()}`;
 
@@ -16,7 +19,7 @@ exports.acquireLock = async (jobName, ttlMs) => {
   try {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + ttlMs);
-    const result = await CronLock.findOneAndUpdate({
+    const result = await CronLock().findOneAndUpdate({
       jobName,
       $or: [{
         expiresAt: {
@@ -67,7 +70,7 @@ exports.acquireLock = async (jobName, ttlMs) => {
  */
 exports.releaseLock = async jobName => {
   try {
-    await CronLock.findOneAndUpdate({
+    await CronLock().findOneAndUpdate({
       jobName,
       lockedBy: instanceId
     }, {

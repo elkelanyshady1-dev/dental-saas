@@ -124,7 +124,6 @@ class PatientLifecycleService {
    */
   async changeStatus({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     isActive,
@@ -211,7 +210,6 @@ class PatientLifecycleService {
    */
   async assignDoctor({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     doctorId,

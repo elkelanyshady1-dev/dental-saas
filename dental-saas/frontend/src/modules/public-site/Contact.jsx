@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BRAND } from "@/config/brand";
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -41,7 +42,9 @@ export default function Contact() {
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900">Email Support</p>
-                                        <p className="text-blue-600 font-medium">support@dentalsaas.com</p>
+                                        <p className="text-blue-600 font-medium">
+                                            <a href={`mailto:${BRAND.supportEmail}`}>{BRAND.supportEmail}</a>
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4">
@@ -50,7 +53,7 @@ export default function Contact() {
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900">Sales Inquiry</p>
-                                        <p className="text-slate-600 font-medium">+1 (800) DENTAL-SAAS</p>
+                                        <p className="text-slate-600 font-medium">+201507239258</p>
                                     </div>
                                 </div>
                             </div>
@@ -113,7 +116,7 @@ export default function Contact() {
                                     <input
                                         type="text"
                                         required
-                                        placeholder="Smile Dental Center"
+                                        placeholder="OrthoNoe Orthodontics"
                                         className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none border"
                                         value={formData.clinicName}
                                         onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
@@ -125,7 +128,7 @@ export default function Contact() {
                                     <textarea
                                         required
                                         rows="4"
-                                        placeholder="How can we help your clinic grow?"
+                                        placeholder="How can we help your orthodontic practice grow?"
                                         className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none border resize-none"
                                         value={formData.message}
                                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}

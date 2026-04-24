@@ -22,7 +22,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Contract Invariant Enforcement ─────────────────────────────────────────
@@ -81,7 +84,7 @@ class DomainViolation extends Error {
  * @returns {Promise<OrgContract|null>}
  */
 async function loadActiveContract(organizationId, session = null) {
-  const query = OrgContract.findOne({
+  const query = OrgContract().findOne({
     organizationId,
     contractStatus: "active"
   }).sort({

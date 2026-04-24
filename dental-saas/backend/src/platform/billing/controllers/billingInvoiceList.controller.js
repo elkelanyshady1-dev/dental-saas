@@ -14,9 +14,15 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   streamInvoicesCsv
 } = require("../services/financeExport.service");
@@ -45,16 +51,16 @@ exports.list = async (req, res) => {
       if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
       if (req.query.to) filter.createdAt.$lte = new Date(req.query.to);
     }
-    const [invoices, total] = await Promise.all([PlatformInvoice.find(filter).select("invoiceNumber organizationId totalAmount currency status paymentStatus createdAt paidAt dueDate contractId invoiceType").sort({
+    const [invoices, total] = await Promise.all([PlatformInvoice().find(filter).select("invoiceNumber organizationId totalAmount currency status paymentStatus createdAt paidAt dueDate contractId invoiceType").sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), PlatformInvoice.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), PlatformInvoice().countDocuments(filter)]);
 
     // ── Enrich with org name (batch, non-fatal) ───────────────────────────
     let data = invoices;
     try {
       const orgIds = [...new Set(invoices.map(i => i.organizationId).filter(Boolean).map(String))];
       if (orgIds.length > 0) {
-        const orgs = await Organization.find({
+        const orgs = await Organization().find({
           _id: {
             $in: orgIds
           }
@@ -128,7 +134,7 @@ exports.pdf = async (req, res) => {
         requestId: req.requestId
       });
     }
-    const invoice = await PlatformInvoice.findById(invoiceId).lean();
+    const invoice = await PlatformInvoice().findById(invoiceId).lean();
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -136,7 +142,7 @@ exports.pdf = async (req, res) => {
         requestId: req.requestId
       });
     }
-    const organization = await Organization.findById(invoice.organizationId).select("name billingCountry regionCode").lean();
+    const organization = await Organization().findById(invoice.organizationId).select("name billingCountry regionCode").lean();
     const pdfBuffer = await generateInvoicePdf(invoice, organization);
     const filename = `invoice-${invoice.invoiceNumber || invoiceId}.pdf`;
 

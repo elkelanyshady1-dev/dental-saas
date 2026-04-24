@@ -37,7 +37,10 @@ const {
 } = require("../organization/controllers/authController");
 const orgProtect = require("../middleware/orgProtect");
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   createLimiter
 } = require("../middleware/rateLimiter");
@@ -364,7 +367,7 @@ router.post("/sessions/:id/revoke", orgProtect, revokeSession);
  */
 router.get("/profile", orgProtect, async (req, res) => {
   try {
-    const org = await Organization.findById(req.user.organizationId).select("features slug country subscription.status");
+    const org = await Organization().findById(req.user.organizationId).select("features slug country subscription.status");
 
     // Phase 12 — Resolve modules from plan pipeline (NOT raw org.modules)
     // This ensures normalized keys (orthodonticsAdv → orthodontics).

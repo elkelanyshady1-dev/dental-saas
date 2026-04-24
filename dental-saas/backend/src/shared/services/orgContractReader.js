@@ -18,7 +18,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 /**
  * loadActiveContractForOrg
  *
@@ -31,7 +34,7 @@ const OrgContract = getPlatformModel(OrgContractDef);
 async function loadActiveContractForOrg(organizationId) {
   if (!organizationId) return null;
   try {
-    const contract = await OrgContract.findOne({
+    const contract = await OrgContract().findOne({
       organizationId,
       contractStatus: "active"
     }).select("planCode contractStatus currency effectiveTo trialEndDate autoRenew gracePeriodDays").sort({

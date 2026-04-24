@@ -1,6 +1,9 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlatformUserDef = require("../models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef);
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+}
 const {
   resolvePlatformCapabilities
 } = require("../../services/platformCapabilityResolver");
@@ -21,7 +24,10 @@ const logger = require("@utils/logger");
 // AuditLog for platform-user audit queries (actorType: "platform_user")
 // stays on platform DB because these are platform-scoped actions.
 const AuditLog_PlatformDef = require("@shared/models/AuditLog");
-const AuditLog_Platform = getPlatformModel(AuditLog_PlatformDef); // RefreshToken_Platform import removed — not used in this controller
+let _AuditLog_Platform_cache = null;
+function AuditLog_Platform() {
+    return _AuditLog_Platform_cache || (_AuditLog_Platform_cache = getPlatformModel(AuditLog_PlatformDef));
+} // RefreshToken_Platform import removed — not used in this controller
 // ─── Per-Org DB Model Resolution (DB_MODE = per-org) ──────────────────────────
 // User, Role, RefreshToken, AuditLog for org-domain governance queries
 // MUST be resolved via getModel() on the org's DB connection.
@@ -75,7 +81,7 @@ exports.createPlatformUser = async (req, res) => {
         message: "name (or firstName+lastName), email, and role are required"
       });
     }
-    const existingUser = await PlatformUser.findOne({
+    const existingUser = await PlatformUser().findOne({
       email: email.trim().toLowerCase()
     });
     if (existingUser) {
@@ -101,7 +107,7 @@ exports.createPlatformUser = async (req, res) => {
       passwordHash = await bcrypt.hash(temporaryPassword, 12);
       mustChangePassword = true;
     }
-    const newUser = await PlatformUser.create({
+    const newUser = await PlatformUser().create({
       firstName: firstName?.trim() || null,
       lastName: lastName?.trim() || null,
       name: resolvedName,
@@ -169,7 +175,7 @@ exports.createPlatformUser = async (req, res) => {
 };
 exports.getPlatformUsers = async (req, res) => {
   try {
-    const users = await PlatformUser.find().select("-password");
+    const users = await PlatformUser().find().select("-password");
     res.json(users);
   } catch (error) {
     res.status(500).json({
@@ -191,7 +197,7 @@ exports.resendInvite = async (req, res) => {
       id
     } = req.params;
     const actor = req.platformUser;
-    const target = await PlatformUser.findById(id);
+    const target = await PlatformUser().findById(id);
     if (!target) return res.status(404).json({
       success: false,
       message: "Platform user not found"
@@ -257,7 +263,7 @@ exports.updatePlatformUserProfile = async (req, res) => {
       jobTitle,
       department
     } = req.body;
-    const user = await PlatformUser.findById(id);
+    const user = await PlatformUser().findById(id);
     if (!user) return res.status(404).json({
       success: false,
       message: "Platform user not found"
@@ -316,7 +322,7 @@ exports.updatePlatformUser = async (req, res) => {
       role,
       isActive
     } = req.body;
-    const user = await PlatformUser.findById(id);
+    const user = await PlatformUser().findById(id);
     if (!user) {
       return res.status(404).json({
         message: "Platform user not found"
@@ -353,7 +359,7 @@ exports.updatePlatformUser = async (req, res) => {
 
     // 2. Protect against removing the LAST superadmin
     if (isTargetSuperAdmin && role && role !== "superadmin" || isActive === false && isTargetSuperAdmin) {
-      const superadminCount = await PlatformUser.countDocuments({
+      const superadminCount = await PlatformUser().countDocuments({
         role: "superadmin",
         isActive: true
       });
@@ -427,13 +433,13 @@ exports.getPlatformUserDetails = async (req, res) => {
         message: "Forbidden: Not authorized to view user details"
       });
     }
-    const user = await PlatformUser.findById(id).select("-password").lean();
+    const user = await PlatformUser().findById(id).select("-password").lean();
     if (!user) {
       return res.status(404).json({
         message: "Platform user not found"
       });
     }
-    const auditCount = await AuditLog_Platform.countDocuments({
+    const auditCount = await AuditLog_Platform().countDocuments({
       actorId: id,
       actorType: "platform_user"
     });
@@ -465,7 +471,7 @@ exports.getPlatformUserAuditHistory = async (req, res) => {
         message: "Forbidden: Not authorized to view user details"
       });
     }
-    const logs = await AuditLog_Platform.find({
+    const logs = await AuditLog_Platform().find({
       actorId: id,
       actorType: "platform_user"
     }).sort({
@@ -480,7 +486,7 @@ exports.getPlatformUserAuditHistory = async (req, res) => {
 };
 exports.getMe = async (req, res) => {
   try {
-    const user = await PlatformUser.findById(req.user.id).select("-password").lean();
+    const user = await PlatformUser().findById(req.user.id).select("-password").lean();
     if (!user) {
       return res.status(404).json({
         message: "Platform user not found"
@@ -498,7 +504,7 @@ exports.updateMe = async (req, res) => {
     const {
       name
     } = req.body;
-    const user = await PlatformUser.findById(req.user.id);
+    const user = await PlatformUser().findById(req.user.id);
     if (!user) {
       return res.status(404).json({
         message: "Platform user not found"
@@ -538,7 +544,7 @@ exports.changePassword = async (req, res) => {
         message: "New password must be at least 8 characters"
       });
     }
-    const user = await PlatformUser.findById(req.user.id).select("+password");
+    const user = await PlatformUser().findById(req.user.id).select("+password");
     if (!user) {
       return res.status(404).json({
         message: "Platform user not found"
@@ -576,7 +582,7 @@ exports.manageCredentials = async (req, res) => {
     const actor = req.platformUser;
 
     // Find user - check PlatformUser first, then User (legacy global for cross-plane lookup)
-    let targetUser = await PlatformUser.findById(userId);
+    let targetUser = await PlatformUser().findById(userId);
     let userModelName = "PlatformUser";
     if (!targetUser) {
       targetUser = await User_Legacy.findById(userId);
@@ -732,7 +738,7 @@ exports.getPlatformCapabilities = async (req, res) => {
 
 exports.getPlatformGovernanceUsers = async (req, res) => {
   try {
-    const users = await PlatformUser.find().select("-password").lean();
+    const users = await PlatformUser().find().select("-password").lean();
     res.json(users);
   } catch (error) {
     res.status(500).json({
@@ -745,7 +751,7 @@ exports.getPlatformUserDetail = async (req, res) => {
     const {
       id
     } = req.params;
-    const user = await PlatformUser.findById(id).select("-password").lean();
+    const user = await PlatformUser().findById(id).select("-password").lean();
     if (!user) return res.status(404).json({
       message: "Platform user not found"
     });
@@ -771,12 +777,12 @@ exports.getPlatformUserDetail = async (req, res) => {
     }));
 
     // ── Audit: events WHERE this user acted OR was the target ───────────────
-    const [asActor, asTarget] = await Promise.all([AuditLog_Platform.find({
+    const [asActor, asTarget] = await Promise.all([AuditLog_Platform().find({
       actorId: id,
       actorType: "platform_user"
     }).sort({
       createdAt: -1
-    }).limit(50).lean(), AuditLog_Platform.find({
+    }).limit(50).lean(), AuditLog_Platform().find({
       entityId: id,
       entity: "PlatformUser"
     }).sort({
@@ -874,7 +880,7 @@ exports.forceLogoutPlatformUser = async (req, res) => {
       id
     } = req.params;
     const actor = req.platformUser;
-    const target = await PlatformUser.findById(id);
+    const target = await PlatformUser().findById(id);
     if (!target) return res.status(404).json({
       message: "User not found"
     });
@@ -908,7 +914,7 @@ exports.resetPlatformUser2FA = async (req, res) => {
       id
     } = req.params;
     const actor = req.platformUser;
-    const target = await PlatformUser.findById(id);
+    const target = await PlatformUser().findById(id);
     if (!target) return res.status(404).json({
       message: "User not found"
     });

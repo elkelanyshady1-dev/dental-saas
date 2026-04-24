@@ -13,9 +13,15 @@ const {
   decrypt
 } = require("../../utils/encryption");
 const PlatformUserDef = require("../models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef); // Platform auth refresh tokens live on the platform DB (PlatformUser is platform-scoped)
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+} // Platform auth refresh tokens live on the platform DB (PlatformUser is platform-scoped)
 const RefreshTokenDef = require("@shared/models/RefreshToken");
-const RefreshToken = getPlatformModel(RefreshTokenDef);
+let _RefreshToken_cache = null;
+function RefreshToken() {
+    return _RefreshToken_cache || (_RefreshToken_cache = getPlatformModel(RefreshTokenDef));
+}
 const {
   isEnterprise
 } = require("@config/platformMode");
@@ -74,7 +80,7 @@ const platformLogin = async (req, res) => {
       event: "AUTH_TRACE_LOGIN_ATTEMPT",
       email
     }, "[AUTH_TRACE] Login attempt");
-    const user = await PlatformUser.findOne({
+    const user = await PlatformUser().findOne({
       email
     }).select("+password");
     if (TRACE) req.logger.debug({
@@ -205,7 +211,7 @@ const verify2FA = async (req, res) => {
       userId,
       code
     } = req.body;
-    const user = await PlatformUser.findById(userId).select("+twoFactorSecretEncrypted");
+    const user = await PlatformUser().findById(userId).select("+twoFactorSecretEncrypted");
     if (!user) {
       return res.status(401).json({
         message: "Invalid credentials"
@@ -407,7 +413,7 @@ const issueTokens = async (user, req, res) => {
   }, "[AUTH_TRACE] Access token created");
   const newRawRefreshToken = crypto.randomBytes(64).toString("hex");
   const newHash = crypto.createHash("sha256").update(newRawRefreshToken).digest("hex");
-  await RefreshToken.create({
+  await RefreshToken().create({
     userId: user._id,
     tokenHash: newHash,
     regionCode,
@@ -468,7 +474,7 @@ const issueTokens = async (user, req, res) => {
   });
 
   // Update lastLogin — non-blocking
-  PlatformUser.findByIdAndUpdate(user._id, {
+  PlatformUser().findByIdAndUpdate(user._id, {
     lastLogin: new Date()
   }).catch(() => {});
   return res.json({
@@ -531,7 +537,7 @@ const complete2FASetup = async (req, res) => {
     const {
       code
     } = req.body;
-    const user = await PlatformUser.findById(req.platformUser._id).select("+twoFactorSecretEncrypted");
+    const user = await PlatformUser().findById(req.platformUser._id).select("+twoFactorSecretEncrypted");
     if (!user.twoFactorSecretEncrypted) {
       return res.status(400).json({
         message: "2FA setup not initiated"
@@ -582,11 +588,11 @@ const disable2FA = async (req, res) => {
     const {
       code
     } = req.body;
-    const user = await PlatformUser.findById(req.platformUser._id).select("+twoFactorSecretEncrypted");
+    const user = await PlatformUser().findById(req.platformUser._id).select("+twoFactorSecretEncrypted");
 
     // 🛡️ Guard: Cannot disable 2FA for the last Superadmin if required
     if (user.role === "superadmin") {
-      const superadminCount = await PlatformUser.countDocuments({
+      const superadminCount = await PlatformUser().countDocuments({
         role: "superadmin",
         isActive: true
       });
@@ -631,7 +637,7 @@ const disable2FA = async (req, res) => {
  */
 const platformProfile = async (req, res) => {
   try {
-    const user = await PlatformUser.findById(req.platformUser._id).select("-password");
+    const user = await PlatformUser().findById(req.platformUser._id).select("-password");
     if (!user || !user.isActive) {
       return res.status(401).json({
         message: "Platform user not found or inactive"
@@ -663,7 +669,7 @@ const platformLogout = async (req, res) => {
     const rawToken = req.cookies?.platformRefreshToken;
     if (rawToken) {
       const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-      await RefreshToken.updateOne({
+      await RefreshToken().updateOne({
         tokenHash
       }, {
         revoked: true,
@@ -742,7 +748,7 @@ const platformRefresh = async (req, res) => {
       });
     }
     const tokenHash = require("crypto").createHash("sha256").update(rawToken).digest("hex");
-    const refreshDoc = await RefreshToken.findOne({
+    const refreshDoc = await RefreshToken().findOne({
       tokenHash
     });
     if (TRACE) req.logger.debug({
@@ -760,7 +766,7 @@ const platformRefresh = async (req, res) => {
         message: "Invalid refresh token"
       });
     }
-    const user = await PlatformUser.findById(refreshDoc.userId);
+    const user = await PlatformUser().findById(refreshDoc.userId);
     if (!user || !user.isActive) {
       if (TRACE) req.logger.debug({
         event: "AUTH_TRACE_REFRESH_FAIL",

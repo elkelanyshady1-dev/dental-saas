@@ -22,9 +22,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -117,7 +123,7 @@ exports.previewPlanVersionImpact = async (req, res) => {
     } = req.params;
 
     // ── 1. Load PlanVersion ────────────────────────────────────────────────
-    const version = await PlanVersion.findById(versionId).lean();
+    const version = await PlanVersion().findById(versionId).lean();
     if (!version) {
       return res.status(404).json({
         success: false,
@@ -132,7 +138,7 @@ exports.previewPlanVersionImpact = async (req, res) => {
     //
     // Note: we intentionally do NOT filter by billing interval here.
     // Revenue aggregation is done in lockedPrice terms so it's interval-agnostic.
-    const activeContracts = await OrgContract.find({
+    const activeContracts = await OrgContract().find({
       planVersionId: versionId,
       contractStatus: "active"
     }).select("organizationId lockedPrice currency").lean();

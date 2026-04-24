@@ -1,0 +1,241 @@
+/* ── VisitCard.css — Timeline card styles ───────────────────────────────────── */
+
+:root {
+  --visit-type-adjustment:   #0D9488;
+  --visit-type-diagnostic:   #6366F1;
+  --visit-type-bonding:      #8B5CF6;
+  --visit-type-debonding:    #F59E0B;
+  --visit-type-retention:    #10B981;
+  --visit-type-emergency:    #EF4444;
+  --visit-type-records:      #64748B;
+  --visit-type-consultation: #3B82F6;
+}
+
+/* ── Card container ────────────────────────────────────────────────────────── */
+
+.visit-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.visit-card:hover {
+  border-color: #94a3b8;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.visit-card:focus-visible {
+  outline: 2px solid #0D9488;
+  outline-offset: 2px;
+}
+
+.visit-card--active {
+  border-color: #0D9488;
+  background: #f0fdfa;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+/* ── Left accent ───────────────────────────────────────────────────────────── */
+
+.visit-card__accent {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.visit-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.visit-card__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.visit-card__header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.visit-card__visit-number {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+}
+
+.visit-card__type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid;
+  letter-spacing: 0.01em;
+  font-family: 'Inter', sans-serif;
+}
+
+.visit-card__date {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.visit-card__chevron {
+  color: #cbd5e1;
+  transition: transform 0.15s ease;
+}
+
+.visit-card:hover .visit-card__chevron {
+  transform: translateX(2px);
+  color: #94a3b8;
+}
+
+/* ── Wires ──────────────────────────────────────────────────────────────────── */
+
+.visit-card__wires {
+  display: flex;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.visit-card__wire-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+}
+
+.visit-card__wire-label {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.visit-card__wire-value {
+  color: #334155;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+/* ── Alerts ─────────────────────────────────────────────────────────────────── */
+
+.visit-card__alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.visit-card__alert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Key Actions ───────────────────────────────────────────────────────────── */
+
+.visit-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.visit-card__action-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #475569;
+  font-family: 'Inter', sans-serif;
+}
+
+.visit-card__action-icon {
+  color: #0D9488;
+  flex-shrink: 0;
+}
+
+/* ── Recall ─────────────────────────────────────────────────────────────────── */
+
+.visit-card__recall {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 100%);
+  border-radius: 8px;
+  border: 1px solid #d1fae5;
+}
+
+.visit-card__recall-icon {
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.visit-card__recall-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #047857;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Status indicator ──────────────────────────────────────────────────────── */
+
+.visit-card__status-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0D9488;
+  padding: 3px 8px;
+  background: rgba(13, 148, 136, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(13, 148, 136, 0.15);
+  animation: visitPulse 2s ease-in-out infinite;
+  width: fit-content;
+}
+
+@keyframes visitPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}

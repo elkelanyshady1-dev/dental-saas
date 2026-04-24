@@ -36,7 +36,10 @@
 
 const getSharedModel      = require("@core/db/getSharedModel");
 const SideEffectOutboxDef = require("./SideEffectOutbox.model");
-const SideEffectOutbox = getSharedModel(SideEffectOutboxDef);
+let _SideEffectOutbox_cache = null;
+function SideEffectOutbox() {
+    return _SideEffectOutbox_cache || (_SideEffectOutbox_cache = getSharedModel(SideEffectOutboxDef));
+}
 const logger           = require("@utils/logger");
 
 /**
@@ -68,7 +71,7 @@ async function enqueueSideEffect(
         };
 
         const createOpts = session ? { session } : {};
-        const [record] = await SideEffectOutbox.create([doc], createOpts);
+        const [record] = await SideEffectOutbox().create([doc], createOpts);
 
         logger.debug({
             event:          "SIDE_EFFECT_ENQUEUED",

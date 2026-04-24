@@ -7,9 +7,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanDef = require("../models/plan.model");
-const Plan = getPlatformModel(PlanDef);
+let _Plan_cache = null;
+function Plan() {
+    return _Plan_cache || (_Plan_cache = getPlatformModel(PlanDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // Per-org DB model resolution for cross-org aggregation
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // Per-org DB model resolution for cross-org aggregation
 const dbManager = require("@core/db/dbManager");
 const getModel = require("@core/db/getModel");
 const UserDef = require("@shared/models/User");
@@ -57,7 +63,7 @@ exports.createPlan = async (req, res) => {
       visibility,
       inflationPolicy
     } = req.body;
-    const existing = await Plan.findOne({
+    const existing = await Plan().findOne({
       code: code.toLowerCase()
     });
     if (existing) {
@@ -70,7 +76,7 @@ exports.createPlan = async (req, res) => {
     if (pricing?.regions) {
       validateRegionCountryOverlap(pricing.regions);
     }
-    const plan = await Plan.create({
+    const plan = await Plan().create({
       name,
       code: code.toLowerCase(),
       description,
@@ -124,7 +130,7 @@ exports.updatePlan = async (req, res) => {
         message: "expectedVersion is required for OAV."
       });
     }
-    const previousStateDoc = await Plan.findById(id);
+    const previousStateDoc = await Plan().findById(id);
     if (!previousStateDoc) return res.status(404).json({
       message: "Plan not found."
     });
@@ -142,7 +148,7 @@ exports.updatePlan = async (req, res) => {
     if (updates.pricing?.regions) {
       validateRegionCountryOverlap(updates.pricing.regions);
     }
-    const result = await Plan.findOneAndUpdate({
+    const result = await Plan().findOneAndUpdate({
       _id: id,
       version: expectedVersion
     }, {
@@ -196,11 +202,11 @@ exports.patchPlanStatus = async (req, res) => {
       isActive,
       expectedVersion
     } = req.body;
-    const previousState = await Plan.findById(id);
+    const previousState = await Plan().findById(id);
     if (!previousState) return res.status(404).json({
       message: "Plan not found."
     });
-    const result = await Plan.findOneAndUpdate({
+    const result = await Plan().findOneAndUpdate({
       _id: id,
       version: expectedVersion
     }, {
@@ -293,13 +299,13 @@ exports.getAllPlans = async (req, res) => {
     const filter = includeInactive ? {} : {
       isActive: true
     };
-    const plans = await Plan.find(filter).sort({
+    const plans = await Plan().find(filter).sort({
       createdAt: -1
     });
 
     // Attach usage counts for admin list
     const plansWithUsage = await Promise.all(plans.map(async plan => {
-      const orgCount = await Organization.countDocuments({
+      const orgCount = await Organization().countDocuments({
         planId: plan._id
       });
       return {
@@ -324,10 +330,10 @@ exports.getPlanUsage = async (req, res) => {
     const {
       id
     } = req.params;
-    const organizationsCount = await Organization.countDocuments({
+    const organizationsCount = await Organization().countDocuments({
       planId: id
     });
-    const orgIds = await Organization.find({
+    const orgIds = await Organization().find({
       planId: id
     }).distinct("_id");
 
@@ -380,7 +386,7 @@ exports.getPlanUsage = async (req, res) => {
  */
 exports.getPlanById = async (req, res) => {
   try {
-    const plan = await Plan.findById(req.params.id);
+    const plan = await Plan().findById(req.params.id);
     if (!plan) return res.status(404).json({
       message: "Plan not found."
     });
@@ -404,13 +410,13 @@ exports.duplicatePlan = async (req, res) => {
     if (!newCode) return res.status(400).json({
       message: "newCode is required."
     });
-    const existing = await Plan.findOne({
+    const existing = await Plan().findOne({
       code: newCode.toLowerCase()
     });
     if (existing) return res.status(400).json({
       message: `Code '${newCode}' already exists.`
     });
-    const source = await Plan.findById(req.params.id);
+    const source = await Plan().findById(req.params.id);
     if (!source) return res.status(404).json({
       message: "Source plan not found."
     });
@@ -439,7 +445,7 @@ exports.duplicatePlan = async (req, res) => {
       defaultPercent: 0,
       applyAfterYears: 1
     };
-    const plan = await Plan.create(cloned);
+    const plan = await Plan().create(cloned);
     await createAuditRecord({
       organizationId: "000000000000000000000000",
       branchId: "000000000000000000000000",

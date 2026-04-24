@@ -39,9 +39,15 @@ const {
   assertPaymentMatchesContract
 } = require("@billing/services/billingValidation.service");
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const KashierEventDef = require("@shared/models/KashierEvent");
-const KashierEvent = getPlatformModel(KashierEventDef);
+let _KashierEvent_cache = null;
+function KashierEvent() {
+    return _KashierEvent_cache || (_KashierEvent_cache = getPlatformModel(KashierEventDef));
+}
 const logger = require("@utils/logger");
 
 // Phase 3 Final Hardening:
@@ -150,7 +156,7 @@ async function handleKashierWebhook(req, res) {
 
   // 6. Idempotency. The unique index on KashierEvent.eventId is the hard
   //    guarantee — the upfront find is a fast-path to avoid work on retries.
-  const existing = await KashierEvent.findOne({
+  const existing = await KashierEvent().findOne({
     eventId: event.externalId
   }).lean();
   if (existing) {
@@ -164,7 +170,7 @@ async function handleKashierWebhook(req, res) {
     });
   }
   try {
-    await KashierEvent.create({
+    await KashierEvent().create({
       eventId: event.externalId,
       type: event.type,
       correlationId
@@ -187,7 +193,7 @@ async function handleKashierWebhook(req, res) {
   //    contractId is required at the metadata guard above, so we know it
   //    exists here. Still check the lookup resolves to a real document —
   //    rejecting with 404 CONTRACT_NOT_FOUND lets ops diagnose stale IDs.
-  const contract = await OrgContract.findById(event.contractId);
+  const contract = await OrgContract().findById(event.contractId);
   if (!contract) {
     logger.error({
       correlationId,

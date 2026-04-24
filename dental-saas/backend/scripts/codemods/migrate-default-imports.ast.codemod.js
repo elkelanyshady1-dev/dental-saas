@@ -67,8 +67,15 @@ const arg  = (n) => {
 
 const dryRun = flag("--dry-run");
 const verbose = flag("--verbose");
+// --strict: throw if any .default import is found that maps to plane "unknown".
+// Tenant-flagged sites are intentional (per the "never module-scope" rule) and
+// do NOT trigger strict mode. Use this on A2+ to catch ownership-map gaps.
+const strict = flag("--strict");
 const ownershipPath = arg("--ownership") || "model-ownership.json";
 const targetArg = arg("--path");
+// --exclude: comma-separated subpath names to skip under --path (e.g. "billing").
+const excludeArg = arg("--exclude");
+const excludeList = excludeArg ? excludeArg.split(",").map(s => s.trim()).filter(Boolean) : [];
 
 if (!targetArg) {
     console.error("[codemod] --path is required");
@@ -191,6 +198,7 @@ function* walk(dir) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             if (entry.name === "node_modules") continue;
+            if (excludeList.includes(entry.name)) continue;
             yield* walk(full);
         } else if (entry.isFile() && full.endsWith(".js")) {
             yield full;
@@ -475,4 +483,16 @@ if (flaggedFiles.length > 0 && verbose) {
 
 if (dryRun) {
     console.log("\n[codemod] --dry-run: no files written.");
+}
+
+// Strict mode: fail the process if any .default import couldn't be auto-
+// resolved to a plane (ownership-map gap). Tenant-flagged sites are
+// intentional and do NOT fail strict — those are the designed "manual review"
+// flow per the never-module-scope rule. Use --strict on A2+ to force map
+// completeness before applying.
+if (strict && totals.unknownFlagged > 0) {
+    console.error("\n[codemod] STRICT MODE: " + totals.unknownFlagged +
+        " unresolved .default import(s) — add to EXPLICIT_OVERRIDES in " +
+        "generate-model-ownership.js, regenerate the map, then re-run.");
+    process.exit(3);
 }

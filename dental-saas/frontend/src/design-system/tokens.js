@@ -1,5 +1,5 @@
 /**
- * tokens.js — DentalSaaS UI Governance Authority v2.0
+ * tokens.js — OrthoNoe UI Governance Authority v2.0
  *
  * SINGLE SOURCE OF TRUTH for all UI design tokens.
  * Upgraded to Stripe-level guardian structure.

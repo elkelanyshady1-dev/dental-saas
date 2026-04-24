@@ -11,13 +11,22 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlatformInvoiceDef = require("../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // ─── Helper: resolve org + 404 guard ─────────────────────────────────────────
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // ─── Helper: resolve org + 404 guard ─────────────────────────────────────────
 async function resolveOrg(id, res) {
-  const org = await Organization.findById(id);
+  const org = await Organization().findById(id);
   if (!org) {
     res.status(404).json({
       message: "Organization not found"
@@ -32,7 +41,7 @@ exports.getOrganizationInvoices = async (req, res) => {
   try {
     const org = await resolveOrg(req.params.id, res);
     if (!org) return;
-    const invoices = await PlatformInvoice.find({
+    const invoices = await PlatformInvoice().find({
       organizationId: org._id
     }).populate("createdBy", "name email").populate("contractId", "planCode contractStatus").sort({
       createdAt: -1
@@ -50,7 +59,7 @@ exports.getOrganizationInvoices = async (req, res) => {
 // ─── GET /platform/invoices/:invoiceId ──────────────────────────────────────
 exports.getInvoiceDetails = async (req, res) => {
   try {
-    const invoice = await PlatformInvoice.findById(req.params.invoiceId).populate("organizationId", "name slug").populate("createdBy", "name email").populate("contractId", "planCode contractStatus currency").lean();
+    const invoice = await PlatformInvoice().findById(req.params.invoiceId).populate("organizationId", "name slug").populate("createdBy", "name email").populate("contractId", "planCode contractStatus currency").lean();
     if (!invoice) {
       return res.status(404).json({
         message: "Invoice not found"
@@ -89,7 +98,7 @@ exports.updateInvoiceStatus = async (req, res) => {
         message: `Invalid invoice status. Allowed: ${VALID_STATUSES.join(", ")}`
       });
     }
-    const invoice = await PlatformInvoice.findById(req.params.invoiceId).session(session);
+    const invoice = await PlatformInvoice().findById(req.params.invoiceId).session(session);
     if (!invoice) {
       await session.abortTransaction();
       session.endSession();
@@ -104,11 +113,11 @@ exports.updateInvoiceStatus = async (req, res) => {
 
       // Sprint 6: Extend OrgContract.effectiveTo instead of subscription.currentPeriodEnd
       if (invoice.contractId) {
-        const contract = await OrgContract.findById(invoice.contractId).session(session);
+        const contract = await OrgContract().findById(invoice.contractId).session(session);
         if (contract) {
           const newEnd = contract.effectiveTo ? new Date(contract.effectiveTo) : new Date();
           newEnd.setMonth(newEnd.getMonth() + 1);
-          await OrgContract.findByIdAndUpdate(contract._id, {
+          await OrgContract().findByIdAndUpdate(contract._id, {
             $set: {
               effectiveTo: newEnd
             }

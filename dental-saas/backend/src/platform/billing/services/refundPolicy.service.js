@@ -25,11 +25,20 @@ const {
   getBillingSettings
 } = require("./billingSettings.service");
 const RevenueScheduleDef = require("../../finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const BillingAuditLogDef = require("../models/BillingAuditLog.model");
-const BillingAuditLog = getPlatformModel(BillingAuditLogDef);
+let _BillingAuditLog_cache = null;
+function BillingAuditLog() {
+    return _BillingAuditLog_cache || (_BillingAuditLog_cache = getPlatformModel(BillingAuditLogDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Default policy values (applied when BillingSettings fields absent) ────────
@@ -91,7 +100,7 @@ async function validateRefundEligibility(contract, invoice, amount, organization
   // ── Rule 3: Revenue recognition check ────────────────────────────────────
   let recognitionStarted = false;
   let recognizedAmount = 0;
-  const schedule = await RevenueSchedule.findOne({
+  const schedule = await RevenueSchedule().findOne({
     invoiceId: invoice._id
   }).lean();
   if (schedule && schedule.recognizedAmount > 0) {
@@ -128,7 +137,7 @@ async function validateRefundEligibility(contract, invoice, amount, organization
 
   // ── Rule 6: Velocity check (fraud guard) ─────────────────────────────────
   const velocityWindowStart = new Date(Date.now() - policy.maxRefundsPerOrgDays * 86_400_000);
-  const recentRefundCount = await BillingAuditLog.countDocuments({
+  const recentRefundCount = await BillingAuditLog().countDocuments({
     organizationId,
     eventType: "REFUND_APPROVED",
     createdAt: {

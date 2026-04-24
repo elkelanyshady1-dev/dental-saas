@@ -22,7 +22,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingTimelineDef = require("../models/BillingTimeline.model");
-const BillingTimeline = getPlatformModel(BillingTimelineDef);
+let _BillingTimeline_cache = null;
+function BillingTimeline() {
+    return _BillingTimeline_cache || (_BillingTimeline_cache = getPlatformModel(BillingTimelineDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -65,7 +68,7 @@ async function emitBillingTimelineEvent({
     // For provider events (webhooks), check by providerEventId.
     // This prevents duplicate entries during webhook retries or replay runs.
     if (providerEventId) {
-      const exists = await BillingTimeline.exists({
+      const exists = await BillingTimeline().exists({
         organizationId,
         contractId: contractId || null,
         eventType,
@@ -81,7 +84,7 @@ async function emitBillingTimelineEvent({
         return;
       }
     }
-    await BillingTimeline.create({
+    await BillingTimeline().create({
       organizationId,
       contractId: contractId || null,
       invoiceId: invoiceId || null,

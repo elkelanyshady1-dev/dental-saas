@@ -7,7 +7,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const RevenueAnalyticsDef = require("../models/revenueAnalytics.model");
-const RevenueAnalytics = getPlatformModel(RevenueAnalyticsDef);
+let _RevenueAnalytics_cache = null;
+function RevenueAnalytics() {
+    return _RevenueAnalytics_cache || (_RevenueAnalytics_cache = getPlatformModel(RevenueAnalyticsDef));
+}
 /**
  * processInvoicePaid
  * Idempotently increments the revenue snapshot based on a paid invoice.
@@ -43,7 +46,7 @@ async function processInvoicePaid(payload) {
   // Net revenue = Total - Tax (All in Minor Units)
   const netRevenueMinor = totalAmountMinor - taxAmountMinor;
   try {
-    await RevenueAnalytics.updateOne({
+    await RevenueAnalytics().updateOne({
       month,
       year,
       countryCode

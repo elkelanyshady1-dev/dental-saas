@@ -14,11 +14,20 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlanVersionDef = require("../../platform/billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 /**
  * resolvePlan
  * Resolves the active PlanVersion for an organization via its current contract.
@@ -30,7 +39,7 @@ async function resolvePlan(organizationId) {
   if (!organizationId) {
     throw new Error("Plan Resolution Error: organizationId is required.");
   }
-  const org = await Organization.findById(organizationId).lean();
+  const org = await Organization().findById(organizationId).lean();
   if (!org) {
     throw new Error(`Plan Resolution Error: Organization ${organizationId} not found.`);
   }
@@ -39,14 +48,14 @@ async function resolvePlan(organizationId) {
   // NOTE: currentContractId is a ROOT-LEVEL field on Organization, NOT under subscription.
   let planVersion = null;
   if (org.currentContractId) {
-    const contract = await OrgContract.findById(org.currentContractId).lean();
+    const contract = await OrgContract().findById(org.currentContractId).lean();
     if (contract?.planVersionId) {
-      planVersion = await PlanVersion.findById(contract.planVersionId).lean();
+      planVersion = await PlanVersion().findById(contract.planVersionId).lean();
     }
   }
   if (!planVersion) {
     // Fallback: find any active trial-tier version (for orgs without contracts yet)
-    planVersion = await PlanVersion.findOne({
+    planVersion = await PlanVersion().findOne({
       templateCode: "trial-tier",
       status: "active"
     }).lean();
@@ -57,7 +66,7 @@ async function resolvePlan(organizationId) {
     if (planVersion.status !== "active") {
       const err = new Error(`PlanVersion '${planVersion.versionTag}' is not active (status: ${planVersion.status}).`);
       err.code = "PLAN_INACTIVE";
-      err.planVersionId = planVersion._id?.toString();
+      err.planVersionId = planVersion._id?.toString()();
       throw err;
     }
     return planVersion;

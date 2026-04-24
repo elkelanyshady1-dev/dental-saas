@@ -74,7 +74,6 @@ const JOB_OPTS = {
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function buildSystemReq({
-  organizationId,
   dbConnection,
   branchId
 }) {

@@ -28,7 +28,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 /**
  * Aggregate revenue impact data for a given PlanVersion,
  * with an optional hypothetical price simulation.
@@ -57,7 +60,7 @@ async function getPlanRevenueImpact(planVersionId, simulatedPrice = null) {
 
   // Single aggregation: count orgs, sum lockedPrice, collect country codes.
   // Simulation math is done in-process — no second round-trip needed.
-  const result = await OrgContract.aggregate([{
+  const result = await OrgContract().aggregate([{
     $match: {
       planVersionId: versionOid,
       contractStatus: "active"

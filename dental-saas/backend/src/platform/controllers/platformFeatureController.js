@@ -1,14 +1,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const FeatureDefinitionDef = require("@shared/models/FeatureDefinition");
-const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
+let _FeatureDefinition_cache = null;
+function FeatureDefinition() {
+    return _FeatureDefinition_cache || (_FeatureDefinition_cache = getPlatformModel(FeatureDefinitionDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const featureService = require("../../services/featureService");
 
 // ─── GET /api/platform/features ─────────────────────────────────────────────
 exports.getAllFeatures = async (req, res) => {
   try {
-    const features = await FeatureDefinition.find().sort({
+    const features = await FeatureDefinition().find().sort({
       createdAt: -1
     });
     res.json(features);
@@ -32,7 +38,7 @@ exports.createFeature = async (req, res) => {
       allowedPlans,
       allowedRoles
     } = req.body;
-    const exists = await FeatureDefinition.findOne({
+    const exists = await FeatureDefinition().findOne({
       key
     });
     if (exists) {
@@ -40,7 +46,7 @@ exports.createFeature = async (req, res) => {
         message: `Feature key '${key}' already exists.`
       });
     }
-    const feature = new FeatureDefinition({
+    const feature = new (FeatureDefinition())({
       key,
       name,
       description,
@@ -73,7 +79,7 @@ exports.createFeature = async (req, res) => {
 // ─── PUT /api/platform/features/:id ─────────────────────────────────────────
 exports.updateFeature = async (req, res) => {
   try {
-    const feature = await FeatureDefinition.findById(req.params.id);
+    const feature = await FeatureDefinition().findById(req.params.id);
     if (!feature) {
       return res.status(404).json({
         message: "Feature not found"
@@ -127,11 +133,11 @@ exports.overrideOrganizationFeature = async (req, res) => {
       enabled,
       resetOverride
     } = req.body;
-    const org = await Organization.findById(orgId);
+    const org = await Organization().findById(orgId);
     if (!org) return res.status(404).json({
       message: "Organization not found"
     });
-    const featureDef = await FeatureDefinition.findOne({
+    const featureDef = await FeatureDefinition().findOne({
       key
     });
     if (!featureDef) return res.status(404).json({

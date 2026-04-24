@@ -11,7 +11,10 @@ const getModel = require("@core/db/getModel");
 const UserDef = require("../../shared/models/User");
 const BranchDef = require("../../shared/models/Branch");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   createAuditRecord
 } = require("../../services/auditService");
@@ -64,12 +67,12 @@ async function validatePlanCompatibility(organizationId, newPlan, actorId) {
     });
 
     // Mark org as overLimit (future creations will be blocked)
-    await Organization.findByIdAndUpdate(organizationId, {
+    await Organization().findByIdAndUpdate(organizationId, {
       overLimit: true
     });
   } else {
     // Clear overLimit flag if moving to a compatible plan
-    await Organization.findByIdAndUpdate(organizationId, {
+    await Organization().findByIdAndUpdate(organizationId, {
       overLimit: false
     });
   }

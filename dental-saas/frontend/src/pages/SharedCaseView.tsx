@@ -689,7 +689,7 @@ const SharedCaseView: React.FC = () => {
         {/* Footer */}
         <footer className="py-8 text-center mt-8">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-            Shared via DentalSaaS · Secure Collaboration Link
+            Shared via OrthoNoe · Secure Collaboration Link
           </p>
         </footer>
       </main>

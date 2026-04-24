@@ -13,6 +13,7 @@ import {
     ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { usePortalAuthContext } from '../context/PortalAuthContext';
+import { BRAND } from '@/config/brand';
 
 const navigation = [
     { name: 'Dashboard', href: '/portal/dashboard', icon: HomeIcon },
@@ -40,9 +41,9 @@ export default function PortalLayout() {
             <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">D</span>
+                        <span className="text-white font-bold text-xl">O</span>
                     </div>
-                    <span className="font-bold text-lg text-slate-800 tracking-tight">DentalSaaS</span>
+                    <span className="font-bold text-lg text-slate-800 tracking-tight">{BRAND.name}</span>
                 </div>
                 <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-500 hover:text-blue-600 transition-colors">
                     <Bars3Icon className="w-6 h-6" />
@@ -92,10 +93,10 @@ export default function PortalLayout() {
             <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white border-r border-slate-200 p-6 sticky top-0 h-screen overflow-y-auto">
                 <div className="flex items-center gap-3 mb-10 px-2">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-                        <span className="text-white font-bold text-2xl">D</span>
+                        <span className="text-white font-bold text-2xl">O</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="font-extrabold text-xl text-slate-900 tracking-tight leading-none italic">DentalSaaS</span>
+                        <span className="font-extrabold text-xl text-slate-900 tracking-tight leading-none italic">{BRAND.name}</span>
                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">Patient Portal</span>
                     </div>
                 </div>

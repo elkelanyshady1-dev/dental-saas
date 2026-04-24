@@ -33,13 +33,25 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 // PHASE 8 — PLANE-002 fix: All cross-plane imports use module aliases.
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   computePrice
 } = require("@billing/pricing/pricingEngine.service");
@@ -115,7 +127,7 @@ async function createCheckoutSession({
 
   // ── 1. Resolve Organization ───────────────────────────────────────────────
   // @per-org-transactional — billing orchestrator — Organization.findById with JWT-scoped organizationId
-  const org = await Organization.findById(organizationId).select("_id name isArchived country subscription").lean();
+  const org = await Organization().findById(organizationId).select("_id name isArchived country subscription").lean();
   if (!org) {
     throw Object.assign(new Error("Organization not found"), {
       status: 404,
@@ -140,7 +152,7 @@ async function createCheckoutSession({
 
   // ── 2. Resolve PlanVersion ────────────────────────────────────────────────
   // @per-org-transactional — billing orchestrator — PlanVersion.findById (platform catalog, no org scope)
-  const planVersion = await PlanVersion.findById(planVersionId).lean();
+  const planVersion = await PlanVersion().findById(planVersionId).lean();
   if (!planVersion) {
     throw Object.assign(new Error(`PlanVersion ${planVersionId} not found`), {
       status: 404,
@@ -192,7 +204,7 @@ async function createCheckoutSession({
   // Return existing draft/open invoice if it already exists for this key.
   // This is the idempotent re-entry point — avoids creating a second contract + invoice.
   // @per-org-transactional — billing orchestrator — idempotency guard with deterministic key
-  const existingInvoice = await PlatformInvoice.findOne({
+  const existingInvoice = await PlatformInvoice().findOne({
     idempotencyKey,
     status: {
       $in: ["draft", "open"]
@@ -221,8 +233,8 @@ async function createCheckoutSession({
       // Phase 3 (ported): Kashier webhook resolves contract via contractId
       // and no longer falls back to invoice. Stripe destructures only what
       // it uses, so extras are harmless.
-      contractId: existingInvoice.contractId?.toString(),
-      planVersionId: planVersionId?.toString(),
+      contractId: existingInvoice.contractId?.toString()(),
+      planVersionId: planVersionId?.toString()(),
       interval: billingInterval,
       providerPriceId: pricing.providerPriceId,
       amount: totalMinorExisting,
@@ -270,7 +282,7 @@ async function createCheckoutSession({
 
   // Convert decimal price to minor units (cents / piastres)
   const totalMinor = Math.round(pricing.finalPrice * 100);
-  const invoice = await PlatformInvoice.create({
+  const invoice = await PlatformInvoice().create({
     contractId: contract._id,
     planVersionId,
     invoiceType: contract.contractStatus === "pending_activation" ? "scheduled" // will activate after trial ends
@@ -324,7 +336,7 @@ async function createCheckoutSession({
   // Guard: provider must support checkout sessions (Paymob/PayPal may not yet)
   if (typeof paymentProvider.createNewCheckoutSession !== "function") {
     // Roll back: cancel the draft invoice since we can't open a payment session
-    await PlatformInvoice.updateOne({
+    await PlatformInvoice().updateOne({
       _id: invoice._id
     }, {
       $set: {
@@ -332,7 +344,7 @@ async function createCheckoutSession({
         voidedAt: new Date()
       }
     });
-    await OrgContract.updateOne({
+    await OrgContract().updateOne({
       _id: contract._id
     }, {
       $set: {
@@ -348,7 +360,7 @@ async function createCheckoutSession({
     invoiceId: invoice._id.toString(),
     // Phase 3 (ported): required by Kashier webhook (no invoice fallback).
     contractId: contract._id.toString(),
-    planVersionId: planVersionId?.toString(),
+    planVersionId: planVersionId?.toString()(),
     interval: billingInterval,
     providerPriceId: pricing.providerPriceId,
     amount: totalMinor,
@@ -459,7 +471,7 @@ async function createUnifiedCheckout({
   assertProviderSupported(requestedProvider);
 
   // ── 3. Resolve org + plan ────────────────────────────────────────────────
-  const org = await Organization.findById(organizationId).select("_id name isArchived country billingCountry subscription").lean();
+  const org = await Organization().findById(organizationId).select("_id name isArchived country billingCountry subscription").lean();
   if (!org) {
     throw Object.assign(new Error("Organization not found"), {
       status: 404,
@@ -472,7 +484,7 @@ async function createUnifiedCheckout({
       code: "ORG_ARCHIVED"
     });
   }
-  const planVersion = await PlanVersion.findById(planVersionId).lean();
+  const planVersion = await PlanVersion().findById(planVersionId).lean();
   if (!planVersion) {
     throw Object.assign(new Error(`PlanVersion ${planVersionId} not found`), {
       status: 404,
@@ -585,7 +597,7 @@ async function createUnifiedCheckout({
   }
   const now = new Date();
   const dueIn3 = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-  const invoice = await PlatformInvoice.create({
+  const invoice = await PlatformInvoice().create({
     contractId: contract._id,
     planVersionId,
     invoiceType: contract.contractStatus === "pending_activation" ? "scheduled" : "initial",
@@ -630,7 +642,7 @@ async function createUnifiedCheckout({
   const cancelUrl = `${process.env.FRONTEND_URL}/org/billing?checkout=cancelled`;
   const providerMetadata = {
     orgId: organizationId.toString(),
-    planVersionId: planVersionId?.toString(),
+    planVersionId: planVersionId?.toString()(),
     contractId: contract._id.toString(),
     invoiceId: invoice._id.toString(),
     interval: billingInterval,

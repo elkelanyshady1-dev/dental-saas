@@ -20,7 +20,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const RegionDef = require("../../platform/domain/models/Region.model");
-const Region = getPlatformModel(RegionDef);
+let _Region_cache = null;
+function Region() {
+    return _Region_cache || (_Region_cache = getPlatformModel(RegionDef));
+}
 const logger = require("../../utils/logger");
 
 /** @type {Record<string, {code: string, name: string, dbUri: string, redisUrl: string, providerKeys: object, status: string}>} */
@@ -36,7 +39,7 @@ let refreshInterval = null;
  * @throws {Error} If no active regions are found (bootstrap required).
  */
 async function loadRegionRegistry() {
-  const regions = await Region.find({
+  const regions = await Region().find({
     status: "ACTIVE"
   }).lean();
   if (!regions.length) {

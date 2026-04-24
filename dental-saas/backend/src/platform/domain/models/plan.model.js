@@ -28,9 +28,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanTemplateDef = require("../../billing/models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef);
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+}
 const PlanVersionDef = require("../../billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 /**
  * Legacy Plan compatibility shim.
  *
@@ -54,18 +60,18 @@ const LegacyPlanShim = {
     if (filter.isActive !== undefined) {
       templateFilter.status = filter.isActive ? "published" : "draft";
     }
-    const query = PlanTemplate.find(templateFilter);
+    const query = PlanTemplate().find(templateFilter);
     // Fluent chain support (sort, lean, etc.)
     return query;
   },
   findById(id) {
-    return PlanTemplate.findById(id);
+    return PlanTemplate().findById(id);
   },
   findOne(filter = {}) {
-    return PlanTemplate.findOne(filter);
+    return PlanTemplate().findOne(filter);
   },
   countDocuments(filter = {}) {
-    return PlanTemplate.countDocuments(filter);
+    return PlanTemplate().countDocuments(filter);
   },
   /**
    * Mutation methods throw — callers must migrate to PlanTemplate/PlanVersion CRUD.
@@ -83,7 +89,7 @@ const LegacyPlanShim = {
   },
   startSession() {
     // Delegate to PlanTemplate's connection (same MongoDB connection)
-    return PlanTemplate.startSession();
+    return PlanTemplate().startSession();
   }
 };
 module.exports = LegacyPlanShim;

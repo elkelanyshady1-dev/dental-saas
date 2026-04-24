@@ -49,7 +49,10 @@ const dbManager = require("../../core/db/dbManager");
 const logger = require("@utils/logger");
 const auditService = require("../../services/auditService");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PLATFORM_SENTINEL_ID = "000000000000000000000000";
 
 // ─── Enums (mirror schema) ───────────────────────────────────────────────────
@@ -315,7 +318,7 @@ async function* iterateAllDbs({
     orgId: null
   };
   if (!includeTenants) return;
-  const orgs = await Organization.find({}, {
+  const orgs = await Organization().find({}, {
     _id: 1
   }).lean();
   for (const org of orgs) {

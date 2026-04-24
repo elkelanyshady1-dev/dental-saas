@@ -15,11 +15,20 @@ const {
   Transform
 } = require("stream");
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const BillingLedgerDef = require("../models/BillingLedger.model");
-const BillingLedger = getPlatformModel(BillingLedgerDef);
+let _BillingLedger_cache = null;
+function BillingLedger() {
+    return _BillingLedger_cache || (_BillingLedger_cache = getPlatformModel(BillingLedgerDef));
+}
 const PaymentAttemptDef = require("../models/PaymentAttempt.model");
-const PaymentAttempt = getPlatformModel(PaymentAttemptDef);
+let _PaymentAttempt_cache = null;
+function PaymentAttempt() {
+    return _PaymentAttempt_cache || (_PaymentAttempt_cache = getPlatformModel(PaymentAttemptDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,7 +65,7 @@ async function streamInvoicesCsv(filters, res) {
   const header = rowToCsv(["Invoice Number", "Organization ID", "Total Amount", "Currency", "Status", "Payment Status", "Created At", "Paid At", "Due Date"]);
   res.write(header);
   try {
-    const cursor = PlatformInvoice.find(filters).select("invoiceNumber organizationId totalAmount currency status paymentStatus createdAt paidAt dueDate").sort({
+    const cursor = PlatformInvoice().find(filters).select("invoiceNumber organizationId totalAmount currency status paymentStatus createdAt paidAt dueDate").sort({
       createdAt: -1
     }).limit(5000).lean().cursor();
     for await (const doc of cursor) {
@@ -87,7 +96,7 @@ async function streamLedgerCsv(filters, res) {
   const header = rowToCsv(["Timestamp", "Event Type", "Amount", "Currency", "Organization ID", "Contract ID", "Invoice ID", "Provider", "Source", "Actor Type"]);
   res.write(header);
   try {
-    const cursor = BillingLedger.find(filters).select("createdAt eventType amount currency organizationId contractId invoiceId provider source actorType").sort({
+    const cursor = BillingLedger().find(filters).select("createdAt eventType amount currency organizationId contractId invoiceId provider source actorType").sort({
       createdAt: -1
     }).limit(5000).lean().cursor();
     for await (const doc of cursor) {
@@ -118,7 +127,7 @@ async function streamPaymentsCsv(filters, res) {
   const header = rowToCsv(["Timestamp", "Organization ID", "Invoice ID", "Provider", "Provider Payment ID", "Amount", "Currency", "Status", "Attempt #", "Error Code", "Error Message"]);
   res.write(header);
   try {
-    const cursor = PaymentAttempt.find(filters).select("createdAt organizationId invoiceId provider providerPaymentId amount currency status attemptNumber errorCode errorMessage").sort({
+    const cursor = PaymentAttempt().find(filters).select("createdAt organizationId invoiceId provider providerPaymentId amount currency status attemptNumber errorCode errorMessage").sort({
       createdAt: -1
     }).limit(5000).lean().cursor();
     for await (const doc of cursor) {

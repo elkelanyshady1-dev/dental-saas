@@ -48,8 +48,7 @@ async function listCases(req, res) {
     const {
       page,
       limit,
-      status,
-      organizationId
+      status
     } = req.query;
     const data = await dashboardService.listCases({
       supervisorId: req.supervisor.supervisorId,

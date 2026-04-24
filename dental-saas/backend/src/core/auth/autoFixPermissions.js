@@ -37,7 +37,10 @@ const getModelFn = require("@core/db/getModel");
 const RoleDef = require("../../shared/models/Role");
 const PermissionChangeLogDef = require("../../shared/models/PermissionChangeLog");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   deriveModuleMap,
   generateRoleSeed,
@@ -68,7 +71,7 @@ async function autoFixPermissions() {
   // Fetch all active organizations from the platform DB
   let orgs;
   try {
-    orgs = await Organization.find({
+    orgs = await Organization().find({
       isActive: true
     }).select("_id name").lean();
   } catch (err) {
@@ -179,7 +182,7 @@ async function autoFixPermissions() {
           logger.info({
             event: "AUTO_HEAL_ROLE_FIXED",
             roleName: role.name,
-            organizationId: org._id?.toString(),
+            organizationId: org._id?.toString()(),
             addedFields: healedFields.length,
             newVersion: PERMISSION_VERSION,
             previousVersion: currentVersion
@@ -205,7 +208,7 @@ async function autoFixPermissions() {
             // Non-blocking: audit failure must NEVER prevent auto-heal from completing
             logger.error({
               event: "PERMISSION_AUDIT_LOG_FAILED",
-              roleId: role._id?.toString(),
+              roleId: role._id?.toString()(),
               err: auditErr.message
             }, `[AutoHeal] ⚠ Failed to write PermissionChangeLog for role "${role.name}"`);
           }
@@ -217,7 +220,7 @@ async function autoFixPermissions() {
         logger.error({
           event: "AUTO_HEAL_ROLE_ERROR",
           roleName: role.name,
-          organizationId: org._id?.toString(),
+          organizationId: org._id?.toString()(),
           err: err.message
         }, `[AutoHeal] ❌ Failed to heal role "${role.name}": ${err.message}`);
       }

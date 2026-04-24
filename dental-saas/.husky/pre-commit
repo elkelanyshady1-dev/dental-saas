@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# ── Write Contract Enforcement Engine v2.0 — Pre-Commit Gate ─────────────────
+# Blocks commits that violate architectural invariants.
+# Runs write contract lint + invariant tests (fast, no DB required).
+
+echo "🔒 Running Write Contract enforcement checks..."
+
+cd backend || exit 1
+
+# 1. ESLint Write Contract rules (all 6 rules at error severity)
+npx eslint src/ --quiet 2>/dev/null
+LINT_EXIT=$?
+
+if [ $LINT_EXIT -ne 0 ]; then
+    echo "❌ ESLint Write Contract failed — fix violations before committing."
+    echo "   Run: cd backend && npm run lint:write-contract"
+    exit 1
+fi
+
+# 2. Invariant tests (structural safety — no DB required)
+npx jest src/tests/invariants/ --runInBand --silent 2>/dev/null
+TEST_EXIT=$?
+
+if [ $TEST_EXIT -ne 0 ]; then
+    echo "❌ Invariant tests failed — architectural violation detected."
+    echo "   Run: cd backend && npm run test:invariants"
+    exit 1
+fi
+
+echo "✅ All Write Contract enforcement checks passed."

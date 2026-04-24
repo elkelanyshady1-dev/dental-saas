@@ -1,6 +1,9 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // ✅ v3.0: Grace emails now enqueued via Redis (non-blocking, retryable)
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // ✅ v3.0: Grace emails now enqueued via Redis (non-blocking, retryable)
 const {
   emitInvoiceEmail
 } = require("../events/email.events");
@@ -22,7 +25,7 @@ const subscriptionGuard = async (req, res, next) => {
     const orgId = req.context?.organizationId;
     if (!orgId) return next(); // Skip if no org context
 
-    const organization = await Organization.findById(orgId);
+    const organization = await Organization().findById(orgId);
     if (!organization) return next();
 
     // v5.2 — SaaS Governance Integration
@@ -58,7 +61,7 @@ const subscriptionGuard = async (req, res, next) => {
       // ── Unexpected error → 500 (DB failure, schema error, etc.) ─────────
       logger.error({
         event: "SUBSCRIPTION_SYSTEM_ERROR",
-        organizationId: organization._id?.toString(),
+        organizationId: organization._id?.toString()(),
         err: planErr.message,
         stack: planErr.stack
       }, `[SubscriptionGuard] Unexpected error during plan resolution`);
@@ -139,7 +142,7 @@ const subscriptionGuard = async (req, res, next) => {
             }).catch(err => {
               logger.error({
                 event: "GRACE_EMAIL_ENQUEUE_FAILED",
-                organizationId: organization._id?.toString(),
+                organizationId: organization._id?.toString()(),
                 err: err.message
               }, "[SubscriptionGuard] Grace email enqueue error");
             });
@@ -147,7 +150,7 @@ const subscriptionGuard = async (req, res, next) => {
         } catch (enqueueErr) {
           logger.error({
             event: "GRACE_EMAIL_INFRA_FAILED",
-            organizationId: organization._id?.toString(),
+            organizationId: organization._id?.toString()(),
             err: enqueueErr.message
           }, "[SubscriptionGuard] Grace email infrastructure error");
         }

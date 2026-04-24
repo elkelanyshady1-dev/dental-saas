@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { publicApi } from "@/services/api";
 import { PLAN_QUERY_KEYS } from "@/lib/query/planQueryKeys";
 import { usePlanChannelListener, PLAN_EVENTS } from "@/lib/realtime/planChannel";
+import { BRAND } from "@/config/brand";
 
 // ─── Module label map (mirrors backend's moduleLabels in platformPublicPricing.controller.js)
 const MODULE_LABELS = {
@@ -104,7 +105,7 @@ function PlanSkeleton() {
 
 export default function Pricing() {
     useEffect(() => {
-        document.title = "Pricing & Plans | DentalSaaS Platform";
+        document.title = `Pricing & Plans | ${BRAND.platform.name}`;
     }, []);
 
     const [isAnnual, setIsAnnual] = useState(true);
@@ -170,10 +171,10 @@ export default function Pricing() {
                 {/* Header */}
                 <div className="text-center mb-16">
                     <h1 className="text-5xl font-extrabold text-slate-900 mb-6">
-                        Simple Pricing for <span className="text-blue-600">Modern Clinics</span>
+                        Simple Pricing for <span className="text-blue-600">Modern Orthodontics</span>
                     </h1>
                     <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-                        Choose the plan that fits your practice's needs. All plans include a 14-day free trial.
+                        Choose the plan that fits your orthodontic practice. All plans include a 30-day free trial.
                     </p>
 
 
@@ -312,7 +313,7 @@ export default function Pricing() {
                                             : "bg-slate-50 text-slate-900 hover:bg-slate-100 border border-slate-200"
                                             }`}
                                     >
-                                        Sign Up — 14 Days Trial
+                                        Sign Up — 30 Days Trial
                                     </Link>
                                 </div>
                             );

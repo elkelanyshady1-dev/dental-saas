@@ -56,7 +56,10 @@ const {
   VISIBILITY_TIMEOUT_MS
 } = require("../../config/outbox.config");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef); // ─── Defaults ────────────────────────────────────────────────────────────────
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+} // ─── Defaults ────────────────────────────────────────────────────────────────
 const DEFAULT_LIMIT = 1000;
 // Reclaim threshold is owned by config/outbox.config.js so every worker
 // (outbox.worker, replayEngine, regional processors) reclaims in lock-step.
@@ -439,7 +442,7 @@ async function run(options = {}) {
   if (scope === "tenant" || scope === "all") {
     let targetOrgIds = orgIds;
     if (!targetOrgIds || targetOrgIds.length === 0) {
-      const orgs = await Organization.find({}, {
+      const orgs = await Organization().find({}, {
         _id: 1
       }).lean();
       targetOrgIds = orgs.map(o => String(o._id));

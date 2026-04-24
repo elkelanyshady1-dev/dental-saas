@@ -1,0 +1,86 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<!--
+  System: Report Ready Notification
+  Sent when an analytics report or clinical report is ready for download.
+  Variables: recipientName, reportName, reportType, generatedAt, link, expiresIn
+-->
+<div style="border-left: 4px solid #2563eb; padding-left: 16px; margin-bottom: 28px;">
+    <p style="font-size: 12px; color: #2563eb; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 4px;">
+        Report Ready
+    </p>
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">OrthoNoe Analytics Engine</p>
+</div>
+
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Hello <strong>{{or recipientName "Doctor"}}</strong>,</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    Your requested report has been generated and is ready for review.
+</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin: 24px 0;">
+    <tr>
+        <td style="padding: 24px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Report Name</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 800; color: #0f172a;">{{reportName}}</p>
+                    </td>
+                </tr>
+                {{#if reportType}}
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Type</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #334155;"><span class="pill pill-blue">{{reportType}}</span></p>
+                    </td>
+                </tr>
+                {{/if}}
+                {{#if generatedAt}}
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Generated</p>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #334155;">{{formatDate generatedAt}}</p>
+                    </td>
+                </tr>
+                {{/if}}
+            </table>
+        </td>
+    </tr>
+</table>
+
+<div style="text-align: center; margin: 28px 0;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+            <td style="background: #2563eb; border-radius: 10px; box-shadow: 0 4px 14px rgba(37,99,235,0.3);">
+                <a href="{{link}}" style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">
+                    Download Report
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>
+
+{{#if expiresIn}}
+<div class="warning-box">
+    <strong>⏱ Note:</strong> This download link will expire in <strong>{{expiresIn}}</strong>. 
+    Please download the report before the link expires.
+</div>
+{{/if}}
+
+<p style="font-size: 13px; color: #64748b; margin-top: 20px; line-height: 1.7;">
+    Or copy this link into your browser:
+</p>
+<p style="word-break: break-all; font-size: 13px; color: #2563eb; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+    {{link}}
+</p>
+
+<hr class="divider" />
+
+<div style="background: #eff6ff; border-radius: 10px; padding: 14px 20px;">
+    <p style="margin: 0; font-size: 12px; color: #1e40af; line-height: 1.6;">
+        <strong>Confidential</strong> — This report may contain patient clinical data 
+        subject to HIPAA/GDPR protections. Handle accordingly.
+    </p>
+</div>
+{{/inline}}
+{{/layout}}

@@ -11,6 +11,8 @@ const sharedModuleNameMapper = {
     "^@shared/(.*)$": "<rootDir>/src/shared/$1",
     "^@utils/(.*)$": "<rootDir>/src/utils/$1",
     "^@core/(.*)$": "<rootDir>/src/core/$1",
+    "^@config/(.*)$": "<rootDir>/src/config/$1",
+    "^@infra/(.*)$": "<rootDir>/src/infrastructure/$1",
     "^@contracts/(.*)$": path.resolve(__dirname, "../packages/platform-contract/$1")
 };
 

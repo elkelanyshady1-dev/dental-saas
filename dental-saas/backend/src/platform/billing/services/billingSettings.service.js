@@ -14,7 +14,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingSettingsDef = require("../models/BillingSettings.model");
-const BillingSettings = getPlatformModel(BillingSettingsDef);
+let _BillingSettings_cache = null;
+function BillingSettings() {
+    return _BillingSettings_cache || (_BillingSettings_cache = getPlatformModel(BillingSettingsDef));
+}
 const logger = require("@utils/logger");
 
 // In-memory cache with TTL (60s) to avoid hitting DB on every cron tick
@@ -34,15 +37,15 @@ async function getBillingSettings() {
   if (_cache && _cacheAt && now - _cacheAt < CACHE_TTL_MS) {
     return _cache;
   }
-  let settings = await BillingSettings.findOne().lean();
+  let settings = await BillingSettings().findOne().lean();
   if (!settings) {
     logger.info("[BillingSettings] No settings document found — creating default");
     try {
-      const doc = await BillingSettings.create({});
+      const doc = await BillingSettings().create({});
       settings = doc.toObject();
     } catch (err) {
       // Race condition: another process may have inserted simultaneously
-      settings = await BillingSettings.findOne().lean();
+      settings = await BillingSettings().findOne().lean();
       if (!settings) throw err;
     }
   }
@@ -60,9 +63,9 @@ async function getBillingSettings() {
  * @returns {Promise<BillingSettings>}
  */
 async function updateBillingSettings(updates) {
-  let settings = await BillingSettings.findOne();
+  let settings = await BillingSettings().findOne();
   if (!settings) {
-    settings = new BillingSettings(updates);
+    settings = new (BillingSettings())(updates);
   } else {
     Object.assign(settings, updates);
   }

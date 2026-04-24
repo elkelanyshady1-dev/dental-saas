@@ -9,7 +9,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const dbManager = require("@core/db/dbManager");
 const getModel = require("@core/db/getModel");
 const UserDef = require("../../shared/models/User");
@@ -29,7 +32,7 @@ const Money = require("../../utils/money");
  */
 async function buildSubscriptionOverview(orgId) {
   // 1. Resolve Organization (platform DB — correct)
-  const organization = await Organization.findById(orgId).lean();
+  const organization = await Organization().findById(orgId).lean();
   if (!organization) return null;
 
   // 2. Compute Effective Plan

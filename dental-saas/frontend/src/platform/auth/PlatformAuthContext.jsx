@@ -200,6 +200,15 @@ export function PlatformAuthProvider({ children }) {
     // REFRESH — called once on boot, never from user actions
     // ─────────────────────────────────────────────────────────────
     const refresh = useCallback(async () => {
+        // TEMP DEBUG — verify how often refresh actually fires. Remove after
+        // confirming the "infinite refresh loop" claim with evidence.
+        console.log("[AUTH_FLOW]", {
+            path: window.location.pathname,
+            hasToken: !!_pToken,
+            isRefreshing: _isRefreshing,
+            action: "refresh_attempt",
+        });
+
         // Guard: only one refresh call in flight at a time.
         // The initRef in the initialization useEffect already prevents duplicates,
         // but this is an additional safety net.

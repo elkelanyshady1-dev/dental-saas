@@ -26,13 +26,25 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -42,9 +54,15 @@ const {
 } = require("./contractStateMachine");
 // Sprint 2: Entitlement engine
 const OrganizationEntitlementDef = require("../models/OrganizationEntitlement.model");
-const OrganizationEntitlement = getPlatformModel(OrganizationEntitlementDef);
+let _OrganizationEntitlement_cache = null;
+function OrganizationEntitlement() {
+    return _OrganizationEntitlement_cache || (_OrganizationEntitlement_cache = getPlatformModel(OrganizationEntitlementDef));
+}
 const BillingAuditLogDef = require("../models/BillingAuditLog.model");
-const BillingAuditLog = getPlatformModel(BillingAuditLogDef); // Sprint 8: BillingTimeline projection
+let _BillingAuditLog_cache = null;
+function BillingAuditLog() {
+    return _BillingAuditLog_cache || (_BillingAuditLog_cache = getPlatformModel(BillingAuditLogDef));
+} // Sprint 8: BillingTimeline projection
 const {
   emitBillingTimelineEvent
 } = require("./billingTimeline.service");
@@ -159,7 +177,7 @@ async function activateContract(contractId, invoiceId, options = {}) {
       if (!invoiceId) {
         throw new ContractActivationError(`invoiceId is required for contract activation (invoice-first lifecycle). ` + `Use skipInvoiceCheck=true only for legacy scheduler (pending_activation contracts).`, "INVOICE_ID_REQUIRED");
       }
-      invoice = await PlatformInvoice.findById(invoiceId).session(session);
+      invoice = await PlatformInvoice().findById(invoiceId).session(session);
       if (!invoice) {
         throw new ContractActivationError(`Invoice ${invoiceId} not found`, "INVOICE_NOT_FOUND");
       }
@@ -170,7 +188,7 @@ async function activateContract(contractId, invoiceId, options = {}) {
     }
 
     // ── Step 2: Load and validate Contract ───────────────────────────────
-    const contract = await OrgContract.findById(contractId).session(session);
+    const contract = await OrgContract().findById(contractId).session(session);
     if (!contract) {
       throw new ContractActivationError(`OrgContract ${contractId} not found`, "CONTRACT_NOT_FOUND");
     }
@@ -185,7 +203,7 @@ async function activateContract(contractId, invoiceId, options = {}) {
       if (!useExternalSession) await session.abortTransaction();
       return {
         contract,
-        organization: await Organization.findById(contract.organizationId)
+        organization: await Organization().findById(contract.organizationId)
       };
     }
 
@@ -207,19 +225,19 @@ async function activateContract(contractId, invoiceId, options = {}) {
     }
 
     // ── Step 3: Load PlanVersion (for module entitlement application) ────
-    const planVersion = await PlanVersion.findById(contract.planVersionId).session(session);
+    const planVersion = await PlanVersion().findById(contract.planVersionId).session(session);
     if (!planVersion) {
       throw new ContractActivationError(`PlanVersion ${contract.planVersionId} not found for contract ${contractId}`, "PLAN_VERSION_NOT_FOUND");
     }
 
     // ── Step 4: Load Organization ─────────────────────────────────────────
-    const org = await Organization.findById(contract.organizationId).session(session);
+    const org = await Organization().findById(contract.organizationId).session(session);
     if (!org) {
       throw new ContractActivationError(`Organization ${contract.organizationId} not found`, "ORG_NOT_FOUND");
     }
 
     // ── Step 5: Supersede existing active contract (if any) ───────────────
-    const previousContract = await OrgContract.findOne({
+    const previousContract = await OrgContract().findOne({
       organizationId: contract.organizationId,
       contractStatus: "active",
       _id: {
@@ -305,7 +323,7 @@ async function activateContract(contractId, invoiceId, options = {}) {
     // Uses upsert + $set (not $setOnInsert) so that re-activation of a contract
     // (e.g. after a plan change) refreshes the entitlement from the new PlanVersion.
     try {
-      await OrganizationEntitlement.findOneAndUpdate({
+      await OrganizationEntitlement().findOneAndUpdate({
         organizationId: org._id,
         effectiveUntil: null
       }, {
@@ -330,7 +348,7 @@ async function activateContract(contractId, invoiceId, options = {}) {
       });
 
       // Entitlement audit log — inside the same transaction
-      await BillingAuditLog.create([{
+      await BillingAuditLog().create([{
         organizationId: org._id,
         contractId: contract._id,
         eventType: "ENTITLEMENT_CREATED_FROM_PLAN",

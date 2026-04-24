@@ -20,9 +20,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../../billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const RevenueScheduleDef = require("../../finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const {
   getRenewalDashboardMetrics
 } = require("../../../projections/renewalDashboard.projection");
@@ -36,12 +42,12 @@ exports.getMetrics = async (req, res) => {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // ── Active subscription count ──────────────────────────────────────────
-    const activeSubscriptions = await OrgContract.countDocuments({
+    const activeSubscriptions = await OrgContract().countDocuments({
       contractStatus: "active"
     });
 
     // ── Past-due (active contracts in dunning) ────────────────────────────
-    const pastDueSubscriptions = await OrgContract.countDocuments({
+    const pastDueSubscriptions = await OrgContract().countDocuments({
       contractStatus: "active",
       dunning: {
         $ne: null
@@ -53,13 +59,13 @@ exports.getMetrics = async (req, res) => {
 
     // ── Churn rate calculation ─────────────────────────────────────────────
     // canceledThisMonth / activeAtStartOfMonth
-    const [canceledThisMonth, activeAtStartOfMonth] = await Promise.all([OrgContract.countDocuments({
+    const [canceledThisMonth, activeAtStartOfMonth] = await Promise.all([OrgContract().countDocuments({
       contractStatus: "canceled",
       updatedAt: {
         $gte: startOfMonth,
         $lte: endOfMonth
       }
-    }), OrgContract.countDocuments({
+    }), OrgContract().countDocuments({
       contractStatus: "active",
       createdAt: {
         $lte: startOfMonth
@@ -69,7 +75,7 @@ exports.getMetrics = async (req, res) => {
     : 0;
 
     // ── Revenue recognition totals from RevenueSchedule ───────────────────
-    const [revenueAgg] = await RevenueSchedule.aggregate([{
+    const [revenueAgg] = await RevenueSchedule().aggregate([{
       $match: {
         status: {
           $in: ["active", "fully_recognized"]

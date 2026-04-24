@@ -32,7 +32,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const cron = require("node-cron");
 const ExchangeRateDef = require("../platform/finance/models/ExchangeRate.model");
-const ExchangeRate = getPlatformModel(ExchangeRateDef);
+let _ExchangeRate_cache = null;
+function ExchangeRate() {
+    return _ExchangeRate_cache || (_ExchangeRate_cache = getPlatformModel(ExchangeRateDef));
+}
 const {
   getBillingSettings
 } = require("../platform/billing/services/billingSettings.service");
@@ -73,7 +76,7 @@ async function _fetchRateFromProvider(from, to) {
 async function _syncPair(from, to, effectiveDate) {
   try {
     // ── Safety: skip if manual override exists for today ─────────────────
-    const existingOverride = await ExchangeRate.findOne({
+    const existingOverride = await ExchangeRate().findOne({
       fromCurrency: from,
       toCurrency: to,
       effectiveDate,
@@ -99,7 +102,7 @@ async function _syncPair(from, to, effectiveDate) {
     }
 
     // ── Upsert auto rate (safe: unique index prevents double-insert) ─────
-    await ExchangeRate.findOneAndUpdate({
+    await ExchangeRate().findOneAndUpdate({
       fromCurrency: from,
       toCurrency: to,
       effectiveDate,

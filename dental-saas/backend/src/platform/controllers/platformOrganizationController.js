@@ -2,9 +2,15 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const organizationService = require("../../shared/services/OrganizationService");
 const asyncHandler = require("@utils/asyncHandler");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractModelDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContractModel = getPlatformModel(OrgContractModelDef); // ─── Per-Org DB Model Resolution (DB_MODE = per-org) ──────────────────────────
+let _OrgContractModel_cache = null;
+function OrgContractModel() {
+    return _OrgContractModel_cache || (_OrgContractModel_cache = getPlatformModel(OrgContractModelDef));
+} // ─── Per-Org DB Model Resolution (DB_MODE = per-org) ──────────────────────────
 // In per-org mode, Branch/User/AuditLog live in dental_org_<orgId>, not the
 // platform DB. Platform controllers must resolve models via getModel() on the
 // org's connection to read org-scoped entities.
@@ -62,7 +68,7 @@ function getOrgModels(orgId) {
 
 // ─── Helper: resolve org with 404 guard ───────────────────────────────────────
 async function resolveOrg(id, res) {
-  const org = await Organization.findById(id).lean();
+  const org = await Organization().findById(id).lean();
   if (!org) {
     res.status(404).json({
       message: "Organization not found"
@@ -138,7 +144,7 @@ exports.getOrganizationDetails = async (req, res) => {
         organizationId: org._id
       }),
       // pendingContract: presence = auto-renew is correctly scheduled; absence = trial-only, no auto-renew
-      OrgContractModel.findOne({
+      OrgContractModel().findOne({
         organizationId: org._id,
         contractStatus: 'pending_activation'
       }).select('_id planCode planVersionTag effectiveFrom autoRenew').lean().then(doc => doc || null).catch(() => null)]);
@@ -641,7 +647,7 @@ exports.updateOrganizationModules = async (req, res) => {
     } = req.body;
 
     // findById + existence check (not findByIdAndUpdate — guards against ghost orgs)
-    const org = await Organization.findById(req.params.id);
+    const org = await Organization().findById(req.params.id);
     if (!org) return res.status(404).json({
       message: "Organization not found"
     });
@@ -672,7 +678,7 @@ exports.updateOrganizationModules = async (req, res) => {
 // Returns only configuration surface — no governance, no subscription fields.
 exports.getOrganizationConfiguration = async (req, res) => {
   try {
-    const org = await Organization.findById(req.params.id).select("modules organizationSettings").lean();
+    const org = await Organization().findById(req.params.id).select("modules organizationSettings").lean();
     if (!org) return res.status(404).json({
       message: "Organization not found"
     });
@@ -731,7 +737,7 @@ exports.updateOrganizationConfiguration = async (req, res) => {
         message: "No valid configuration fields provided"
       });
     }
-    const org = await Organization.findByIdAndUpdate(req.params.id, {
+    const org = await Organization().findByIdAndUpdate(req.params.id, {
       $set: $setOps
     }, {
       new: true,
@@ -844,7 +850,7 @@ exports.getBranchDetails = async (req, res) => {
       const [branch, org] = await Promise.all([orgModels.Branch.findOne({
         _id: branchId,
         organizationId: orgId
-      }).lean(), Organization.findById(orgId).select("name appointmentSettings").lean()]);
+      }).lean(), Organization().findById(orgId).select("name appointmentSettings").lean()]);
       if (!branch) return res.status(404).json({
         message: "Branch not found in this organization"
       });
@@ -892,7 +898,7 @@ exports.getBranchConfiguration = async (req, res) => {
       const [branch, org] = await Promise.all([orgModels.Branch.findOne({
         _id: branchId,
         organizationId: orgId
-      }).select("workingHoursOverride isActive").lean(), Organization.findById(orgId).select("appointmentSettings").lean()]);
+      }).select("workingHoursOverride isActive").lean(), Organization().findById(orgId).select("appointmentSettings").lean()]);
       if (!branch) return res.status(404).json({
         message: "Branch not found in this organization"
       });
@@ -973,7 +979,7 @@ exports.updateBranchConfiguration = async (req, res) => {
       }, {
         new: true,
         runValidators: true
-      }).select("workingHoursOverride isActive").lean(), Organization.findById(orgId).select("appointmentSettings").lean()]);
+      }).select("workingHoursOverride isActive").lean(), Organization().findById(orgId).select("appointmentSettings").lean()]);
       if (!updated) return res.status(404).json({
         message: "Branch not found"
       });
@@ -1000,7 +1006,7 @@ exports.getPlatformRevenueAnalytics = async (req, res) => {
     const intelligence = await revenueIntelligenceService.computeRevenueIntelligence();
 
     // Compute subscription status counters for dashboard metadata
-    const orgs = await Organization.find().select("subscription").lean();
+    const orgs = await Organization().find().select("subscription").lean();
     let activeSubscriptions = 0;
     let trialSubscriptions = 0;
     let suspendedSubscriptions = 0;
@@ -1179,7 +1185,7 @@ exports.getBranchAnalytics = async (req, res) => {
 // Platform actor path: uses Control Plane DB for audit (actorType: platform_user).
 exports.archiveOrganization = async (req, res) => {
   try {
-    const org = await Organization.findByIdAndUpdate(req.params.id, {
+    const org = await Organization().findByIdAndUpdate(req.params.id, {
       $set: {
         isArchived: true,
         archivedAt: new Date()
@@ -1227,7 +1233,7 @@ exports.archiveOrganization = async (req, res) => {
 // Restores a previously archived organization. Clears isArchived + archivedAt.
 exports.restoreOrganization = async (req, res) => {
   try {
-    const org = await Organization.findByIdAndUpdate(req.params.id, {
+    const org = await Organization().findByIdAndUpdate(req.params.id, {
       $set: {
         isArchived: false,
         archivedAt: null
@@ -1285,7 +1291,7 @@ exports.checkDuplicateOrganizations = asyncHandler(async (req, res) => {
 
   // Build regex safely — escape any special regex chars from the raw query
   const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const matches = await Organization.find({
+  const matches = await Organization().find({
     $or: [{
       name: {
         $regex: escaped,
@@ -1318,22 +1324,28 @@ exports.checkDuplicateOrganizations = asyncHandler(async (req, res) => {
 // Returns contract history + current active contract + invoice history.
 // READ-ONLY. All mutations must go through contractEngine / activation services.
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 exports.getOrganizationContracts = asyncHandler(async (req, res) => {
   const {
     id
   } = req.params;
-  const org = await Organization.findById(id).lean();
+  const org = await Organization().findById(id).lean();
   if (!org) return res.status(404).json({
     message: "Organization not found"
   });
-  const [contracts, invoices] = await Promise.all([OrgContract.find({
+  const [contracts, invoices] = await Promise.all([OrgContract().find({
     organizationId: id
   }).sort({
     createdAt: -1
-  }).lean(), PlatformInvoice.find({
+  }).lean(), PlatformInvoice().find({
     organizationId: id
   }).sort({
     createdAt: -1
@@ -1376,7 +1388,7 @@ exports.addContact = asyncHandler(async (req, res) => {
     ownerName: ownerName?.trim() || null,
     phone: phone?.trim() || null
   };
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $push: {
       contacts: newContact
     }
@@ -1420,7 +1432,7 @@ exports.updateContact = asyncHandler(async (req, res) => {
       message: 'No valid fields provided.'
     });
   }
-  const org = await Organization.findOneAndUpdate({
+  const org = await Organization().findOneAndUpdate({
     _id: id,
     'contacts._id': contactId
   }, {
@@ -1444,7 +1456,7 @@ exports.deleteContact = asyncHandler(async (req, res) => {
     id,
     contactId
   } = req.params;
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $pull: {
       contacts: {
         _id: contactId
@@ -1466,7 +1478,7 @@ exports.deleteContact = asyncHandler(async (req, res) => {
 // ─── GET /platform/organizations/:id/crm ─────────────────────────────────────
 // Returns full CRM payload. Guard: VIEW_ORGANIZATIONS.
 exports.getCrm = asyncHandler(async (req, res) => {
-  const org = await Organization.findById(req.params.id).select('crm').lean();
+  const org = await Organization().findById(req.params.id).select('crm').lean();
   if (!org) return res.status(404).json({
     message: 'Organization not found.'
   });
@@ -1496,7 +1508,7 @@ exports.addCrmNote = asyncHandler(async (req, res) => {
     createdBy: req.platformUser?.name || req.platformUser?.email || 'Platform Admin',
     createdAt: new Date()
   };
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $push: {
       'crm.notes': {
         $each: [newNote],
@@ -1522,7 +1534,7 @@ exports.deleteCrmNote = asyncHandler(async (req, res) => {
     id,
     noteId
   } = req.params;
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $pull: {
       'crm.notes': {
         _id: noteId
@@ -1556,7 +1568,7 @@ exports.addCrmTag = asyncHandler(async (req, res) => {
   }
   const cleanTag = String(tag).trim();
   // $addToSet prevents duplicates atomically
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $addToSet: {
       'crm.tags': cleanTag
     }
@@ -1579,7 +1591,7 @@ exports.removeCrmTag = asyncHandler(async (req, res) => {
     id,
     tag
   } = req.params;
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $pull: {
       'crm.tags': decodeURIComponent(tag)
     }
@@ -1615,7 +1627,7 @@ exports.addCrmTask = asyncHandler(async (req, res) => {
     status: 'open',
     dueDate: dueDate ? new Date(dueDate) : null
   };
-  const org = await Organization.findByIdAndUpdate(id, {
+  const org = await Organization().findByIdAndUpdate(id, {
     $push: {
       'crm.tasks': newTask
     }
@@ -1659,7 +1671,7 @@ exports.updateCrmTask = asyncHandler(async (req, res) => {
       message: 'No valid fields provided.'
     });
   }
-  const org = await Organization.findOneAndUpdate({
+  const org = await Organization().findOneAndUpdate({
     _id: id,
     'crm.tasks._id': taskId
   }, {

@@ -20,15 +20,30 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrganizationEntitlementDef = require("../models/OrganizationEntitlement.model");
-const OrganizationEntitlement = getPlatformModel(OrganizationEntitlementDef);
+let _OrganizationEntitlement_cache = null;
+function OrganizationEntitlement() {
+    return _OrganizationEntitlement_cache || (_OrganizationEntitlement_cache = getPlatformModel(OrganizationEntitlementDef));
+}
 const BillingAuditLogDef = require("../models/BillingAuditLog.model");
-const BillingAuditLog = getPlatformModel(BillingAuditLogDef);
+let _BillingAuditLog_cache = null;
+function BillingAuditLog() {
+    return _BillingAuditLog_cache || (_BillingAuditLog_cache = getPlatformModel(BillingAuditLogDef));
+}
 const logger = require("@utils/logger");
 const {
   resolveOrganizationEntitlements,
@@ -40,16 +55,16 @@ const {
 
 // ─── Helper: load planVersion for an org ──────────────────────────────────────
 async function loadPlanVersionForOrg(orgId) {
-  const org = await Organization.findById(orgId).lean();
+  const org = await Organization().findById(orgId).lean();
   if (!org) return {
     org: null,
     planVersion: null
   };
   let planVersion = null;
   if (org.currentContractId) {
-    const contract = await OrgContract.findById(org.currentContractId).lean();
+    const contract = await OrgContract().findById(org.currentContractId).lean();
     if (contract?.planVersionId) {
-      planVersion = await PlanVersion.findById(contract.planVersionId).lean();
+      planVersion = await PlanVersion().findById(contract.planVersionId).lean();
     }
   }
   return {
@@ -234,7 +249,7 @@ async function applyEntitlementOverride(req, res) {
     }
 
     // ── Load existing entitlement ──────────────────────────────────────────
-    const current = await OrganizationEntitlement.findOne({
+    const current = await OrganizationEntitlement().findOne({
       organizationId: orgId,
       effectiveUntil: null
     });
@@ -266,7 +281,7 @@ async function applyEntitlementOverride(req, res) {
     };
 
     // ── Apply update ───────────────────────────────────────────────────────
-    const updated = await OrganizationEntitlement.findOneAndUpdate({
+    const updated = await OrganizationEntitlement().findOneAndUpdate({
       organizationId: orgId,
       effectiveUntil: null
     }, {
@@ -290,7 +305,7 @@ async function applyEntitlementOverride(req, res) {
     // ── Audit log — fire and forget ────────────────────────────────────────
     setImmediate(async () => {
       try {
-        await BillingAuditLog.create({
+        await BillingAuditLog().create({
           organizationId: orgId,
           contractId: current.contractId,
           eventType: "ENTITLEMENT_OVERRIDE_APPLIED",
@@ -312,7 +327,7 @@ async function applyEntitlementOverride(req, res) {
         });
 
         // Sprint 3: CAPABILITY_STATE_CHANGED — for unified capability observability
-        await BillingAuditLog.create({
+        await BillingAuditLog().create({
           organizationId: orgId,
           contractId: current.contractId,
           eventType: "CAPABILITY_STATE_CHANGED",

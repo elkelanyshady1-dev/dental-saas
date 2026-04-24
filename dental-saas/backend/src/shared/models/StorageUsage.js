@@ -7,6 +7,6 @@
  */
 "use strict";
 
-const getPlatformModel = require("@core/db/getPlatformModel");
+const { makeLazyPlatformModel } = require("@core/db/lazyModelProxy");
 const StorageUsageDef = require("../../core/storage/models/organizationStorageUsage.model");
-module.exports = getPlatformModel(StorageUsageDef);
+module.exports = makeLazyPlatformModel(StorageUsageDef);

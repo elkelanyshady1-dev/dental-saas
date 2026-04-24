@@ -1,0 +1,28 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<!--
+  Patient Layout Wrapper
+  Softer UI with emerald accents for patient-facing communications.
+  Used by: appointmentReminder, treatmentUpdate, patient portal emails
+-->
+<div style="border-left: 4px solid #10b981; padding-left: 16px; margin-bottom: 24px;">
+  <p style="font-size: 13px; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px;">
+    Patient Communication
+  </p>
+  <p style="font-size: 11px; color: #94a3b8; margin: 0;">
+    From your care team at OrthoNoe
+  </p>
+</div>
+
+{{{content}}}
+
+<hr class="divider" />
+
+<div style="background: #f0fdf4; border-radius: 10px; padding: 16px 20px; margin-top: 20px;">
+  <p style="margin: 0; font-size: 12px; color: #065f46; line-height: 1.6;">
+    <strong>Your Privacy Matters</strong> — This email contains protected health information. 
+    If you received this in error, please delete it and notify our office immediately.
+  </p>
+</div>
+{{/inline}}
+{{/layout}}

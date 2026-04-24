@@ -3,7 +3,13 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(grep -v \"//\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(npm --prefix frontend run lint:branding)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx jest *)",
+      "WebSearch",
+      "Bash(node -c src/core/db/platformConnection.js)",
+      "Bash(node -c src/core/db/sharedConnection.js)"
     ]
   }
 }

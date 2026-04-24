@@ -52,9 +52,15 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const BillingLedgerDef = require("../models/BillingLedger.model");
-const BillingLedger = getPlatformModel(BillingLedgerDef);
+let _BillingLedger_cache = null;
+function BillingLedger() {
+    return _BillingLedger_cache || (_BillingLedger_cache = getPlatformModel(BillingLedgerDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ async function checkPaymentTotals(opts = {}) {
   }
 
   // ── Ledger: sum payment.succeeded amountMinor ──────────────────────────────
-  const [ledgerResult] = await BillingLedger.aggregate([{
+  const [ledgerResult] = await BillingLedger().aggregate([{
     $match: {
       ...matchBase,
       eventType: "payment.succeeded"
@@ -143,7 +149,7 @@ async function checkPaymentTotals(opts = {}) {
     if (from) invoiceMatch.paidAt.$gte = new Date(from);
     if (to) invoiceMatch.paidAt.$lte = new Date(to);
   }
-  const [invoiceResult] = await PlatformInvoice.aggregate([{
+  const [invoiceResult] = await PlatformInvoice().aggregate([{
     $match: invoiceMatch
   }, {
     $group: {
@@ -241,7 +247,7 @@ async function replayLedgerRevenue(opts = {}) {
   }
 
   // Aggregate per org × currency × eventType in one pass
-  const rawRows = await BillingLedger.aggregate([{
+  const rawRows = await BillingLedger().aggregate([{
     $match: matchStage
   }, {
     $group: {
@@ -371,7 +377,7 @@ async function detectAnomalies(opts = {}) {
   } : {};
 
   // ── A: Net-negative orgs ───────────────────────────────────────────────────
-  const netNegativeOrgs = await BillingLedger.aggregate([{
+  const netNegativeOrgs = await BillingLedger().aggregate([{
     $match: {
       ...orgFilter,
       ...dateFilter,
@@ -418,7 +424,7 @@ async function detectAnomalies(opts = {}) {
   }]);
 
   // ── B: Negative invoices ───────────────────────────────────────────────────
-  const negativeInvoices = await PlatformInvoice.find({
+  const negativeInvoices = await PlatformInvoice().find({
     ...orgFilter,
     ...dateFilter,
     totalAmountMinor: {
@@ -433,7 +439,7 @@ async function detectAnomalies(opts = {}) {
   }).limit(MAX_ANOMALY_SAMPLE).lean();
 
   // ── C: Orphaned invoices (no contractId) ──────────────────────────────────
-  const orphanedInvoices = await PlatformInvoice.find({
+  const orphanedInvoices = await PlatformInvoice().find({
     ...orgFilter,
     ...dateFilter,
     $or: [{
@@ -454,7 +460,7 @@ async function detectAnomalies(opts = {}) {
   // ── D: Paid invoices missing ledger entry ──────────────────────────────────
   // Fetch paid invoice IDs, then find which have no matching ledger entry.
   // Batched to avoid O(n) lookups in tests — samples up to MAX_ANOMALY_SAMPLE.
-  const paidInvoices = await PlatformInvoice.find({
+  const paidInvoices = await PlatformInvoice().find({
     ...orgFilter,
     status: "paid"
   }, {
@@ -466,7 +472,7 @@ async function detectAnomalies(opts = {}) {
   const paidInvoiceIds = paidInvoices.map(i => i._id);
 
   // Find which of these paid invoice IDs have a ledger entry
-  const ledgerCoveredIds = await BillingLedger.distinct("invoiceId", {
+  const ledgerCoveredIds = await BillingLedger().distinct("invoiceId", {
     eventType: "payment.succeeded",
     invoiceId: {
       $in: paidInvoiceIds
@@ -479,7 +485,7 @@ async function detectAnomalies(opts = {}) {
   }));
 
   // ── E: Duplicate invoice numbers ───────────────────────────────────────────
-  const duplicateInvoiceNumbers = await PlatformInvoice.aggregate([{
+  const duplicateInvoiceNumbers = await PlatformInvoice().aggregate([{
     $match: {
       ...orgFilter,
       ...dateFilter,
@@ -531,7 +537,7 @@ async function detectAnomalies(opts = {}) {
   //   b) reference an invoiceId that no longer exists in PlatformInvoice
   // Common causes: webhook failure, partial transaction commit, deleted invoice,
   // manual DB corruption.
-  const orphanPaymentCandidates = await BillingLedger.find({
+  const orphanPaymentCandidates = await BillingLedger().find({
     ...orgFilter,
     ...dateFilter,
     eventType: "payment.succeeded",
@@ -553,7 +559,7 @@ async function detectAnomalies(opts = {}) {
 
   // Deeper check: find ledger entries where invoiceId is set but points to a
   // PlatformInvoice that was deleted or never existed.
-  const ledgerWithInvoiceId = await BillingLedger.find({
+  const ledgerWithInvoiceId = await BillingLedger().find({
     ...orgFilter,
     ...dateFilter,
     eventType: "payment.succeeded",
@@ -570,7 +576,7 @@ async function detectAnomalies(opts = {}) {
     currency: 1
   }).limit(MAX_ANOMALY_SAMPLE * 2).lean();
   const invoiceIdRefs = [...new Set(ledgerWithInvoiceId.map(e => String(e.invoiceId)))];
-  const existingInvoiceIds = invoiceIdRefs.length > 0 ? await PlatformInvoice.distinct("_id", {
+  const existingInvoiceIds = invoiceIdRefs.length > 0 ? await PlatformInvoice().distinct("_id", {
     _id: {
       $in: invoiceIdRefs
     }

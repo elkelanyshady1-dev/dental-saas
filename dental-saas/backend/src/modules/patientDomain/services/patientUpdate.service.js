@@ -31,7 +31,6 @@ class PatientUpdateService {
    */
   async updatePatient({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     data,
@@ -108,7 +107,6 @@ class PatientUpdateService {
    */
   async changePrimaryBranch({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     newBranchId,
@@ -184,7 +182,6 @@ class PatientUpdateService {
    */
   async updateBranchAccess({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     allowedBranchIds,

@@ -31,11 +31,20 @@
 
 const getSharedModel = require("@core/db/getSharedModel");
 const CommunicationMetricsDef = require("../../platform/models/CommunicationMetrics.model");
-const CommunicationMetrics = getSharedModel(CommunicationMetricsDef);
+let _CommunicationMetrics_cache = null;
+function CommunicationMetrics() {
+    return _CommunicationMetrics_cache || (_CommunicationMetrics_cache = getSharedModel(CommunicationMetricsDef));
+}
 const CommunicationRetryLogDef = require("../../platform/models/CommunicationRetryLog.model");
-const CommunicationRetryLog = getSharedModel(CommunicationRetryLogDef);
+let _CommunicationRetryLog_cache = null;
+function CommunicationRetryLog() {
+    return _CommunicationRetryLog_cache || (_CommunicationRetryLog_cache = getSharedModel(CommunicationRetryLogDef));
+}
 const EmailEventDef = require("../../platform/models/EmailEvent.model");
-const EmailEvent = getSharedModel(EmailEventDef);
+let _EmailEvent_cache = null;
+function EmailEvent() {
+    return _EmailEvent_cache || (_EmailEvent_cache = getSharedModel(EmailEventDef));
+}
 const {
   sendCommunication,
   sendBulkCommunication
@@ -81,7 +90,7 @@ exports.getMetrics = async (req, res) => {
 
     // DB aggregation is the authoritative source for historical counts.
     // Live queue state (waiting/active/delayed) no longer exists post-Phase-6.
-    const dbMetrics = await CommunicationMetrics.aggregate([{
+    const dbMetrics = await CommunicationMetrics().aggregate([{
       $match: {
         bucket: {
           $gte: since
@@ -172,7 +181,7 @@ exports.getRetryLogs = async (req, res) => {
     const filter = {};
     if (channel) filter.channel = channel;
     if (dlqOnly) filter.isDLQ = true;
-    const logs = await CommunicationRetryLog.find(filter).sort({
+    const logs = await CommunicationRetryLog().find(filter).sort({
       createdAt: -1
     }).limit(limit).lean();
     return res.json({
@@ -301,7 +310,7 @@ exports.getEmailEvents = async (req, res) => {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
     if (req.query.template) filter.template = req.query.template;
-    const events = await EmailEvent.find(filter).sort({
+    const events = await EmailEvent().find(filter).sort({
       createdAt: -1
     }).limit(limit).lean();
     return res.json({

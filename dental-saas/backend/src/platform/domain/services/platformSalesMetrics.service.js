@@ -11,11 +11,20 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 class SalesMetricsService {
   /**
    * getMetricsBySalesOwner
@@ -24,18 +33,18 @@ class SalesMetricsService {
    */
   async getMetricsBySalesOwner(salesOwnerId) {
     // Resolve orgs via OrgContract.salesOwnerId (Sprint 5)
-    const contracts = await OrgContract.find({
+    const contracts = await OrgContract().find({
       salesOwnerId
     }).lean();
     const orgIds = contracts.map(c => c.organizationId);
 
     // Fetch matched organizations for name/status
-    const orgs = await Organization.find({
+    const orgs = await Organization().find({
       _id: {
         $in: orgIds
       }
     }).lean();
-    const paidInvoices = await PlatformInvoice.find({
+    const paidInvoices = await PlatformInvoice().find({
       status: "paid",
       organizationId: {
         $in: orgIds

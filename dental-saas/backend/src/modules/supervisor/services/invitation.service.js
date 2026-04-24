@@ -324,8 +324,7 @@ class InvitationService {
    * @returns {object[]} invitations
    */
   async listCaseInvitations({
-    caseId,
-    organizationId
+    caseId
   }) {
     const {
       SupervisorInvitation

@@ -25,9 +25,15 @@
 const getSharedModel = require("@core/db/getSharedModel");
 const logger = require("@utils/logger");
 const CommunicationMetricsDef = require("../models/CommunicationMetrics.model");
-const CommunicationMetrics = getSharedModel(CommunicationMetricsDef);
+let _CommunicationMetrics_cache = null;
+function CommunicationMetrics() {
+    return _CommunicationMetrics_cache || (_CommunicationMetrics_cache = getSharedModel(CommunicationMetricsDef));
+}
 const EmailEventDef = require("../models/EmailEvent.model");
-const EmailEvent = getSharedModel(EmailEventDef);
+let _EmailEvent_cache = null;
+function EmailEvent() {
+    return _EmailEvent_cache || (_EmailEvent_cache = getSharedModel(EmailEventDef));
+}
 
 // Shared response body for endpoints that cannot be answered without the
 // removed BullMQ/Redis surface. Kept consistent with communicationMetricsController
@@ -58,7 +64,7 @@ async function getEmailMetrics(req, res) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // Aggregate from CommunicationMetrics (hourly buckets, last 24h)
-    const metrics = await CommunicationMetrics.aggregate([{
+    const metrics = await CommunicationMetrics().aggregate([{
       $match: {
         channel: "email",
         bucket: {
@@ -96,7 +102,7 @@ async function getEmailMetrics(req, res) {
     const retryRate = totalAttempts > 0 ? Math.round(totals.retried / totalAttempts * 1000) / 10 : 0;
 
     // Provider usage breakdown from EmailEvent (last 24h)
-    const providerBreakdown = await EmailEvent.aggregate([{
+    const providerBreakdown = await EmailEvent().aggregate([{
       $match: {
         status: "sent",
         createdAt: {
@@ -117,7 +123,7 @@ async function getEmailMetrics(req, res) {
     }]);
 
     // Hourly time-series for chart
-    const hourlyBuckets = await CommunicationMetrics.aggregate([{
+    const hourlyBuckets = await CommunicationMetrics().aggregate([{
       $match: {
         channel: "email",
         bucket: {
@@ -216,7 +222,7 @@ async function getWorkerStatus(req, res) {
   let recentSent = null;
   try {
     const since = new Date(Date.now() - 5 * 60 * 1000);
-    recentSent = await EmailEvent.countDocuments({
+    recentSent = await EmailEvent().countDocuments({
       status: "sent",
       createdAt: {
         $gte: since

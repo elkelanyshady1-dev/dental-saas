@@ -27,7 +27,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const logger = require("@utils/logger");
 async function expireManualSubscription(org) {
   org.subscription.status = "expired";
@@ -57,7 +60,7 @@ async function markPastDue(org) {
 async function runSubscriptionLifecycle({
   now = new Date()
 } = {}) {
-  const orgs = await Organization.find({
+  const orgs = await Organization().find({
     "subscription.status": "active",
     "subscription.currentPeriodEnd": {
       $lte: now

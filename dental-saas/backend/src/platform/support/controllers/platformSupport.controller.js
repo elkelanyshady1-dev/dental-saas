@@ -1,8 +1,14 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const TicketDef = require("@shared/models/Ticket");
-const Ticket = getPlatformModel(TicketDef);
+let _Ticket_cache = null;
+function Ticket() {
+    return _Ticket_cache || (_Ticket_cache = getPlatformModel(TicketDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const refundService = require("../services/platformRefund.service");
 const ticketService = require("../services/platformTicket.service");
 
@@ -22,7 +28,7 @@ exports.createTicket = async (req, res) => {
     const {
       organizationId
     } = req.user;
-    const ticket = await Ticket.create({
+    const ticket = await Ticket().create({
       organizationId,
       createdBy: req.user.userId,
       category,
@@ -47,7 +53,7 @@ exports.createTicket = async (req, res) => {
  */
 exports.getOrgTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find({
+    const tickets = await Ticket().find({
       organizationId: req.user.organizationId
     }).sort({
       createdAt: -1
@@ -66,7 +72,7 @@ exports.getOrgTickets = async (req, res) => {
  */
 exports.getPlatformTickets = async (req, res) => {
   try {
-    const tickets = await Ticket.find().populate("organizationId", "name").sort({
+    const tickets = await Ticket().find().populate("organizationId", "name").sort({
       createdAt: -1
     });
     res.json(tickets);
@@ -91,7 +97,7 @@ exports.assignTicket = async (req, res) => {
     } = req.body;
 
     // v11.0 Hardening — Move to service and enforce transition
-    const ticket = await Ticket.findById(id);
+    const ticket = await Ticket().findById(id);
     if (!ticket) return res.status(404).json({
       message: "Ticket not found"
     });
@@ -138,7 +144,7 @@ exports.addMessage = async (req, res) => {
       message
     } = req.body;
     const actorType = req.platformUser ? "platform_user" : "tenant_user";
-    const ticket = await Ticket.findById(id);
+    const ticket = await Ticket().findById(id);
     if (!ticket) return res.status(404).json({
       message: "Ticket not found"
     });

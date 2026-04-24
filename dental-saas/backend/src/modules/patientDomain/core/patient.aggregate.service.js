@@ -50,7 +50,6 @@ class PatientAggregateService {
    * CREATE ARCHETYPE — delegates to patientCreate.service
    */
   async createPatient({
-    organizationId,
     actorId,
     data,
     ipAddress,
@@ -79,7 +78,6 @@ class PatientAggregateService {
    * UPDATE ARCHETYPE — delegates to patientUpdate.service
    */
   async updatePatient({
-    organizationId,
     actorId,
     patientId,
     data,
@@ -111,7 +109,6 @@ class PatientAggregateService {
    * BRANCH GOVERNANCE — delegates to patientUpdate.service
    */
   async changePrimaryBranch({
-    organizationId,
     actorId,
     patientId,
     newBranchId,
@@ -139,7 +136,6 @@ class PatientAggregateService {
     });
   }
   async updateBranchAccess({
-    organizationId,
     actorId,
     patientId,
     allowedBranchIds,
@@ -171,7 +167,6 @@ class PatientAggregateService {
    * PORTAL ACCESS GOVERNANCE
    */
   async setPortalEnabled({
-    organizationId,
     patientId,
     enabled,
     expectedVersion,
@@ -197,7 +192,6 @@ class PatientAggregateService {
    * SOFT DELETE — delegates to patientLifecycle.service
    */
   async softDeletePatient({
-    organizationId,
     actorId,
     patientId,
     reason,
@@ -225,7 +219,6 @@ class PatientAggregateService {
    * STATUS MANAGEMENT — delegates to patientLifecycle.service
    */
   async changeStatus({
-    organizationId,
     actorId,
     patientId,
     isActive,
@@ -257,7 +250,6 @@ class PatientAggregateService {
    * MEDICAL HISTORY — delegates to patientClinical.service
    */
   async updateMedicalHistory({
-    organizationId,
     actorId,
     patientId,
     medicalHistory,
@@ -287,7 +279,6 @@ class PatientAggregateService {
    * POLICY MANAGEMENT — delegates to patientPolicy.service
    */
   async updatePolicy({
-    organizationId,
     actorId,
     data,
     ipAddress,
@@ -313,7 +304,6 @@ class PatientAggregateService {
    * DOCTOR ASSIGNMENT — delegates to patientLifecycle.service
    */
   async assignDoctor({
-    organizationId,
     actorId,
     patientId,
     doctorId,

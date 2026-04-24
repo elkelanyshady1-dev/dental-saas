@@ -85,6 +85,19 @@ const errorHandler = (err, req, res, next) => {
 
     const statusCode = error.statusCode || err.statusCode || err.status || 500;
 
+    // Unconditional stderr dump for 5xx so the stack is visible regardless of logger config
+    if (statusCode >= 500) {
+        console.error("🔥 GLOBAL ERROR (5xx)");
+        console.error("  route:      ", req.method, req.originalUrl);
+        console.error("  requestId:  ", requestId);
+        console.error("  statusCode: ", statusCode);
+        console.error("  errName:    ", err?.name);
+        console.error("  errMessage: ", safeMessage);
+        console.error("  errCode:    ", err?.code);
+        console.error("  errorCode:  ", err?.errorCode);
+        console.error("  stack:\n" + (safeStack || "<no stack>"));
+    }
+
     try {
         res.status(statusCode).json({
             success: false,

@@ -7,7 +7,10 @@ const {
 } = require("@infra/metrics/metrics");
 const logger = require("../utils/logger");
 const PlatformUserDef = require("../platform/models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef); // Per-org DB resolution for User model hydration
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+} // Per-org DB resolution for User model hydration
 const dbManager = require("@core/db/dbManager");
 const getModel = require("@core/db/getModel");
 const UserDef = require("../shared/models/User");
@@ -65,7 +68,7 @@ const authMiddleware = async (req, res, next) => {
 
     // ──── Platform Token Path ────────────────────────────────────────────
     if (decoded.type === "platform") {
-      const platformUser = await PlatformUser.findById(decoded.id);
+      const platformUser = await PlatformUser().findById(decoded.id);
       if (!platformUser) {
         return res.status(401).json({
           success: false,

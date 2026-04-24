@@ -90,7 +90,6 @@ async function creditWallet({
   reason,
   idempotencyKey,
   processedByUserId,
-  organizationId,
   refundId,
   currency: currencyOverride
 }, req, externalSession = null) {
@@ -258,7 +257,6 @@ async function debitWallet({
   reason,
   idempotencyKey,
   processedByUserId,
-  organizationId,
   invoiceId,
   currency: currencyOverride
 }, req, externalSession = null) {

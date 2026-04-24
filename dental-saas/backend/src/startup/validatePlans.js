@@ -15,7 +15,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanVersionDef = require("../platform/billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -25,7 +28,7 @@ const logger = require("@utils/logger");
  *                         if the trial-tier PlanVersion is missing.
  */
 async function validatePlans() {
-  const trial = await PlanVersion.findOne({
+  const trial = await PlanVersion().findOne({
     templateCode: "trial-tier",
     status: "active"
   }).lean();
@@ -51,12 +54,12 @@ async function validatePlans() {
   if (!hasModules) {
     logger.warn({
       event: "PLAN_VALIDATION_NO_MODULES",
-      planId: trial._id?.toString()
+      planId: trial._id?.toString()()
     }, "[StartupValidator] ⚠️  Trial-tier PlanVersion found but has no modules defined — entitlements may be empty");
   }
   logger.info({
     event: "PLAN_VALIDATION_PASSED",
-    planId: trial._id?.toString(),
+    planId: trial._id?.toString()(),
     versionTag: trial.versionTag
   }, `[StartupValidator] ✅ Plan validation passed — trial-tier PlanVersion: ${trial.versionTag}`);
 }

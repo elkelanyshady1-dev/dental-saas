@@ -1,39 +1,40 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { BRAND } from "@/config/brand";
 
 export default function Features() {
     useEffect(() => {
-        document.title = "Features | DentalSaaS Clinical Hub";
+        document.title = `Features | ${BRAND.name} Clinical Hub`;
     }, []);
     const categories = [
         {
-            title: "Clinical Excellence",
-            icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.675.27a1 1 0 00-.573.743L10 18H2v2h8v-2h9.428l.572-2.572z",
+            title: "Orthodontic Intelligence",
+            icon: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z",
             items: [
-                { label: "Dental Charting", desc: "Interactive 3D charting for pediatric and adult patients." },
-                { label: "Imaging Hub", desc: "DICOM support with high-res storage for X-rays and scans." },
-                { label: "E-Prescriptions", desc: "Send prescriptions directly to patient pharmacies." },
-                { label: "Treatment Plans", desc: "Create and track complex orthodontic and surgical plans." }
+                { label: "CephAI Tracing", desc: "AI-powered 32-point cephalometric landmark detection with automated angular and linear measurements." },
+                { label: "3D Model Viewer", desc: "Interactive STL visualization with PointNet++ segmentation, Bolton analysis, and Curve of Spee measurement." },
+                { label: "Treatment Planning", desc: "Multi-phase orthodontic plans with wire sequencing, appliance tracking, and visit milestone scheduling." },
+                { label: "Clinical Snapshots", desc: "Event-driven photo capture system for tracking treatment progress with timestamped clinical records." }
             ]
         },
         {
             title: "Smart Practice Management",
             icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
             items: [
-                { label: "Dynamic Calendar", desc: "Multi-doctor views with drag-and-drop scheduling." },
-                { label: "WhatsApp Automations", desc: "Automated reminders, follow-ups, and review requests." },
-                { label: "Patient Portal", desc: "Secure access for patients to view history and pay bills." },
-                { label: "Insurance Gateway", desc: "Direct electronic claims processing with major providers." }
+                { label: "Dynamic Calendar", desc: "Multi-doctor views with drag-and-drop scheduling optimized for orthodontic recall intervals." },
+                { label: "WhatsApp Automations", desc: "Automated appointment reminders, follow-ups, and recall notifications via WhatsApp and SMS." },
+                { label: "Patient Portal", desc: "Secure access for patients to view treatment progress, upcoming visits, and share clinical photos." },
+                { label: "Recall Management", desc: "Intelligent recall system that tracks pending patient follow-ups and automates scheduling workflows." }
             ]
         },
         {
             title: "Enterprise Operations",
             icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
             items: [
-                { label: "Multi-Clinic Sync", desc: "Unified patient records across all your locations." },
-                { label: "Financial Analytics", desc: "Deep insights into production, collection, and overhead." },
-                { label: "Staff RBAC", desc: "Customized access levels for every role in your practice." },
-                { label: "Platform API", desc: "Connect DentalSaaS to your existing medical hardware." }
+                { label: "Multi-Clinic Sync", desc: "Unified patient records across all your orthodontic locations with tenant-isolated databases." },
+                { label: "Financial Analytics", desc: "Deep insights into production, collection, and overhead with multi-currency support." },
+                { label: "Staff RBAC", desc: "Granular role-based access for orthodontists, assistants, and admin staff — JWT-driven security." },
+                { label: "Platform API", desc: "Connect OrthoNoe to your existing medical hardware and third-party systems." }
             ]
         }
     ];
@@ -43,12 +44,25 @@ export default function Features() {
             {/* Hero */}
             <section className="py-24 bg-slate-900 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"></div>
-                <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-                    <h1 className="text-5xl font-black mb-6">Built for the future of <span className="text-blue-500 underline decoration-4 underline-offset-8">Dentistry</span></h1>
-                    <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                        A comprehensive suite of clinical and administrative tools designed to eliminate
-                        inefficiencies and focus on what matters most: patient health.
-                    </p>
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                    <div className="grid lg:grid-cols-2 gap-16 items-center">
+                        <div className="text-center lg:text-left">
+                            <h1 className="text-5xl font-black mb-6">Built for the future of <span className="text-blue-500 underline decoration-4 underline-offset-8">Orthodontics</span></h1>
+                            <p className="text-xl text-slate-400 max-w-2xl leading-relaxed">
+                                A comprehensive suite of AI-powered clinical and administrative tools designed for orthodontists who demand precision, from cephalometric analysis to multi-phase treatment tracking.
+                            </p>
+                        </div>
+                        <div className="hidden lg:block">
+                            <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-6 shadow-2xl">
+                                <img
+                                    src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80"
+                                    alt="Modern orthodontic treatment room with digital imaging"
+                                    className="rounded-2xl w-full object-cover h-[320px]"
+                                    loading="eager"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -79,7 +93,7 @@ export default function Features() {
             {/* CTA */}
             <section className="py-24 bg-slate-50">
                 <div className="max-w-4xl mx-auto px-6 text-center">
-                    <h2 className="text-3xl font-bold text-slate-900 mb-8">Experience the power of DentalSaaS</h2>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-8">Experience the power of OrthoNoe</h2>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
                         <Link to="/pricing" className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition">
                             View Pricing & Plans

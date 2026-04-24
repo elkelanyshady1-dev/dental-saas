@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --clinical-bg: #f8fafc;
+  --clinical-header: #1e293b;
+  --clinical-card: #ffffff;
+  --clinical-border: #e2e8f0;
+  --tooth-healthy: #ffffff;
+  --tooth-selected: #3b82f6;
+  --tooth-alert: #ef4444;
+}
+
+body {
+  background-color: var(--clinical-bg);
+  color: #1e293b;
+  font-family: var(--font-sans);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

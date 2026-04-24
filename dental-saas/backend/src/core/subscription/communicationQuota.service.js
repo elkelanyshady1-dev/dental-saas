@@ -14,7 +14,10 @@ const {
 } = require("./effectivePlanBuilder");
 const getPlatformModel = require("@core/db/getPlatformModel");
 const CommunicationUsageDef = require("../../modules/communicationDomain/models/communicationUsage.model");
-const CommunicationUsage = getPlatformModel(CommunicationUsageDef);
+let _CommunicationUsage_cache = null;
+function CommunicationUsage() {
+    return _CommunicationUsage_cache || (_CommunicationUsage_cache = getPlatformModel(CommunicationUsageDef));
+}
 
 /**
  * getCurrentBillingCycle
@@ -50,7 +53,7 @@ async function assertCommunicationQuota(organizationId, type) {
   } = getCurrentBillingCycle();
 
   // Find or create usage record for this cycle
-  let usage = await CommunicationUsage.findOne({
+  let usage = await CommunicationUsage().findOne({
     organizationId,
     billingCycleStart: start
   });

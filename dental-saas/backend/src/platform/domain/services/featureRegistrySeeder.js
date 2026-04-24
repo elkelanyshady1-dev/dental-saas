@@ -22,9 +22,15 @@ const {
   FEATURE_REGISTRY
 } = require("../../featureRegistry");
 const ModuleDefinitionDef = require("../models/ModuleDefinition.model");
-const ModuleDefinition = getPlatformModel(ModuleDefinitionDef);
+let _ModuleDefinition_cache = null;
+function ModuleDefinition() {
+    return _ModuleDefinition_cache || (_ModuleDefinition_cache = getPlatformModel(ModuleDefinitionDef));
+}
 const FeatureDefinitionDef = require("../models/FeatureDefinition.model");
-const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
+let _FeatureDefinition_cache = null;
+function FeatureDefinition() {
+    return _FeatureDefinition_cache || (_FeatureDefinition_cache = getPlatformModel(FeatureDefinitionDef));
+}
 const logger = require("@utils/logger");
 
 // Category mapping for better UI grouping
@@ -83,7 +89,7 @@ async function seedFeatureRegistry() {
     sortOrder += 10;
 
     // ── Seed Module ─────────────────────────────────────────────────
-    const existingModule = await ModuleDefinition.findOne({
+    const existingModule = await ModuleDefinition().findOne({
       key: moduleKey
     });
     if (!existingModule) {
@@ -94,7 +100,7 @@ async function seedFeatureRegistry() {
         enterprise: def.plans.includes("enterprise")
       };
       const featureCount = def.features ? Object.keys(def.features).length : 0;
-      await ModuleDefinition.create({
+      await ModuleDefinition().create({
         key: moduleKey,
         schemaKey: def.schemaKey || moduleKey,
         displayName: def.label,
@@ -117,7 +123,7 @@ async function seedFeatureRegistry() {
     if (def.features) {
       for (const [featureKey, featureDef] of Object.entries(def.features)) {
         const fullKey = `${moduleKey}.${featureKey}`;
-        const existingFeature = await FeatureDefinition.findOne({
+        const existingFeature = await FeatureDefinition().findOne({
           key: fullKey
         });
         if (!existingFeature) {
@@ -130,7 +136,7 @@ async function seedFeatureRegistry() {
 
           // Generate human-readable display name from key
           const displayName = featureKey.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase()).trim();
-          await FeatureDefinition.create({
+          await FeatureDefinition().create({
             key: fullKey,
             module: moduleKey,
             displayName,

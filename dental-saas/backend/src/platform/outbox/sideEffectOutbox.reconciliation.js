@@ -23,7 +23,10 @@
 
 const getSharedModel      = require("@core/db/getSharedModel");
 const SideEffectOutboxDef = require("./SideEffectOutbox.model");
-const SideEffectOutbox = getSharedModel(SideEffectOutboxDef);
+let _SideEffectOutbox_cache = null;
+function SideEffectOutbox() {
+    return _SideEffectOutbox_cache || (_SideEffectOutbox_cache = getSharedModel(SideEffectOutboxDef));
+}
 const logger           = require("@utils/logger");
 
 // Events stuck in "processing" for longer than this are considered crashed
@@ -37,7 +40,7 @@ async function reconcile() {
     try {
         const cutoff = new Date(Date.now() - STUCK_TIMEOUT_MS);
 
-        const stuck = await SideEffectOutbox.find({
+        const stuck = await SideEffectOutbox().find({
             status:   "processing",
             lockedAt: { $lt: cutoff },
         }).lean();
@@ -45,7 +48,7 @@ async function reconcile() {
         if (stuck.length === 0) return 0;
 
         for (const event of stuck) {
-            await SideEffectOutbox.updateOne(
+            await SideEffectOutbox().updateOne(
                 { _id: event._id, status: "processing" },
                 {
                     $set: {

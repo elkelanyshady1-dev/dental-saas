@@ -30,7 +30,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const AuthTraceDef = require("@shared/models/AuthTrace");
-const AuthTrace = getPlatformModel(AuthTraceDef);
+let _AuthTrace_cache = null;
+function AuthTrace() {
+    return _AuthTrace_cache || (_AuthTrace_cache = getPlatformModel(AuthTraceDef));
+}
 const {
   getEnforcementMode
 } = require("@rbac/fieldWriteGuard");
@@ -109,14 +112,14 @@ async function getSummary(organizationId, options = {}) {
   const cached = await _getCache(cacheKey);
   if (cached) return cached;
   const filter = _buildDateFilter(organizationId, options);
-  const [total, denials, perfResult] = await Promise.all([AuthTrace.countDocuments(filter),
+  const [total, denials, perfResult] = await Promise.all([AuthTrace().countDocuments(filter),
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  AuthTrace.countDocuments({
+  AuthTrace().countDocuments({
     ...filter,
     hasDenial: true
   }),
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  AuthTrace.aggregate([{
+  AuthTrace().aggregate([{
     $match: filter
   }, {
     $group: {
@@ -156,7 +159,7 @@ async function getTimeline(organizationId, options = {}) {
   : "%Y-%m-%dT%H:00:00Z"; // Hourly buckets for ≤ 7 days
 
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: filter
   }, {
     $group: {
@@ -217,9 +220,9 @@ async function getDistribution(organizationId, options = {}) {
   const cached = await _getCache(cacheKey);
   if (cached) return cached;
   const filter = _buildDateFilter(organizationId, options);
-  const [total, denials] = await Promise.all([AuthTrace.countDocuments(filter),
+  const [total, denials] = await Promise.all([AuthTrace().countDocuments(filter),
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  AuthTrace.countDocuments({
+  AuthTrace().countDocuments({
     ...filter,
     hasDenial: true
   })]);
@@ -245,7 +248,7 @@ async function getDeniedPermissions(organizationId, options = {}) {
   const filter = _buildDateFilter(organizationId, options);
 
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true
@@ -309,7 +312,7 @@ async function getRecentDenials(organizationId, options = {}) {
     if (options.startDate) filter.createdAt.$gte = new Date(options.startDate);
     if (options.endDate) filter.createdAt.$lte = new Date(options.endDate);
   }
-  const traces = await AuthTrace.find(filter).sort({
+  const traces = await AuthTrace().find(filter).sort({
     createdAt: -1
   }).limit(safeLimit).select("requestId method path userId role resourceType hasDenial denialLayer duration steps createdAt").lean();
   const result = traces.map(t => ({
@@ -341,7 +344,7 @@ async function getRiskUsers(organizationId, options = {}) {
   const filter = _buildDateFilter(organizationId, options);
 
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true,
@@ -399,7 +402,7 @@ async function getLayerPerformance(organizationId, options = {}) {
   const filter = _buildDateFilter(organizationId, options);
 
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: filter
   }, {
     $unwind: "$steps"
@@ -472,7 +475,7 @@ async function getFieldViolations(organizationId, options = {}) {
   const filter = _buildDateFilter(organizationId, options);
 
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true,
@@ -586,9 +589,9 @@ async function getAuthAnalytics(organizationId, options = {}) {
 // ─── Legacy Aggregation Helpers ─────────────────────────────────────────────
 
 async function _getOverview(filter) {
-  const [total, denials] = await Promise.all([AuthTrace.countDocuments(filter),
+  const [total, denials] = await Promise.all([AuthTrace().countDocuments(filter),
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  AuthTrace.countDocuments({
+  AuthTrace().countDocuments({
     ...filter,
     hasDenial: true
   })]);
@@ -601,7 +604,7 @@ async function _getOverview(filter) {
 }
 async function _getDenialsByLayer(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true
@@ -631,7 +634,7 @@ async function _getDenialsByLayer(filter) {
 }
 async function _getDenialsByUser(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true,
@@ -668,7 +671,7 @@ async function _getDenialsByUser(filter) {
 }
 async function _getDenialsByResource(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true,
@@ -695,7 +698,7 @@ async function _getDenialsByResource(filter) {
 }
 async function _getDenialsByPath(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: {
       ...filter,
       hasDenial: true
@@ -725,7 +728,7 @@ async function _getDenialsByPath(filter) {
 }
 async function _getHourlyTrend(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: filter
   }, {
     $group: {
@@ -777,7 +780,7 @@ async function _getHourlyTrend(filter) {
 }
 async function _getPerformanceStats(filter) {
   // @rls-platform-analytics — cross-org metrics aggregation, no org-scoped req
-  const result = await AuthTrace.aggregate([{
+  const result = await AuthTrace().aggregate([{
     $match: filter
   }, {
     $group: {

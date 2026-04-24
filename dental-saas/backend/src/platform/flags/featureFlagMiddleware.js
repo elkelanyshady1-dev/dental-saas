@@ -25,7 +25,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const FeatureFlagDef = require("../billing/models/FeatureFlag.model");
-const FeatureFlag = getPlatformModel(FeatureFlagDef);
+let _FeatureFlag_cache = null;
+function FeatureFlag() {
+    return _FeatureFlag_cache || (_FeatureFlag_cache = getPlatformModel(FeatureFlagDef));
+}
 const logger = require("@utils/logger");
 
 // ─── In-memory TTL cache ───────────────────────────────────────────────────────
@@ -63,7 +66,7 @@ async function _loadFlags() {
     return _cache;
   }
   _cacheStats.misses++;
-  const flags = await FeatureFlag.find({}).lean().maxTimeMS(3000);
+  const flags = await FeatureFlag().find({}).lean().maxTimeMS(3000);
   _cache = flags;
   _cacheExpiry = Date.now() + CACHE_TTL_MS;
   return flags;
@@ -83,7 +86,7 @@ async function _loadFlags() {
  */
 async function resolveFeatureFlags(req, res, next) {
   // Phase 8: Use req.context (set by authMiddleware) — req.organization is deprecated
-  const orgId = req.context?.organizationId?.toString() || req.params?.orgId?.toString() || null;
+  const orgId = req.context?.organizationId?.toString()() || req.params?.orgId?.toString()() || null;
   try {
     const flags = await _loadFlags();
     const resolved = {};

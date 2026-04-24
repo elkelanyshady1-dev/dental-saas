@@ -19,7 +19,10 @@ const {
   collectGuardianMetrics
 } = require("./guardian.metrics.service");
 const GuardianAuditLogDef = require("./models/GuardianAuditLog.model");
-const GuardianAuditLog = getPlatformModel(GuardianAuditLogDef);
+let _GuardianAuditLog_cache = null;
+function GuardianAuditLog() {
+    return _GuardianAuditLog_cache || (_GuardianAuditLog_cache = getPlatformModel(GuardianAuditLogDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -35,7 +38,7 @@ const logger = require("@utils/logger");
  */
 async function persistAuditLog(metrics, actorId, scanType) {
   try {
-    await GuardianAuditLog.create({
+    await GuardianAuditLog().create({
       summary: metrics.summary,
       runtime: metrics.runtime,
       system: metrics.system,
@@ -291,9 +294,9 @@ exports.exportGuardianReport = async (req, res) => {
 exports.getGuardianHistory = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-    const [scans, total] = await Promise.all([GuardianAuditLog.find({}).sort({
+    const [scans, total] = await Promise.all([GuardianAuditLog().find({}).sort({
       createdAt: -1
-    }).limit(limit).populate("scanTriggeredBy", "email fullName platformRole").lean(), GuardianAuditLog.countDocuments({})]);
+    }).limit(limit).populate("scanTriggeredBy", "email fullName platformRole").lean(), GuardianAuditLog().countDocuments({})]);
     logger.info({
       service: "guardian",
       action: "history",

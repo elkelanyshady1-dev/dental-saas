@@ -1,9 +1,12 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlatformNotificationDef = require("../platform/models/PlatformNotification");
-const PlatformNotification = getPlatformModel(PlatformNotificationDef);
+let _PlatformNotification_cache = null;
+function PlatformNotification() {
+    return _PlatformNotification_cache || (_PlatformNotification_cache = getPlatformModel(PlatformNotificationDef));
+}
 exports.getNotifications = async (req, res) => {
   try {
-    const notifications = await PlatformNotification.find().sort({
+    const notifications = await PlatformNotification().find().sort({
       createdAt: -1
     }).limit(20).populate('organizationId', 'name slug').lean();
 
@@ -25,7 +28,7 @@ exports.markAsRead = async (req, res) => {
     const {
       id
     } = req.params;
-    await PlatformNotification.findByIdAndUpdate(id, {
+    await PlatformNotification().findByIdAndUpdate(id, {
       $addToSet: {
         readBy: req.user.id
       }
@@ -42,7 +45,7 @@ exports.markAsRead = async (req, res) => {
 };
 exports.markAllRead = async (req, res) => {
   try {
-    await PlatformNotification.updateMany({
+    await PlatformNotification().updateMany({
       readBy: {
         $ne: req.user.id
       }

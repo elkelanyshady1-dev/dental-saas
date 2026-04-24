@@ -23,13 +23,25 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const InvoiceSequenceDef = require("../models/InvoiceSequence.model");
-const InvoiceSequence = getPlatformModel(InvoiceSequenceDef);
+let _InvoiceSequence_cache = null;
+function InvoiceSequence() {
+    return _InvoiceSequence_cache || (_InvoiceSequence_cache = getPlatformModel(InvoiceSequenceDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -73,7 +85,7 @@ async function _generateInvoiceNumber(session) {
   const yearMonth = `${year}${month}`;
 
   // findOneAndUpdate with $inc is atomic — guaranteed unique seq per month
-  const seqDoc = await InvoiceSequence.findOneAndUpdate({
+  const seqDoc = await InvoiceSequence().findOneAndUpdate({
     yearMonth
   }, {
     $inc: {
@@ -115,7 +127,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
   } = options;
 
   // ── Load contract ──────────────────────────────────────────────────────────
-  const contractQuery = OrgContract.findById(contractId);
+  const contractQuery = OrgContract().findById(contractId);
   if (session) contractQuery.session(session);
   const contract = await contractQuery;
   if (!contract) {
@@ -140,7 +152,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
   const cycleEnd = new Date(cycleStart);
   if (billingInterval === "yearly") cycleEnd.setFullYear(cycleEnd.getFullYear() + 1);else cycleEnd.setMonth(cycleEnd.getMonth() + 1);
   const idempotencyKey = `contract:${contract._id}:${cycleStart.getFullYear()}-${String(cycleStart.getUTCMonth()).padStart(2, "0")}`;
-  const existingQuery = PlatformInvoice.findOne({
+  const existingQuery = PlatformInvoice().findOne({
     idempotencyKey
   });
   if (session) existingQuery.session(session);
@@ -158,7 +170,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
   }
 
   // ── Load org for tax country ───────────────────────────────────────────────
-  const orgQuery = Organization.findById(contract.organizationId).select("billingCountry regionCode");
+  const orgQuery = Organization().findById(contract.organizationId).select("billingCountry regionCode");
   if (session) orgQuery.session(session);
   const org = await orgQuery;
   const taxPercent = TAX_RATES[org?.billingCountry] ?? 0;
@@ -255,7 +267,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
   // Re-read creditBalance from DB inside the session (if provided) before any write.
   // This prevents a race where two concurrent invoices both read the same creditBalance.
   if (creditApplied > 0) {
-    const freshContract = await OrgContract.findById(contract._id).select("creditBalance").session(session || null).lean();
+    const freshContract = await OrgContract().findById(contract._id).select("creditBalance").session(session || null).lean();
     if (!freshContract || freshContract.creditBalance < creditApplied) {
       const err = new Error(`[InvoiceEngine] Credit race condition detected: ` + `creditBalance=${freshContract?.creditBalance ?? 0} < creditApplied=${creditApplied} ` + `for contract ${contract._id}. Aborting to prevent double-deduction.`);
       err.code = "CREDIT_BALANCE_INSUFFICIENT";
@@ -286,7 +298,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
   const createOpts = session ? {
     session
   } : {};
-  const [invoice] = await PlatformInvoice.create([{
+  const [invoice] = await PlatformInvoice().create([{
     organizationId: contract.organizationId,
     contractId: contract._id,
     planVersionId: contract.planVersionId || null,
@@ -325,7 +337,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
       ...createOpts,
       new: false
     };
-    await OrgContract.findByIdAndUpdate(contract._id, {
+    await OrgContract().findByIdAndUpdate(contract._id, {
       $inc: {
         creditBalance: -creditApplied
       }
@@ -338,7 +350,7 @@ async function generatePlatformInvoice(contractId, options = {}) {
       ...createOpts,
       new: false
     };
-    await OrgContract.findByIdAndUpdate(contract._id, {
+    await OrgContract().findByIdAndUpdate(contract._id, {
       $inc: {
         "appliedCoupon.usedCount": 1
       }

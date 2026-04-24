@@ -1,6 +1,6 @@
 /**
  * tokens.js
- * DentalSaaS Design Token System — v1.0
+ * OrthoNoe Design Token System — v1.0
  *
  * Single source of truth for the entire design system.
  * Consumed by:

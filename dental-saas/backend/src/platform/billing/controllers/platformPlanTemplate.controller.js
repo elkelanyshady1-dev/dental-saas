@@ -21,9 +21,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanTemplateDef = require("../models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef);
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+}
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const logger = require("@utils/logger");
 
 // ─── GET /plan-templates ──────────────────────────────────────────────────────
@@ -36,13 +42,13 @@ exports.listPlanTemplates = async (req, res) => {
     if (status && ["draft", "published", "archived"].includes(status)) {
       filter.status = status;
     }
-    const templates = await PlanTemplate.find(filter).sort({
+    const templates = await PlanTemplate().find(filter).sort({
       createdAt: -1
     }).lean();
     const templateIds = templates.map(t => t._id);
 
     // Fetch active AND draft versions in one query
-    const relevantVersions = await PlanVersion.find({
+    const relevantVersions = await PlanVersion().find({
       templateId: {
         $in: templateIds
       },
@@ -97,7 +103,7 @@ exports.listPlanTemplates = async (req, res) => {
 // ─── GET /plan-templates/:id ──────────────────────────────────────────────────
 exports.getPlanTemplateById = async (req, res) => {
   try {
-    const template = await PlanTemplate.findById(req.params.id).lean();
+    const template = await PlanTemplate().findById(req.params.id).lean();
     if (!template) {
       return res.status(404).json({
         success: false,
@@ -106,7 +112,7 @@ exports.getPlanTemplateById = async (req, res) => {
     }
 
     // Include all versions for this template
-    const versions = await PlanVersion.find({
+    const versions = await PlanVersion().find({
       templateId: template._id
     }).sort({
       createdAt: -1
@@ -146,7 +152,7 @@ exports.createPlanTemplate = async (req, res) => {
         message: "name and code are required"
       });
     }
-    const existing = await PlanTemplate.findOne({
+    const existing = await PlanTemplate().findOne({
       code: code.toLowerCase().trim()
     }).lean();
     if (existing) {
@@ -155,7 +161,7 @@ exports.createPlanTemplate = async (req, res) => {
         message: `A template with code '${code}' already exists.`
       });
     }
-    const template = await PlanTemplate.create({
+    const template = await PlanTemplate().create({
       name: name.trim(),
       code: code.toLowerCase().trim(),
       description: description || "",
@@ -220,7 +226,7 @@ exports.updatePlanTemplate = async (req, res) => {
         message: "expectedVersion is required for OAV"
       });
     }
-    const template = await PlanTemplate.findById(id);
+    const template = await PlanTemplate().findById(id);
     if (!template) {
       return res.status(404).json({
         success: false,
@@ -239,7 +245,7 @@ exports.updatePlanTemplate = async (req, res) => {
     // status transitions happen via dedicated publish/archive endpoints
     delete updates.status;
     delete updates.createdBy;
-    const result = await PlanTemplate.findOneAndUpdate({
+    const result = await PlanTemplate().findOneAndUpdate({
       _id: id,
       version: expectedVersion
     }, {

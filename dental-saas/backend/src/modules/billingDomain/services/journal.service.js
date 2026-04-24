@@ -57,7 +57,6 @@ function _getJournalEntry(connection) {
  * @returns {Promise<Object>} — created JournalEntry document
  */
 async function postJournalEntry({
-  organizationId,
   branchId,
   patientId,
   referenceType,

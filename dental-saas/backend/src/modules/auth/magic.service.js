@@ -28,7 +28,10 @@
 const crypto = require("crypto");
 const getPlatformModel = require("@core/db/getPlatformModel");
 const MagicTokenDef = require("./magicToken.model");
-const MagicToken = getPlatformModel(MagicTokenDef);
+let _MagicToken_cache = null;
+function MagicToken() {
+    return _MagicToken_cache || (_MagicToken_cache = getPlatformModel(MagicTokenDef));
+}
 const { sendCommunication } = require("@services/communicationService");
 const { checkRateLimit } = require("./rateLimiter");
 const logger = require("@utils/logger");
@@ -106,7 +109,7 @@ async function createMagicLink(rawEmail, meta = {}) {
 
         // Rate limit — one link per 60 seconds per email
         const cutoff = new Date(Date.now() - RATE_LIMIT_MS);
-        const recent = await MagicToken.findOne({ email, createdAt: { $gt: cutoff } })
+        const recent = await MagicToken().findOne({ email, createdAt: { $gt: cutoff } })
             .sort({ createdAt: -1 })
             .lean();
 
@@ -146,9 +149,9 @@ async function createMagicLink(rawEmail, meta = {}) {
 
     // Replace any prior unexpired tokens for this email (defense against
     // multiple in-flight links). TTL index cleans up naturally too.
-    await MagicToken.deleteMany({ email });
+    await MagicToken().deleteMany({ email });
 
-    await MagicToken.create({
+    await MagicToken().create({
         email,
         tokenHash: hashToken(token),
         expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
@@ -179,7 +182,7 @@ async function verifyMagicToken(rawToken) {
     // We hold the tokenHash index; find by hash directly. timingSafeEqual is
     // used on the retrieved record's hash as a belt-and-braces check against
     // timing leaks via the DB index path (driver-level differences).
-    const record = await MagicToken.findOne({ tokenHash: inputHash });
+    const record = await MagicToken().findOne({ tokenHash: inputHash });
 
     if (!record) {
         throw makeError("Invalid or expired token", 401, "MAGIC_INVALID");
@@ -192,12 +195,12 @@ async function verifyMagicToken(rawToken) {
     }
 
     if (record.expiresAt < new Date()) {
-        await MagicToken.deleteOne({ _id: record._id });
+        await MagicToken().deleteOne({ _id: record._id });
         throw makeError("Magic link has expired", 401, "MAGIC_EXPIRED");
     }
 
     // Single-use — delete before returning. Atomic on a single doc.
-    await MagicToken.deleteOne({ _id: record._id });
+    await MagicToken().deleteOne({ _id: record._id });
 
     logger.info(
         { email: _maskEmail(record.email) },

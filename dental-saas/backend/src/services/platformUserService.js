@@ -6,7 +6,10 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 
 const mongoose = require("mongoose");
 const PlatformUserDef = require("../platform/models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef);
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+}
 const auditService = require("./auditService");
 
 /**
@@ -70,14 +73,14 @@ exports.updatePlatformUserRole = async ({
 }) => {
   return await runInHardenedTransaction(async session => {
     // @rls-platform-service — platform admin user CRUD, no org-scoped req
-    const target = await PlatformUser.findById(targetId).session(session);
+    const target = await PlatformUser().findById(targetId).session(session);
     if (!target) throw new Error("Target user not found");
     const oldRole = target.role;
 
     // SAFEGUARD: Prevent removing LAST superadmin
     if (oldRole === "superadmin" && newRole !== "superadmin") {
       // @rls-platform-service — platform admin user CRUD, no org-scoped req
-      const superadminCount = await PlatformUser.countDocuments({
+      const superadminCount = await PlatformUser().countDocuments({
         role: "superadmin",
         isActive: true
       }).session(session);
@@ -132,14 +135,14 @@ exports.updatePlatformUserStatus = async ({
 }) => {
   return await runInHardenedTransaction(async session => {
     // @rls-platform-service — platform admin user CRUD, no org-scoped req
-    const target = await PlatformUser.findById(targetId).session(session);
+    const target = await PlatformUser().findById(targetId).session(session);
     if (!target) throw new Error("Target user not found");
     const isTargetSuperadmin = target.role === "superadmin";
 
     // Safeguard: Protect last active superadmin from suspension
     if (isTargetSuperadmin && isActive === false) {
       // @rls-platform-service — platform admin user CRUD, no org-scoped req
-      const superadminCount = await PlatformUser.countDocuments({
+      const superadminCount = await PlatformUser().countDocuments({
         role: "superadmin",
         isActive: true
       }).session(session);
@@ -176,11 +179,11 @@ exports.deletePlatformUser = async ({
 }) => {
   return await runInHardenedTransaction(async session => {
     // @rls-platform-service — platform admin user CRUD, no org-scoped req
-    const target = await PlatformUser.findById(targetId).session(session);
+    const target = await PlatformUser().findById(targetId).session(session);
     if (!target) throw new Error("Target user not found");
     if (target.role === "superadmin") {
       // @rls-platform-service — platform admin user CRUD, no org-scoped req
-      const superadminCount = await PlatformUser.countDocuments({
+      const superadminCount = await PlatformUser().countDocuments({
         role: "superadmin",
         isActive: true
       }).session(session);
@@ -190,7 +193,7 @@ exports.deletePlatformUser = async ({
     }
 
     // @rls-platform-service — platform admin user CRUD, no org-scoped req
-    await PlatformUser.deleteOne({
+    await PlatformUser().deleteOne({
       _id: targetId
     }).session(session);
     await auditService.createAuditRecord({

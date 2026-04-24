@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { publicApi } from "@/services/api";
+import { BRAND } from "@/config/brand";
 
 // ─── Scroll-triggered fade-in hook ────────────────────────────────────────────
 function useFadeIn(threshold = 0.15) {
@@ -57,46 +58,46 @@ function useCountUp(target, duration = 1800, started = false) {
 // ─── Feature card data ─────────────────────────────────────────────────────────
 const FEATURES = [
     {
-        title: "Smart Scheduling",
-        desc: "Drag-and-drop calendar with automated WhatsApp & SMS reminders. Zero no-shows.",
-        icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
-        color: "from-blue-500 to-blue-600"
-    },
-    {
-        title: "Patient Records",
-        desc: "Complete clinical history, prescriptions, and high-resolution imaging in one record.",
-        icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+        title: "CephAI Tracing",
+        desc: "AI-powered cephalometric analysis with 32-point landmark detection. Clinical-grade measurements in seconds.",
+        icon: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z",
         color: "from-violet-500 to-violet-600"
     },
     {
-        title: "Enterprise Billing",
-        desc: "Multi-currency invoicing, global tax compliance, and insurance claims management.",
-        icon: "M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z",
+        title: "Treatment Planning",
+        desc: "Multi-phase orthodontic treatment plans with wire sequences, appliance tracking, and visit milestones.",
+        icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
+        color: "from-blue-500 to-blue-600"
+    },
+    {
+        title: "3D Model Viewer",
+        desc: "Interactive STL visualization with automated tooth segmentation and Bolton analysis.",
+        icon: "M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5",
         color: "from-emerald-500 to-emerald-600"
     },
     {
-        title: "Lab Management",
-        desc: "Seamless digital workflow between your clinic and dental labs with real-time status.",
-        icon: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.675.27a1 1 0 00-.573.743L10 18H2v2h8v-2h9.428l.572-2.572z",
+        title: "Smart Scheduling",
+        desc: "Drag-and-drop calendar with automated WhatsApp reminders. Optimized for orthodontic recall intervals.",
+        icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
         color: "from-amber-500 to-amber-600"
     },
     {
-        title: "Staff & Roles",
-        desc: "Granular RBAC for dentists, receptionists, nurses, and admin staff. Role-safe by design.",
-        icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+        title: "Patient Portal",
+        desc: "Secure portal for patients to view treatment progress, upcoming visits, and share clinical photos.",
+        icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
         color: "from-rose-500 to-rose-600"
     },
     {
         title: "Multi-Clinic",
-        desc: "Manage 100+ branches from one unified platform. Enterprise-grade governance built in.",
+        desc: "Manage 100+ orthodontic locations from one unified platform. Enterprise-grade governance built in.",
         icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
         color: "from-cyan-500 to-cyan-600"
     }
 ];
 
 const STATS = [
-    { value: "500+", label: "Clinics Online" },
-    { value: "2M+", label: "Appointments" },
+    { value: "500+", label: "Orthodontic Clinics" },
+    { value: "2M+", label: "Cases Managed" },
     { value: "15+", label: "Countries" },
     { value: "99%", label: "Satisfaction" }
 ];
@@ -143,10 +144,10 @@ function FeatureCard({ title, desc, icon, color, delay = 0 }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 export default function Home() {
     const [siteContent, setSiteContent] = useState({
-        heroTitle: "The Smart Dental Platform for Modern Clinics",
-        heroSubtitle: "Secure, scalable, and designed for dental professionals.",
-        aboutTitle: "Empowering Dental Clinics with Smart Solutions",
-        aboutDescription: "DentalSaaS provides everything you need to manage your practice securely.",
+        heroTitle: "The Smart Orthodontic Platform for Modern Practices",
+        heroSubtitle: "From cephalometric AI to multi-phase treatment tracking — built for orthodontists who demand precision.",
+        aboutTitle: "Empowering Orthodontic Practices with Intelligent Tools",
+        aboutDescription: "OrthoNoe provides everything you need to manage your orthodontic practice securely.",
         whatsappNumber: null,
         supportEmail: null
     });
@@ -155,7 +156,7 @@ export default function Home() {
     const [ctaRef, ctaVisible] = useFadeIn(0.2);
 
     useEffect(() => {
-        document.title = "DentalSaaS | The Modern Operating System for Dentistry";
+        document.title = BRAND.meta.title;
         publicApi.get("/public/site-content")
             .then(res => {
                 if (res.data.success) {
@@ -200,7 +201,7 @@ export default function Home() {
                             <span
                                 className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent"
                             >
-                                Modern Dentistry
+                                Modern Orthodontics
                             </span>
                         </h1>
 
@@ -251,8 +252,8 @@ export default function Home() {
 
                         <div className="bg-white p-2 rounded-[2.5rem] shadow-2xl border border-slate-100 rotate-1 hover:rotate-0 transition-transform duration-500">
                             <img
-                                src="https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=1000&q=80"
-                                alt="DentalSaaS Dashboard Preview showing smart scheduling and analytics"
+                                src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=1000&q=80"
+                                alt="Orthodontist examining patient braces with OrthoNoe platform"
                                 className="rounded-[2rem] w-full shadow-inner"
                                 fetchPriority="high"
                                 loading="eager"
@@ -286,10 +287,10 @@ export default function Home() {
                         className={`text-center mb-16 transition-all duration-700 ${featuresVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                     >
                         <h2 className="text-4xl font-bold text-slate-900 mb-4 tracking-[-0.01em]">
-                            Everything your clinic needs
+                            Everything your orthodontic practice needs
                         </h2>
                         <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
-                            Built for scale, security, and simplicity — from solo practices to global networks.
+                            Built for scale, security, and clinical precision — from solo orthodontists to global networks.
                         </p>
                     </div>
 
@@ -321,8 +322,8 @@ export default function Home() {
                         Designed to scale with you.
                     </h2>
                     <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-16 leading-relaxed">
-                        Whether you're opening your first practice or managing an international dental group,
-                        DentalSaaS provides the infrastructure you need to thrive.
+                        Whether you're opening your first orthodontic practice or managing an international group,
+                        OrthoNoe provides the infrastructure you need to thrive.
                     </p>
 
                     {/* Stats — count-up on scroll */}
@@ -349,7 +350,7 @@ export default function Home() {
                         Ready to transform your practice?
                     </h2>
                     <p className="text-slate-500 text-lg mb-10 leading-relaxed">
-                        Join thousands of dental professionals using DentalSaaS to run smarter, faster, safer clinics.
+                        Join thousands of orthodontic professionals using OrthoNoe to run smarter, faster, safer practices.
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -370,7 +371,7 @@ export default function Home() {
 
                     {/* Reassurance lines */}
                     <p className="text-slate-400 mt-6 text-sm font-medium">
-                        No credit card required · 14-day free trial
+                        No credit card required · 30-day free trial
                     </p>
                     <p className="text-slate-400 mt-1 text-sm font-medium">
                         Setup in under 5 minutes.

@@ -1,8 +1,14 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformUserDef = require("../models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef); // v20.1 Wave4 — getCountryCode removed; country field is now ISO code
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+} // v20.1 Wave4 — getCountryCode removed; country field is now ISO code
 exports.getOrganizations = async (req, res) => {
   try {
     // Filters
@@ -18,9 +24,9 @@ exports.getOrganizations = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Parallel execution: data + count
-    const [organizations, total] = await Promise.all([Organization.find(filter).sort({
+    const [organizations, total] = await Promise.all([Organization().find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), Organization.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), Organization().countDocuments(filter)]);
     res.json({
       success: true,
       data: organizations,
@@ -67,7 +73,7 @@ exports.updateOrganizationStatus = async (req, res) => {
     const {
       isActive
     } = req.body;
-    const organization = await Organization.findById(id);
+    const organization = await Organization().findById(id);
     if (!organization) {
       return res.status(404).json({
         message: "Organization not found"
@@ -146,7 +152,7 @@ exports.globalSearch = async (req, res) => {
     // NOTE: Branch and User are per-org entities (dental_org_<id>).
     // Cross-org federated search is a future enhancement.
     // For now, only platform-level entities are searched.
-    const [organizations, platformUsers] = await Promise.all([Organization.find({
+    const [organizations, platformUsers] = await Promise.all([Organization().find({
       $or: [{
         name: searchRegex
       }, {
@@ -154,7 +160,7 @@ exports.globalSearch = async (req, res) => {
       }]
     }).select("_id name slug status currentContractId isActive").sort({
       name: 1
-    }).limit(5).lean(), PlatformUser.find({
+    }).limit(5).lean(), PlatformUser().find({
       $or: [{
         name: searchRegex
       }, {

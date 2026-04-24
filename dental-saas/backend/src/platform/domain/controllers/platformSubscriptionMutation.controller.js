@@ -9,9 +9,15 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const planAggregateService = require("../services/platformPlan.aggregate.service");
 const orgAddOnAggregateService = require("../../../shared/services/OrgAddOnService");
 const AddOnDef = require("../models/addOn.model");
-const AddOn = getPlatformModel(AddOnDef);
+let _AddOn_cache = null;
+function AddOn() {
+    return _AddOn_cache || (_AddOn_cache = getPlatformModel(AddOnDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   createAuditRecord
 } = require("../../../services/auditService");
@@ -101,7 +107,7 @@ exports.addAddon = async (req, res) => {
     }
 
     // 1. Resolve Org and AddOn
-    const [org, addon] = await Promise.all([Organization.findById(orgId), AddOn.findById(addOnId)]);
+    const [org, addon] = await Promise.all([Organization().findById(orgId), AddOn().findById(addOnId)]);
     if (!org) return res.status(404).json({
       success: false,
       error: "Organization not found"

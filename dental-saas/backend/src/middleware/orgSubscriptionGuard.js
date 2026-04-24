@@ -27,11 +27,20 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const logger = require("@utils/logger");
 const {
   resolveOrganizationEntitlements
@@ -178,7 +187,7 @@ async function orgSubscriptionGuard(req, res, next) {
         error: "Organization context missing"
       });
     }
-    const org = await Organization.findById(orgId).lean();
+    const org = await Organization().findById(orgId).lean();
     if (!org) {
       return res.status(404).json({
         success: false,
@@ -189,7 +198,7 @@ async function orgSubscriptionGuard(req, res, next) {
     // Load active OrgContract (null if no contract yet — legacy orgs)
     let activeContract = null;
     if (org.currentContractId) {
-      activeContract = await OrgContract.findOne({
+      activeContract = await OrgContract().findOne({
         _id: org.currentContractId,
         organizationId: org._id,
         contractStatus: "active"
@@ -209,7 +218,7 @@ async function orgSubscriptionGuard(req, res, next) {
       try {
         let planVersion = null;
         if (activeContract?.planVersionId) {
-          planVersion = await PlanVersion.findById(activeContract.planVersionId).lean();
+          planVersion = await PlanVersion().findById(activeContract.planVersionId).lean();
         }
 
         // PHASE 9 — ACCESS-002 fix: Fallback for trial users without a contract.
@@ -217,7 +226,7 @@ async function orgSubscriptionGuard(req, res, next) {
         // no activeContract. Load the trial-tier PlanVersion directly so
         // req.planCapabilities is defined for feature gating.
         if (!planVersion && state === "trial") {
-          planVersion = await PlanVersion.findOne({
+          planVersion = await PlanVersion().findOne({
             templateCode: "trial-tier",
             status: "active"
           }).lean();

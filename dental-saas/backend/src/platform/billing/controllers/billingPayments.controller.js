@@ -16,9 +16,15 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PaymentAttemptDef = require("../models/PaymentAttempt.model");
-const PaymentAttempt = getPlatformModel(PaymentAttemptDef);
+let _PaymentAttempt_cache = null;
+function PaymentAttempt() {
+    return _PaymentAttempt_cache || (_PaymentAttempt_cache = getPlatformModel(PaymentAttemptDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   streamPaymentsCsv
 } = require("../services/financeExport.service");
@@ -33,14 +39,14 @@ exports.list = async (req, res) => {
     const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
     const skip = (page - 1) * limit;
     const filter = _buildFilter(req.query);
-    const [attempts, total] = await Promise.all([PaymentAttempt.find(filter).select("createdAt organizationId invoiceId contractId provider providerPaymentId amount currency status attemptNumber errorCode errorMessage requestId").sort({
+    const [attempts, total] = await Promise.all([PaymentAttempt().find(filter).select("createdAt organizationId invoiceId contractId provider providerPaymentId amount currency status attemptNumber errorCode errorMessage requestId").sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), PaymentAttempt.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), PaymentAttempt().countDocuments(filter)]);
     let data = attempts;
     try {
       const orgIds = [...new Set(attempts.map(a => a.organizationId).filter(Boolean).map(String))];
       if (orgIds.length > 0) {
-        const orgs = await Organization.find({
+        const orgs = await Organization().find({
           _id: {
             $in: orgIds
           }

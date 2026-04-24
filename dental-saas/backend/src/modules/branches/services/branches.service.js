@@ -46,7 +46,6 @@ function _generateChairs(count, existingChairs = []) {
     return newChairs;
 }
 
-
 /**
  * Create a new branch within the organization.
  */
@@ -89,7 +88,6 @@ async function createBranch(data, req, actorId) {
     // Auto-provision initial Chairs
     branch.chairs = _generateChairs(branch.numberOfOperatories, []);
     await branch.save();
-
 
     logger.info({
         event: "BRANCH_CREATED",
@@ -298,7 +296,6 @@ async function updateBranch(branchId, data, req, actorId) {
 
     return branch.toObject(); // full plain-object serialization (includes chairs + workingHours)
 }
-
 
 /**
  * Soft-delete a branch (set isActive = false, deletedAt = now).

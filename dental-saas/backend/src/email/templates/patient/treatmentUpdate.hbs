@@ -1,0 +1,68 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<!--
+  Patient: Treatment Plan Update
+  Sent to patients when their treatment plan is updated.
+  Variables: patientName, treatment, notes, doctorName, updatedAt, portalUrl
+-->
+<div style="border-left: 4px solid #10b981; padding-left: 16px; margin-bottom: 28px;">
+    <p style="font-size: 12px; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 4px;">
+        Treatment Update
+    </p>
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">From your orthodontic care team</p>
+</div>
+
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Hello <strong>{{patientName}}</strong>,</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    Your treatment plan has been updated by your orthodontist. Here are the latest details:
+</p>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin: 24px 0;">
+    <tr>
+        <td style="padding: 24px;">
+            <p style="margin: 0 0 4px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Treatment</p>
+            <p style="margin: 0 0 20px; font-size: 18px; font-weight: 800; color: #0f172a;">{{treatment}}</p>
+
+            {{#if notes}}
+            <p style="margin: 0 0 4px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Doctor's Notes</p>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 4px;">
+                <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.7; font-style: italic;">
+                    "{{notes}}"
+                </p>
+            </div>
+            {{/if}}
+
+            {{#if doctorName}}
+            <p style="margin: 16px 0 0; font-size: 13px; color: #64748b;">
+                Updated by <strong style="color: #334155;">Dr. {{doctorName}}</strong>
+                {{#if updatedAt}} on {{formatDate updatedAt}}{{/if}}
+            </p>
+            {{/if}}
+        </td>
+    </tr>
+</table>
+
+{{#if portalUrl}}
+<div style="text-align: center;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+            <td style="background: #10b981; border-radius: 10px; box-shadow: 0 4px 14px rgba(16,185,129,0.3);">
+                <a href="{{portalUrl}}" style="display: inline-block; padding: 14px 36px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px;">
+                    View Full Treatment Plan
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>
+{{/if}}
+
+<hr class="divider" />
+
+<div style="background: #f0fdf4; border-radius: 10px; padding: 14px 20px;">
+    <p style="margin: 0; font-size: 12px; color: #065f46; line-height: 1.6;">
+        <strong>Your Privacy Matters</strong> — This email contains protected health information.
+        If you received this in error, please delete it immediately.
+    </p>
+</div>
+{{/inline}}
+{{/layout}}

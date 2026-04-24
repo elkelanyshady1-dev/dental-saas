@@ -26,7 +26,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const FeatureDefinitionDef = require("../shared/models/FeatureDefinition");
-const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
+let _FeatureDefinition_cache = null;
+function FeatureDefinition() {
+    return _FeatureDefinition_cache || (_FeatureDefinition_cache = getPlatformModel(FeatureDefinitionDef));
+}
 const {
   MODULE_REGISTRY
 } = require("../platform/featureRegistry");
@@ -96,7 +99,7 @@ async function seed() {
   }
   console.log("[seedModuleFeatures] Starting FeatureDefinition upserts…");
   for (const seedData of MODULE_FEATURE_SEEDS) {
-    await FeatureDefinition.findOneAndUpdate({
+    await FeatureDefinition().findOneAndUpdate({
       key: seedData.key
     }, {
       $set: seedData

@@ -26,13 +26,25 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformNotificationDef = require("../platform/models/PlatformNotification");
-const PlatformNotification = getPlatformModel(PlatformNotificationDef);
+let _PlatformNotification_cache = null;
+function PlatformNotification() {
+    return _PlatformNotification_cache || (_PlatformNotification_cache = getPlatformModel(PlatformNotificationDef));
+}
 const {
   logBillingEvent
 } = require("../platform/billing/services/billingAuditLog.service");
@@ -56,7 +68,7 @@ async function enforceGraceExpiration() {
 
   // Umbrella query: active contracts with an elapsed grace period
   // @rls-platform-cron — cross-org grace period processing, no org-scoped req
-  const overdue = await OrgContract.find({
+  const overdue = await OrgContract().find({
     contractStatus: "active",
     "dunning.gracePeriodEndsAt": {
       $lte: now
@@ -93,7 +105,7 @@ async function enforceGraceExpiration() {
 async function _enforceOne(contract, now) {
   // Only suspend if there is still an unpaid invoice (idempotency + correctness)
   // @rls-platform-cron — cross-org grace period processing, no org-scoped req
-  const unpaid = await PlatformInvoice.findOne({
+  const unpaid = await PlatformInvoice().findOne({
     contractId: contract._id,
     status: {
       $in: ["open", "issued"]
@@ -107,14 +119,14 @@ async function _enforceOne(contract, now) {
   }
 
   // Suspend org
-  await Organization.findByIdAndUpdate(contract.organizationId, {
+  await Organization().findByIdAndUpdate(contract.organizationId, {
     $set: {
       status: "suspended"
     }
   });
 
   // Expire contract + record suspendedAt on dunning
-  await OrgContract.findByIdAndUpdate(contract._id, {
+  await OrgContract().findByIdAndUpdate(contract._id, {
     $set: {
       contractStatus: "expired",
       terminatedAt: now,
@@ -124,7 +136,7 @@ async function _enforceOne(contract, now) {
   });
 
   // Platform notification
-  await PlatformNotification.create([{
+  await PlatformNotification().create([{
     type: "ORG_SUSPENDED",
     title: "Organization Suspended — Grace Period Expired",
     organizationId: contract.organizationId,

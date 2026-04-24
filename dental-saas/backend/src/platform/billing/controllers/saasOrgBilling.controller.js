@@ -18,7 +18,10 @@ const {
   generatePlatformInvoice
 } = require("../services/invoiceEngine.service");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 const {
   getCurrentBillingCycle
@@ -100,7 +103,7 @@ exports.manualGenerateInvoice = async (req, res) => {
     } = req.params;
 
     // Resolve the org's active contract — invoiceEngine requires a contractId
-    const contract = await OrgContract.findOne({
+    const contract = await OrgContract().findOne({
       organizationId: orgId,
       contractStatus: {
         $in: ["active", "ready", "pending_payment"]

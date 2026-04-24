@@ -27,7 +27,10 @@ const getModel = require("@core/db/getModel");
 const mongoose = require("mongoose");
 const TicketMessageDef = require("@modules/supportDomain/models/TicketMessage.model");
 const TicketDef = require("@shared/models/Ticket");
-const Ticket = getPlatformModel(TicketDef);
+let _Ticket_cache = null;
+function Ticket() {
+    return _Ticket_cache || (_Ticket_cache = getPlatformModel(TicketDef));
+}
 
 function _TicketMessage(req) {
   if (!req?.dbConnection) {
@@ -160,7 +163,7 @@ async function createMessage({
   // Ownership guard: the ticket must exist in this org DB AND the caller
   // must be its creator OR have platform-plane context. Org-plane callers
   // can only message their own tickets.
-  const ticket = await Ticket.findOne({
+  const ticket = await Ticket().findOne({
     _id: ticketId,
     isArchived: {
       $ne: true
@@ -216,7 +219,7 @@ async function createMessage({
       // commits. If another tab/request beat us, matchedCount === 0
       // and we abort the transaction by throwing. The TicketMessage
       // insert above is rolled back with us.
-      const result = await Ticket.updateOne({
+      const result = await Ticket().updateOne({
         _id: ticketId,
         version: expVer
       }, {
@@ -248,7 +251,7 @@ async function createMessage({
   }
   if (versionConflict) {
     recordFailure("version_conflict");
-    const current = await Ticket.findById(ticketId).select("version").lean();
+    const current = await Ticket().findById(ticketId).select("version").lean();
     throw new VersionConflictError(current?.version ?? null);
   }
 
@@ -289,7 +292,7 @@ async function listMessages({
   const orgId = extractOrgId(req);
 
   // Ownership guard (org plane can only see own tickets).
-  const ticket = await Ticket.findOne({
+  const ticket = await Ticket().findOne({
     _id: ticketId
   }).lean();
   if (!ticket) throw new NotFoundError();

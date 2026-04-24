@@ -18,9 +18,15 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const express = require("express");
 const router = express.Router();
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlanVersionDef = require("../platform/billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const {
   resolveOrganizationEntitlements
 } = require("../platform/billing/services/entitlementResolver.service");
@@ -57,9 +63,9 @@ router.get("/", async (req, res) => {
     // Load plan version from active contract
     let planVersion = null;
     if (org.currentContractId) {
-      const contract = await OrgContract.findById(org.currentContractId).lean();
+      const contract = await OrgContract().findById(org.currentContractId).lean();
       if (contract?.planVersionId) {
-        planVersion = await PlanVersion.findById(contract.planVersionId).lean();
+        planVersion = await PlanVersion().findById(contract.planVersionId).lean();
       }
     }
     if (!planVersion) {

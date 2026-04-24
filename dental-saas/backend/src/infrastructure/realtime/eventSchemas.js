@@ -199,6 +199,18 @@ const EVENT_SCHEMAS = {
         requiredPermission: "orthodontics.read",
         description: "Doctor closed or left a visit session — presence cleared",
     },
+
+    // ─── U-CAP Asset Job (thumbnail / DICOM processing lifecycle) ─────────
+    // Single event carries every phase (started / progress / done / failed /
+    // skipped). `phase` distinguishes; `progress` is 0–100 only on the
+    // "progress" and "done" phases. Frontend hook (useAssetRealtime) patches
+    // the photos query cache directly so the grid updates without a refetch.
+    "asset.job.v1": {
+        requiredFields: ["photoId", "caseId", "phase"],
+        optionalFields: ["progress", "jobType", "error", "retryCount"],
+        requiredPermission: "orthodontics.read",
+        description: "Thumbnail / DICOM job lifecycle update — drives grid progress bars and dashboard",
+    },
 };
 
 // ═══════════════════════════════════════════════════════════════

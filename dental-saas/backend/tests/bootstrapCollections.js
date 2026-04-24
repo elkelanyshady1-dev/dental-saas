@@ -107,7 +107,17 @@ async function bootstrapCollections() {
     // syncIndexes() is idempotent — safe to call even if collection already exists.
     // It creates the collection, creates/updates indexes, and crucially registers
     // the collection in mongoose.connection.collections.
-    await Promise.all(models.map(m => m.syncIndexes()));
+    //
+    // Some model files export the compiled Model directly (`module.exports = Model`),
+    // others export the SSOT wrapper `{ modelName, schema, default: Model }`.
+    // Accept both shapes so the bootstrap works regardless of which convention
+    // each model adopted.
+    const resolveModel = (m) => (m && typeof m.syncIndexes === "function") ? m : (m && m.default) ? m.default : null;
+    await Promise.all(models.map(m => {
+        const resolved = resolveModel(m);
+        if (!resolved) return Promise.resolve();
+        return resolved.syncIndexes();
+    }));
 
     // ─── Safety Guard ─────────────────────────────────────────────────────────
     // Verify all critical collections are now registered. If any are missing,

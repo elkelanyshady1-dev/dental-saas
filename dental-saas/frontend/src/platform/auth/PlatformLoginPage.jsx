@@ -6,6 +6,7 @@ import Input from "@/design-system/components/Input";
 import Card from "@/design-system/components/Card";
 import FeatureItem from "@/design-system/components/FeatureItem";
 import StatsBadge from "@/design-system/components/StatsBadge";
+import { BRAND } from "@/config/brand";
 
 export default function PlatformLoginPage() {
     const { platformLogin, token, user } = usePlatformAuth();
@@ -66,7 +67,7 @@ export default function PlatformLoginPage() {
                         </svg>
                     </div>
                     <div className="font-extrabold text-2xl text-slate-800 tracking-tight">
-                        DentalSaaS Platform
+                        {BRAND.platform.name}
                     </div>
                 </Link>
 
@@ -76,7 +77,7 @@ export default function PlatformLoginPage() {
                 </h1>
 
                 <p className="mt-6 text-lg text-slate-600">
-                    Oversee and Manage the Global DentalSaaS Infrastructure
+                    {BRAND.platform.headline}
                 </p>
             </div>
 

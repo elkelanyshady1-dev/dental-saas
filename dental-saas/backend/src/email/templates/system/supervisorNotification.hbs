@@ -1,0 +1,64 @@
+{{#> layout subject=subject}}
+{{#*inline "body"}}
+<!--
+  System: Supervisor/Staff Notification
+  Sent to supervisors or senior staff for administrative alerts.
+  Variables: recipientName, message, studentName, eventType, timestamp, actionUrl
+-->
+<div style="border-left: 4px solid #2563eb; padding-left: 16px; margin-bottom: 28px;">
+    <p style="font-size: 12px; color: #2563eb; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 4px;">
+        Supervisor Alert
+    </p>
+    <p style="font-size: 11px; color: #94a3b8; margin: 0;">OrthoNoe Clinical Administration</p>
+</div>
+
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Dear <strong>{{or recipientName "Supervisor"}}</strong>,</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    {{message}}
+</p>
+
+{{#if studentName}}
+<table class="data">
+    <tr>
+        <th>Staff Member</th>
+        <td style="font-weight: 600;">{{studentName}}</td>
+    </tr>
+    {{#if eventType}}
+    <tr>
+        <th>Event Type</th>
+        <td><span class="pill pill-blue">{{eventType}}</span></td>
+    </tr>
+    {{/if}}
+    {{#if timestamp}}
+    <tr>
+        <th>Occurred at</th>
+        <td>{{formatDate timestamp}}</td>
+    </tr>
+    {{/if}}
+</table>
+{{/if}}
+
+{{#if actionUrl}}
+<div style="text-align: center; margin: 28px 0;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+            <td style="background: #2563eb; border-radius: 10px; box-shadow: 0 4px 14px rgba(37,99,235,0.3);">
+                <a href="{{actionUrl}}" style="display: inline-block; padding: 14px 36px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px;">
+                    Review in Dashboard
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>
+{{/if}}
+
+<hr class="divider" />
+
+<div style="background: #eff6ff; border-radius: 10px; padding: 14px 20px;">
+    <p style="margin: 0; font-size: 12px; color: #1e40af; line-height: 1.6;">
+        <strong>Confidential</strong> — This notification is intended for authorized supervisory staff only.
+        It may reference patient data subject to HIPAA/GDPR protections.
+    </p>
+</div>
+{{/inline}}
+{{/layout}}

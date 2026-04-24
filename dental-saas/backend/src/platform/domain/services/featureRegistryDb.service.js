@@ -19,9 +19,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const ModuleDefinitionDef = require("../models/ModuleDefinition.model");
-const ModuleDefinition = getPlatformModel(ModuleDefinitionDef);
+let _ModuleDefinition_cache = null;
+function ModuleDefinition() {
+    return _ModuleDefinition_cache || (_ModuleDefinition_cache = getPlatformModel(ModuleDefinitionDef));
+}
 const FeatureDefinitionDef = require("../models/FeatureDefinition.model");
-const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
+let _FeatureDefinition_cache = null;
+function FeatureDefinition() {
+    return _FeatureDefinition_cache || (_FeatureDefinition_cache = getPlatformModel(FeatureDefinitionDef));
+}
 const logger = require("@utils/logger");
 
 // ─── MODULE OPERATIONS ──────────────────────────────────────────────────────
@@ -31,7 +37,7 @@ const logger = require("@utils/logger");
  * @returns {Promise<ModuleDefinition[]>}
  */
 async function listModules() {
-  return ModuleDefinition.find().sort({
+  return ModuleDefinition().find().sort({
     category: 1,
     sortOrder: 1,
     key: 1
@@ -44,7 +50,7 @@ async function listModules() {
  * @returns {Promise<ModuleDefinition|null>}
  */
 async function getModuleByKey(key) {
-  return ModuleDefinition.findOne({
+  return ModuleDefinition().findOne({
     key
   }).lean();
 }
@@ -63,7 +69,7 @@ async function updateModule(id, data) {
   delete safeData.key;
   delete safeData.schemaKey;
   delete safeData.isCore;
-  const updated = await ModuleDefinition.findByIdAndUpdate(id, safeData, {
+  const updated = await ModuleDefinition().findByIdAndUpdate(id, safeData, {
     new: true,
     runValidators: true
   }).lean();
@@ -74,11 +80,11 @@ async function updateModule(id, data) {
   }
 
   // Update feature count
-  const featureCount = await FeatureDefinition.countDocuments({
+  const featureCount = await FeatureDefinition().countDocuments({
     module: updated.key
   });
   if (updated.featureCount !== featureCount) {
-    await ModuleDefinition.findByIdAndUpdate(id, {
+    await ModuleDefinition().findByIdAndUpdate(id, {
       featureCount
     });
   }
@@ -115,7 +121,7 @@ async function listFeatures(moduleKey) {
   const filter = moduleKey ? {
     module: moduleKey
   } : {};
-  return FeatureDefinition.find(filter).sort({
+  return FeatureDefinition().find(filter).sort({
     module: 1,
     key: 1
   }).lean();
@@ -127,7 +133,7 @@ async function listFeatures(moduleKey) {
  * @returns {Promise<FeatureDefinition|null>}
  */
 async function getFeatureByKey(key) {
-  return FeatureDefinition.findOne({
+  return FeatureDefinition().findOne({
     key
   }).lean();
 }
@@ -145,7 +151,7 @@ async function updateFeature(id, data) {
   };
   delete safeData.key;
   delete safeData.module;
-  const updated = await FeatureDefinition.findByIdAndUpdate(id, safeData, {
+  const updated = await FeatureDefinition().findByIdAndUpdate(id, safeData, {
     new: true,
     runValidators: true
   }).lean();
@@ -168,7 +174,7 @@ async function updateFeature(id, data) {
  * @returns {Promise<FeatureDefinition>}
  */
 async function updateFeaturePlans(featureKey, plans) {
-  const feature = await FeatureDefinition.findOneAndUpdate({
+  const feature = await FeatureDefinition().findOneAndUpdate({
     key: featureKey
   }, {
     plans
@@ -195,7 +201,7 @@ async function updateFeaturePlans(featureKey, plans) {
  * @returns {Promise<ModuleDefinition>}
  */
 async function updateModulePlans(moduleKey, plans) {
-  const module = await ModuleDefinition.findOneAndUpdate({
+  const module = await ModuleDefinition().findOneAndUpdate({
     key: moduleKey
   }, {
     plans

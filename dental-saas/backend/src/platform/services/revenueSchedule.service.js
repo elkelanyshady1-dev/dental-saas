@@ -20,7 +20,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const RevenueScheduleDef = require("../finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const {
   getBillingSettings
 } = require("./billing/services/billingSettings.service");
@@ -44,7 +47,7 @@ const SYSTEM_ACTOR = "000000000000000000000000";
 async function createRevenueScheduleOnPayment(invoice, contract, session = null) {
   try {
     // Idempotency: skip if already created
-    const existing = await RevenueSchedule.findOne({
+    const existing = await RevenueSchedule().findOne({
       invoiceId: invoice._id
     });
     if (existing) {
@@ -92,7 +95,7 @@ async function createRevenueScheduleOnPayment(invoice, contract, session = null)
     // Pre-compute normalized amounts (null if rate unavailable)
     const normalizedTotal = exchangeRate !== null ? +(amount * exchangeRate).toFixed(6) : null;
     const normalizedPerPeriod = exchangeRate !== null ? +(perPeriod * exchangeRate).toFixed(6) : null;
-    const sched = new RevenueSchedule({
+    const sched = new (RevenueSchedule())({
       organizationId: invoice.organizationId,
       contractId: invoice.contractId || contract._id,
       invoiceId: invoice._id,

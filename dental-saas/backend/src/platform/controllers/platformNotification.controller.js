@@ -15,7 +15,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlatformNotificationDef = require("../../platform/models/PlatformNotification");
-const PlatformNotification = getPlatformModel(PlatformNotificationDef);
+let _PlatformNotification_cache = null;
+function PlatformNotification() {
+    return _PlatformNotification_cache || (_PlatformNotification_cache = getPlatformModel(PlatformNotificationDef));
+}
 const logger = require("@utils/logger");
 
 // ─── GET /notifications ───────────────────────────────────────────────────────
@@ -31,9 +34,9 @@ exports.list = async (req, res) => {
         $nin: [userId]
       }
     } : {};
-    const [notifications, total] = await Promise.all([PlatformNotification.find(filter).sort({
+    const [notifications, total] = await Promise.all([PlatformNotification().find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), PlatformNotification.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), PlatformNotification().countDocuments(filter)]);
 
     // Annotate each notification with whether THIS user has read it
     const annotated = notifications.map(n => ({
@@ -68,7 +71,7 @@ exports.list = async (req, res) => {
 exports.unreadCount = async (req, res) => {
   try {
     const userId = req.platformUser?._id;
-    const count = await PlatformNotification.countDocuments({
+    const count = await PlatformNotification().countDocuments({
       readBy: {
         $nin: [userId]
       }
@@ -98,7 +101,7 @@ exports.markRead = async (req, res) => {
     const {
       id
     } = req.params;
-    await PlatformNotification.updateOne({
+    await PlatformNotification().updateOne({
       _id: id
     }, {
       $addToSet: {
@@ -126,7 +129,7 @@ exports.markRead = async (req, res) => {
 exports.markAllRead = async (req, res) => {
   try {
     const userId = req.platformUser?._id;
-    await PlatformNotification.updateMany({
+    await PlatformNotification().updateMany({
       readBy: {
         $nin: [userId]
       }

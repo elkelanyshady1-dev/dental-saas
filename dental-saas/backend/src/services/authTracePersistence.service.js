@@ -28,7 +28,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const AuthTraceDef = require("@shared/models/AuthTrace");
-const AuthTrace = getPlatformModel(AuthTraceDef);
+let _AuthTrace_cache = null;
+function AuthTrace() {
+    return _AuthTrace_cache || (_AuthTrace_cache = getPlatformModel(AuthTraceDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -161,7 +164,7 @@ function persistTraceAsync(req) {
 function _directPersist(doc) {
   setImmediate(async () => {
     try {
-      const savedTrace = await AuthTrace.create(doc);
+      const savedTrace = await AuthTrace().create(doc);
 
       // Run post-persist hooks (anomaly detection, etc.)
       for (const hook of _postPersistHooks) {
@@ -219,9 +222,9 @@ async function getTraces(organizationId, options = {}) {
   const safeLimit = Math.min(Number(limit) || 50, 100);
   const safePage = Math.max(Number(page) || 1, 1);
   const skip = (safePage - 1) * safeLimit;
-  const [traces, total] = await Promise.all([AuthTrace.find(filter).sort({
+  const [traces, total] = await Promise.all([AuthTrace().find(filter).sort({
     createdAt: -1
-  }).skip(skip).limit(safeLimit).lean(), AuthTrace.countDocuments(filter)]);
+  }).skip(skip).limit(safeLimit).lean(), AuthTrace().countDocuments(filter)]);
   return {
     traces,
     pagination: {
@@ -238,7 +241,7 @@ async function getTraces(organizationId, options = {}) {
  */
 async function getTraceByRequestId(requestId, organizationId) {
   // @rls-platform-service — system-wide auth trace persistence, no org-scoped req
-  return AuthTrace.findOne({
+  return AuthTrace().findOne({
     requestId,
     organizationId
   }).lean();
@@ -252,7 +255,7 @@ async function getTraceByRequestId(requestId, organizationId) {
  */
 async function deleteTracesOlderThan(olderThan) {
   // @rls-platform-service — system-wide auth trace persistence, no org-scoped req
-  const result = await AuthTrace.deleteMany({
+  const result = await AuthTrace().deleteMany({
     createdAt: {
       $lt: olderThan
     }

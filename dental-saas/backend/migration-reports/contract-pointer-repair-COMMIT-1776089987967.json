@@ -1,0 +1,47 @@
+{
+  "mode": "COMMIT",
+  "totalOrgs": 5,
+  "alreadyCorrect": 2,
+  "repointed": 0,
+  "nulled": 3,
+  "errors": [],
+  "details": [
+    {
+      "orgId": "69a9f380b90d57cce3168c0e",
+      "orgName": "Dental shine",
+      "status": "CORRECT",
+      "currentContractId": "69ab8d8e7e36b999bb79b671",
+      "contractStatus": "active"
+    },
+    {
+      "orgId": "69b4897e42f39fa87c0b07e0",
+      "orgName": "test1",
+      "status": "NULLED",
+      "oldContractId": "69b4897e42f39fa87c0b07f0",
+      "pointedContractStatus": "expired",
+      "reason": "No active contract found"
+    },
+    {
+      "orgId": "69b4988e77425e4dcc2fbff1",
+      "orgName": "test2",
+      "status": "NULLED",
+      "oldContractId": "69b4988e77425e4dcc2fc001",
+      "pointedContractStatus": "expired",
+      "reason": "No active contract found"
+    },
+    {
+      "orgId": "69b499c677425e4dcc2fc05b",
+      "orgName": "test3",
+      "status": "NULLED",
+      "oldContractId": "69b499c677425e4dcc2fc06b",
+      "pointedContractStatus": "expired",
+      "reason": "No active contract found"
+    },
+    {
+      "orgId": "69c7537ba6ddf0a9ee567ce2",
+      "orgName": "Test clinic 2",
+      "status": "CORRECT_NO_CONTRACT",
+      "reason": "Null pointer, no active contract — OK"
+    }
+  ]
+}

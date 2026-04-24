@@ -1,0 +1,18 @@
+{
+  "mode": "COMMIT",
+  "total": 1,
+  "migrated": 1,
+  "skipped": 0,
+  "errors": [],
+  "details": [
+    {
+      "contractId": "69dc0d26684284b957578615",
+      "organizationId": "69c7537ba6ddf0a9ee567ce2",
+      "status": "MIGRATED",
+      "promoDays": 150,
+      "promoStartDate": "2026-04-12T21:22:46.929Z",
+      "promoEndDate": "2026-09-09T20:22:46.929Z",
+      "effectiveToUpdated": true
+    }
+  ]
+}

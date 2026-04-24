@@ -51,7 +51,10 @@ const logger = require("@utils/logger");
 // key/scope/org-scoped. Refund.schema stays untouched — transport-level
 // idempotency should not be a domain concern.
 const IdempotencyKeyDef = require("@core/IdempotencyKey.model");
-const IdempotencyKey = getSharedModel(IdempotencyKeyDef);
+let _IdempotencyKey_cache = null;
+function IdempotencyKey() {
+    return _IdempotencyKey_cache || (_IdempotencyKey_cache = getSharedModel(IdempotencyKeyDef));
+}
 const {
   v4: uuidv4
 } = require("uuid");
@@ -119,7 +122,7 @@ async function processRefund({
     // Fast replay path: completed key → return cached response. Scoped to
     // (key, organizationId, scope:"refund") so a cross-scope key reuse
     // can't return a wrong-operation response.
-    const existing = await IdempotencyKey.findOne({
+    const existing = await IdempotencyKey().findOne({
       key: idempotencyKey,
       scope: "refund"
     }).lean();
@@ -141,7 +144,7 @@ async function processRefund({
     // Claim the key. Unique index on `key` serializes concurrent claims;
     // exactly one caller wins the insert, the rest get E11000.
     try {
-      await IdempotencyKey.create({
+      await IdempotencyKey().create({
         key: idempotencyKey,
         scope: "refund",
         userId: processedByUserId ? String(processedByUserId) : null,
@@ -159,7 +162,7 @@ async function processRefund({
         // scope. If they completed → return cached response.
         // Anything else (still in-flight, or a stale "failed" row)
         // → 409 so the client backs off.
-        const winner = await IdempotencyKey.findOne({
+        const winner = await IdempotencyKey().findOne({
           key: idempotencyKey,
           scope: "refund"
         }).lean();
@@ -387,7 +390,7 @@ async function processRefund({
       // point retries can proceed again. Don't let a cache-write
       // failure mask a real refund success.
       try {
-        await IdempotencyKey.updateOne({
+        await IdempotencyKey().updateOne({
           key: claimedKey,
           scope: "refund"
         }, {
@@ -421,7 +424,7 @@ async function processRefund({
       // Deletion lets the client fix whatever caused the failure and
       // retry with the same key.
       try {
-        await IdempotencyKey.deleteOne({
+        await IdempotencyKey().deleteOne({
           key: claimedKey,
           scope: "refund",
           status: "in-flight"

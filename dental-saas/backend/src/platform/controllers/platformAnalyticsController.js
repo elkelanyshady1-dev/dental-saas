@@ -15,9 +15,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformUserDef = require("../models/PlatformUser");
-const PlatformUser = getPlatformModel(PlatformUserDef);
+let _PlatformUser_cache = null;
+function PlatformUser() {
+    return _PlatformUser_cache || (_PlatformUser_cache = getPlatformModel(PlatformUserDef));
+}
 const logger = require("@utils/logger");
 
 // Per-org DB model resolution
@@ -84,14 +90,14 @@ exports.getPlatformAnalytics = async (req, res) => {
     startOfToday.setHours(0, 0, 0, 0);
 
     // Platform-level counts (global connection — correct)
-    const [totalOrganizations, activeOrganizations, newOrganizationsToday, allOrgIds] = await Promise.all([Organization.countDocuments(), Organization.countDocuments({
+    const [totalOrganizations, activeOrganizations, newOrganizationsToday, allOrgIds] = await Promise.all([Organization().countDocuments(), Organization().countDocuments({
       isActive: true,
       "subscription.status": "active"
-    }), Organization.countDocuments({
+    }), Organization().countDocuments({
       createdAt: {
         $gte: startOfToday
       }
-    }), Organization.find().distinct("_id")]);
+    }), Organization().find().distinct("_id")]);
 
     // Cross-org aggregation — bounded concurrency to prevent pool exhaustion
     const limit = pLimit(ORG_AGGREGATION_CONCURRENCY);
@@ -164,10 +170,10 @@ exports.getLatestEvents = async (req, res) => {
     // Step 2: resolve actorId across PlatformUser (platform DB only)
     // Tenant user names are embedded in audit records at write time (actorFirstName/actorLastName).
     // We only need to resolve PlatformUser actors here.
-    const actorIds = [...new Set(logs.map(l => l.actorId?.toString()).filter(Boolean))];
+    const actorIds = [...new Set(logs.map(l => l.actorId?.toString()()).filter(Boolean))];
     let actorMap = {};
     if (actorIds.length > 0) {
-      const platformActors = await PlatformUser.find({
+      const platformActors = await PlatformUser().find({
         _id: {
           $in: actorIds
         }

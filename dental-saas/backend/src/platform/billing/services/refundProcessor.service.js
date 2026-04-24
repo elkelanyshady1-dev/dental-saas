@@ -25,13 +25,25 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const RefundExecutionRecordDef = require("@shared/models/RefundExecutionRecord");
-const RefundExecutionRecord = getPlatformModel(RefundExecutionRecordDef);
+let _RefundExecutionRecord_cache = null;
+function RefundExecutionRecord() {
+    return _RefundExecutionRecord_cache || (_RefundExecutionRecord_cache = getPlatformModel(RefundExecutionRecordDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const RevenueScheduleDef = require("../../finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const {
   assertValidRefundTransition
 } = require("../domain/refundStateMachine");
@@ -72,7 +84,7 @@ async function requestRefund({
 }) {
   // ── Idempotency check ───────────────────────────────────────────────────
   if (idempotencyKey) {
-    const existing = await RefundExecutionRecord.findOne({
+    const existing = await RefundExecutionRecord().findOne({
       idempotencyKey
     }).lean();
     if (existing) {
@@ -90,14 +102,14 @@ async function requestRefund({
   }
 
   // ── Load invoice + contract ─────────────────────────────────────────────
-  const invoice = await PlatformInvoice.findById(invoiceId).lean();
+  const invoice = await PlatformInvoice().findById(invoiceId).lean();
   if (!invoice) {
     const err = new Error(`PlatformInvoice ${invoiceId} not found`);
     err.status = 404;
     err.code = "INVOICE_NOT_FOUND";
     throw err;
   }
-  const contract = await OrgContract.findById(contractId || invoice.contractId).lean();
+  const contract = await OrgContract().findById(contractId || invoice.contractId).lean();
   if (!contract) {
     const err = new Error(`OrgContract not found for invoice ${invoiceId}`);
     err.status = 404;
@@ -127,7 +139,7 @@ async function requestRefund({
 
   // ── Create record ───────────────────────────────────────────────────────
   const key = idempotencyKey || `refund-${invoiceId}-${requestedMinor}-${Date.now()}`;
-  const record = await RefundExecutionRecord.create({
+  const record = await RefundExecutionRecord().create({
     organizationId: invoice.organizationId,
     invoiceId: invoice._id,
     contractId: contract._id,
@@ -183,7 +195,7 @@ async function requestRefund({
  * @param {string} approvedBy - PlatformUser._id
  */
 async function approveRefund(refundId, approvedBy) {
-  const record = await RefundExecutionRecord.findById(refundId);
+  const record = await RefundExecutionRecord().findById(refundId);
   if (!record) {
     const err = new Error(`RefundExecutionRecord ${refundId} not found`);
     err.status = 404;
@@ -230,7 +242,7 @@ async function approveRefund(refundId, approvedBy) {
  * @param {string} [reason]
  */
 async function rejectRefund(refundId, rejectedBy, reason = "manual_rejection") {
-  const record = await RefundExecutionRecord.findById(refundId);
+  const record = await RefundExecutionRecord().findById(refundId);
   if (!record) {
     const err = new Error(`RefundExecutionRecord ${refundId} not found`);
     err.status = 404;
@@ -277,7 +289,7 @@ async function rejectRefund(refundId, rejectedBy, reason = "manual_rejection") {
  * @param {string} processedBy
  */
 async function processRefund(refundId, processedBy) {
-  const record = await RefundExecutionRecord.findById(refundId);
+  const record = await RefundExecutionRecord().findById(refundId);
   if (!record) {
     const err = new Error(`RefundExecutionRecord ${refundId} not found`);
     err.status = 404;
@@ -298,7 +310,7 @@ async function processRefund(refundId, processedBy) {
 
   // ── Idempotency: provider refund already exists? ────────────────────────
   if (record.providerRefundId) {
-    const byProvider = await RefundExecutionRecord.findOne({
+    const byProvider = await RefundExecutionRecord().findOne({
       providerRefundId: record.providerRefundId,
       status: "refund_completed"
     }).lean();
@@ -314,14 +326,14 @@ async function processRefund(refundId, processedBy) {
     }
   }
   assertValidRefundTransition(record.status, "refund_processing");
-  const invoice = await PlatformInvoice.findById(record.invoiceId);
+  const invoice = await PlatformInvoice().findById(record.invoiceId);
   if (!invoice) {
     const err = new Error(`PlatformInvoice ${record.invoiceId} not found during processing`);
     err.status = 404;
     err.code = "INVOICE_NOT_FOUND";
     throw err;
   }
-  const contract = await OrgContract.findById(record.contractId).lean();
+  const contract = await OrgContract().findById(record.contractId).lean();
 
   // Transition to processing
   record.status = "refund_processing";
@@ -383,7 +395,7 @@ async function processRefund(refundId, processedBy) {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    const lInv = await PlatformInvoice.findById(invoice._id).session(session);
+    const lInv = await PlatformInvoice().findById(invoice._id).session(session);
 
     // ── Update refund tracking fields ─────────────────────────────────────
     lInv.refundedAmountMinor = (lInv.refundedAmountMinor || 0) + record.amountMinor;
@@ -407,7 +419,7 @@ async function processRefund(refundId, processedBy) {
 
     // ── Revenue Reversal ─────────────────────────────────────────────────
     const previousSchedule = {};
-    const schedule = await RevenueSchedule.findOne({
+    const schedule = await RevenueSchedule().findOne({
       invoiceId: invoice._id
     }).session(session);
     if (schedule && schedule.totalAmount > 0) {

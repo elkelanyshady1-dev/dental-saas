@@ -11,6 +11,6 @@
 // tracked on the platform connection (platform-level usage metrics, read by
 // platform projections). Binding to the platform connection preserves the
 // pre-5d behavior when this model was compiled on global mongoose.
-const getPlatformModel = require("@core/db/getPlatformModel");
+const { makeLazyPlatformModel } = require("@core/db/lazyModelProxy");
 const CommunicationUsageDef = require("../../modules/communicationDomain/models/communicationUsage.model");
-module.exports = getPlatformModel(CommunicationUsageDef);
+module.exports = makeLazyPlatformModel(CommunicationUsageDef);

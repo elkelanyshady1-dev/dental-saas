@@ -3,6 +3,8 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query/queryClient";
+import OrthoNoeLogo from "@/components/brand/OrthoNoeLogo";
+import { BRAND } from "@/config/brand";
 
 
 const NAV_LINKS = [
@@ -48,12 +50,8 @@ export default function PublicLayout() {
 
                     {/* Brand Logo */}
                     <Link to="/" className="flex items-center gap-2.5 hover:opacity-85 transition-opacity">
-                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/25">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <span className="text-lg font-bold text-blue-600 tracking-tight">DentalSaaS</span>
+                        <OrthoNoeLogo className="w-9 h-9" />
+                        <span className="text-lg font-bold text-blue-600 tracking-tight">{BRAND.name}</span>
                     </Link>
 
                     {/* Desktop Navigation — increased gap */}
@@ -146,15 +144,11 @@ export default function PublicLayout() {
                         {/* Brand column */}
                         <div className="col-span-2 md:col-span-1">
                             <div className="flex items-center gap-2.5 mb-5 text-white text-lg font-bold">
-                                <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/30">
-                                    <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                DentalSaaS
+                                <OrthoNoeLogo className="w-8 h-8" variant="mono-light" />
+                                {BRAND.name}
                             </div>
                             <p className="text-sm leading-relaxed text-slate-500 max-w-xs">
-                                The ultimate operating system for modern dental practices — from solo clinics to global networks.
+                                The operating system for modern orthodontics — from solo practices to global orthodontic networks.
                             </p>
                         </div>
 
@@ -216,7 +210,7 @@ export default function PublicLayout() {
                     {/* Bottom bar */}
                     <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
                         <p className="text-xs text-slate-600 tracking-wider font-medium uppercase">
-                            &copy; {new Date().getFullYear()} DentalSaaS Platform Inc. All rights reserved.
+                            {BRAND.copyright}
                         </p>
 
                         {/* Social links — circular hover */}

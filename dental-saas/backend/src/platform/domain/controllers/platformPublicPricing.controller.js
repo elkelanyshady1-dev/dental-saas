@@ -13,9 +13,15 @@
 // MIGRATED v6.2: Replaced retired Plan shim with canonical models
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const PlanTemplateDef = require("@billing/models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef);
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+}
 const addOnService = require("../services/platformAddOn.service");
 const {
   resolveCountry
@@ -103,7 +109,7 @@ exports.getPublicPricing = async (req, res) => {
     const detectedCountry = resolveCountry(req);
 
     // ── Query PlanVersion (source of truth) with visibility gate ──────
-    const activeVersions = await PlanVersion.find({
+    const activeVersions = await PlanVersion().find({
       status: "active",
       visibility: "public"
     }).sort({
@@ -123,8 +129,8 @@ exports.getPublicPricing = async (req, res) => {
     }
 
     // Enrich with PlanTemplate metadata (name, description)
-    const templateIds = [...new Set(activeVersions.map(v => v.templateId?.toString()).filter(Boolean))];
-    const templates = await PlanTemplate.find({
+    const templateIds = [...new Set(activeVersions.map(v => v.templateId?.toString()()).filter(Boolean))];
+    const templates = await PlanTemplate().find({
       _id: {
         $in: templateIds
       }
@@ -139,7 +145,7 @@ exports.getPublicPricing = async (req, res) => {
 
     // Transform to marketing shape using template + version data
     const marketingPlans = activeVersions.map(v => {
-      const tmpl = templateMap[v.templateId?.toString()] || {};
+      const tmpl = templateMap[v.templateId?.toString()()] || {};
       // Build a merged "plan-like" object for transformPlanForMarketing
       const merged = {
         ...tmpl,
@@ -168,7 +174,7 @@ exports.getPublicPricing = async (req, res) => {
  */
 exports.getPricingMatrix = async (req, res) => {
   try {
-    const activeVersions = await PlanVersion.find({
+    const activeVersions = await PlanVersion().find({
       status: "active",
       visibility: "public"
     }).sort({
@@ -176,8 +182,8 @@ exports.getPricingMatrix = async (req, res) => {
     }).lean();
 
     // Enrich with template names
-    const templateIds = [...new Set(activeVersions.map(v => v.templateId?.toString()).filter(Boolean))];
-    const templates = await PlanTemplate.find({
+    const templateIds = [...new Set(activeVersions.map(v => v.templateId?.toString()()).filter(Boolean))];
+    const templates = await PlanTemplate().find({
       _id: {
         $in: templateIds
       }
@@ -216,7 +222,7 @@ exports.getPricingMatrix = async (req, res) => {
     const matrix = featureKeys.map(f => {
       const values = {};
       activeVersions.forEach(v => {
-        const code = v.templateCode || templateMap[v.templateId?.toString()]?.code || "unknown";
+        const code = v.templateCode || templateMap[v.templateId?.toString()()]?.code || "unknown";
         let val;
         if (f.path.startsWith("limits.")) {
           const limitVal = v.limits?.[f.key];
@@ -236,7 +242,7 @@ exports.getPricingMatrix = async (req, res) => {
     res.json({
       detectedCountry: resolveCountry(req),
       plans: activeVersions.map(v => {
-        const tmpl = templateMap[v.templateId?.toString()] || {};
+        const tmpl = templateMap[v.templateId?.toString()()] || {};
         return {
           name: tmpl.name || v.label,
           code: v.templateCode || tmpl.code

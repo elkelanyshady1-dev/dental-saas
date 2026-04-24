@@ -17,7 +17,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingAuditLogDef = require("../models/BillingAuditLog.model");
-const BillingAuditLog = getPlatformModel(BillingAuditLogDef);
+let _BillingAuditLog_cache = null;
+function BillingAuditLog() {
+    return _BillingAuditLog_cache || (_BillingAuditLog_cache = getPlatformModel(BillingAuditLogDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -48,7 +51,7 @@ async function logBillingEvent({
   session = null
 } = {}) {
   try {
-    const doc = new BillingAuditLog({
+    const doc = new (BillingAuditLog())({
       organizationId,
       contractId,
       invoiceId,
@@ -68,8 +71,8 @@ async function logBillingEvent({
     logger.error({
       err,
       eventType,
-      organizationId: organizationId?.toString(),
-      contractId: contractId?.toString()
+      organizationId: organizationId?.toString()(),
+      contractId: contractId?.toString()()
     }, "[BillingAuditLog] Write failed (non-fatal)");
     return null;
   }
@@ -99,8 +102,8 @@ async function getOrgBillingHistory(organizationId, {
   if (eventType) filter.eventType = eventType;
   if (contractId) filter.contractId = contractId;
   const skip = (page - 1) * limit;
-  const total = await BillingAuditLog.countDocuments(filter);
-  const data = await BillingAuditLog.find(filter).sort({
+  const total = await BillingAuditLog().countDocuments(filter);
+  const data = await BillingAuditLog().find(filter).sort({
     createdAt: -1
   }).skip(skip).limit(limit).lean();
   return {

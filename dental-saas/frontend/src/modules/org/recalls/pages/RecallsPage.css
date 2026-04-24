@@ -1,0 +1,512 @@
+/* ── RecallsPage.css — Full Recall Domain Dashboard ────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ── Container ─────────────────────────────────────────────────────────────── */
+
+.rp-container {
+  padding: 28px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: 'Inter', sans-serif;
+  min-height: 100%;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.rp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.rp-header__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.rp-header__subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+/* ── Stats Cards ───────────────────────────────────────────────────────────── */
+
+.rp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .rp-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+.rp-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rp-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.rp-stat-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rp-stat-card__icon {
+  font-size: 18px;
+}
+
+.rp-stat-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rp-stat-card__value {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* ── Filter Bar ────────────────────────────────────────────────────────────── */
+
+.rp-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rp-filters__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.rp-filters__search:focus-within {
+  border-color: #0D9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.08);
+}
+
+.rp-filters__search-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.rp-filters__input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+}
+
+.rp-filters__input::placeholder {
+  color: #94a3b8;
+}
+
+.rp-filters__select {
+  padding: 9px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #f8fafc;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.rp-filters__select:focus {
+  border-color: #0D9488;
+}
+
+.rp-filters__date {
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  background: #f8fafc;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.rp-filters__date:focus {
+  border-color: #0D9488;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+
+.rp-table-wrap {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rp-table thead th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
+  white-space: nowrap;
+}
+
+.rp-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.12s ease;
+}
+
+.rp-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.rp-table tbody tr:hover {
+  background: #f8fffe;
+}
+
+.rp-table tbody td {
+  padding: 14px 16px;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.rp-row--overdue {
+  background: #fef2f2 !important;
+}
+
+.rp-row--overdue:hover {
+  background: #fce7e7 !important;
+}
+
+/* ── Patient cell ──────────────────────────────────────────────────────────── */
+
+.rp-patient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rp-patient__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0D9488, #14b8a6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.rp-patient__name {
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+/* ── Mono cell ─────────────────────────────────────────────────────────────── */
+
+.rp-cell--mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Date cell ─────────────────────────────────────────────────────────────── */
+
+.rp-date {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.rp-date--overdue {
+  color: #dc2626;
+}
+
+.rp-overdue-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fecaca;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+/* ── Type badge ────────────────────────────────────────────────────────────── */
+
+.rp-type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0fdfa;
+  color: #0D9488;
+  border: 1px solid #ccfbf1;
+}
+
+/* ── Reason cell ───────────────────────────────────────────────────────────── */
+
+.rp-cell--reason {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* ── Status badge ──────────────────────────────────────────────────────────── */
+
+.rp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────────── */
+
+.rp-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rp-action-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.rp-action-btn:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.rp-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rp-action-btn--send:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.rp-action-btn--complete:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.rp-action-btn--cancel:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* ── Fetching overlay ──────────────────────────────────────────────────────── */
+
+.rp-fetching-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 5;
+  animation: rpFade 0.3s ease;
+}
+
+@keyframes rpFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Loading ───────────────────────────────────────────────────────────────── */
+
+.rp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  gap: 16px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rp-loading__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0D9488;
+  border-radius: 50%;
+  animation: rpSpin 0.8s linear infinite;
+}
+
+@keyframes rpSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────────── */
+
+.rp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  gap: 12px;
+}
+
+.rp-empty__icon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.rp-empty__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.rp-empty__text {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  text-align: center;
+  max-width: 280px;
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────────── */
+
+.rp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.rp-pagination__info {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.rp-pagination__buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.rp-page-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.rp-page-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.rp-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rp-page-btn--active {
+  background: #0D9488;
+  color: #ffffff;
+  border-color: #0D9488;
+}
+
+.rp-page-btn--active:hover {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff !important;
+}

@@ -18,11 +18,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 /**
  * getContractsNeedingRenewal
  *
@@ -67,8 +76,8 @@ async function getContractsNeedingRenewal({
     }]
   };
   const skip = (page - 1) * limit;
-  const total = await OrgContract.countDocuments(query);
-  const contracts = await OrgContract.find(query).sort({
+  const total = await OrgContract().countDocuments(query);
+  const contracts = await OrgContract().find(query).sort({
     effectiveTo: 1
   }).skip(skip).limit(limit).lean();
   if (!contracts.length) {
@@ -90,7 +99,7 @@ async function getContractsNeedingRenewal({
 
   // Batch-load org names
   const orgIds = [...new Set(contracts.map(c => c.organizationId.toString()))];
-  const orgs = await Organization.find({
+  const orgs = await Organization().find({
     _id: {
       $in: orgIds
     }
@@ -102,7 +111,7 @@ async function getContractsNeedingRenewal({
 
   // Batch-load latest open invoice per contract
   const contractIds = contracts.map(c => c._id);
-  const invoices = await PlatformInvoice.find({
+  const invoices = await PlatformInvoice().find({
     contractId: {
       $in: contractIds
     },

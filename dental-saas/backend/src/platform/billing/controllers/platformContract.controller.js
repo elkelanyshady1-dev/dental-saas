@@ -22,11 +22,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const logger = require("@utils/logger");
 
 // Audit service — consistent with platform audit patterns
@@ -91,7 +100,7 @@ exports.createContract = async (req, res) => {
     }
 
     // ── Validate org exists ────────────────────────────────────────────────
-    const org = await Organization.findById(organizationId);
+    const org = await Organization().findById(organizationId);
     if (!org) {
       return res.status(404).json({
         success: false,
@@ -100,7 +109,7 @@ exports.createContract = async (req, res) => {
     }
 
     // ── Validate PlanVersion exists and is active ──────────────────────────
-    const planVersion = await PlanVersion.findById(planVersionId);
+    const planVersion = await PlanVersion().findById(planVersionId);
     if (!planVersion) {
       return res.status(404).json({
         success: false,
@@ -115,7 +124,7 @@ exports.createContract = async (req, res) => {
     }
 
     // ── Guard: no duplicate pending scheduled changes ─────────────────────
-    const existingDraft = await OrgContract.findOne({
+    const existingDraft = await OrgContract().findOne({
       organizationId,
       contractStatus: "draft"
     });
@@ -141,7 +150,7 @@ exports.createContract = async (req, res) => {
     });
 
     // ── Create contract ────────────────────────────────────────────────────
-    const contract = new OrgContract({
+    const contract = new (OrgContract())({
       organizationId,
       planVersionId,
       planCode: planVersion.templateCode,
@@ -282,7 +291,7 @@ exports.createSalesContract = async (req, res) => {
     }
 
     // ── Validate org ───────────────────────────────────────────────────────
-    const org = await Organization.findById(organizationId);
+    const org = await Organization().findById(organizationId);
     if (!org || org.isArchived) {
       return res.status(404).json({
         success: false,
@@ -291,7 +300,7 @@ exports.createSalesContract = async (req, res) => {
     }
 
     // ── Validate PlanVersion (active; visibility gate bypassed here — sales+public allowed) ──
-    const planVersion = await PlanVersion.findById(planVersionId);
+    const planVersion = await PlanVersion().findById(planVersionId);
     if (!planVersion) {
       return res.status(404).json({
         success: false,
@@ -306,7 +315,7 @@ exports.createSalesContract = async (req, res) => {
     }
 
     // ── Guard: no duplicate pending_activation ─────────────────────────────
-    const existingPending = await OrgContract.findOne({
+    const existingPending = await OrgContract().findOne({
       organizationId,
       contractStatus: "pending_activation"
     });
@@ -319,7 +328,7 @@ exports.createSalesContract = async (req, res) => {
     }
 
     // Guard: no duplicate sales draft per org
-    const existingSalesDraft = await OrgContract.findOne({
+    const existingSalesDraft = await OrgContract().findOne({
       organizationId,
       contractStatus: "draft",
       source: "sales"
@@ -335,7 +344,7 @@ exports.createSalesContract = async (req, res) => {
     // ── Determine lifecycle state based on trial ───────────────────────────
     // TDS: If org has an active trial contract, the new paid contract must be PENDING.
     // effectiveFrom = trial's effectiveTo so it activates when trial ends via trialActivation.job.
-    const activeTrial = await OrgContract.findOne({
+    const activeTrial = await OrgContract().findOne({
       organizationId,
       contractStatus: "active",
       trialDays: {
@@ -370,7 +379,7 @@ exports.createSalesContract = async (req, res) => {
     });
 
     // ── Create contract ────────────────────────────────────────────────────
-    const contract = new OrgContract({
+    const contract = new (OrgContract())({
       organizationId,
       planVersionId,
       planCode: planVersion.templateCode,
@@ -493,7 +502,7 @@ exports.updateContractStatus = async (req, res) => {
         error: "Only 'terminated' status can be set via this endpoint. Activation is performed by the payment flow."
       });
     }
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -526,7 +535,7 @@ exports.updateContractStatus = async (req, res) => {
 
     // If active contract terminated → clear org's currentContractId
     if (prevStatus === "active") {
-      await Organization.findByIdAndUpdate(contract.organizationId, {
+      await Organization().findByIdAndUpdate(contract.organizationId, {
         $set: {
           currentContractId: null
         }
@@ -583,7 +592,7 @@ exports.replaceContract = async (req, res) => {
       id
     } = req.params;
     const actorId = req.platformUser?._id;
-    const sourceContract = await OrgContract.findById(id);
+    const sourceContract = await OrgContract().findById(id);
     if (!sourceContract) {
       return res.status(404).json({
         success: false,
@@ -598,7 +607,7 @@ exports.replaceContract = async (req, res) => {
     }
 
     // Guard: only one pending draft per org
-    const existingDraft = await OrgContract.findOne({
+    const existingDraft = await OrgContract().findOne({
       organizationId: sourceContract.organizationId,
       contractStatus: "draft",
       _id: {
@@ -630,7 +639,7 @@ exports.replaceContract = async (req, res) => {
       appliedCoupon = sourceContract.appliedCoupon,
       salesOwnerId = sourceContract.salesOwnerId
     } = req.body;
-    let planVersion = await PlanVersion.findById(planVersionId);
+    let planVersion = await PlanVersion().findById(planVersionId);
     if (!planVersion) {
       return res.status(404).json({
         success: false,
@@ -645,7 +654,7 @@ exports.replaceContract = async (req, res) => {
     }
 
     // ── Compute price via Pricing Engine (REVENUE SAFETY) ─────────────────
-    const org = await Organization.findById(sourceContract.organizationId).select("country billingCountry").lean();
+    const org = await Organization().findById(sourceContract.organizationId).select("country billingCountry").lean();
     const pricing = await computePrice({
       planVersion: planVersion.toObject ? planVersion.toObject() : planVersion,
       billingInterval,
@@ -657,7 +666,7 @@ exports.replaceContract = async (req, res) => {
     });
 
     // ── Create replacement draft ───────────────────────────────────────────
-    const replacement = new OrgContract({
+    const replacement = new (OrgContract())({
       organizationId: sourceContract.organizationId,
       planVersionId,
       planCode: planVersion.templateCode,
@@ -753,7 +762,7 @@ exports.uploadContractDocument = async (req, res) => {
         error: "documentUrl or documentKey is required"
       });
     }
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -844,7 +853,7 @@ exports.setAutoRenew = async (req, res) => {
         error: "autoRenew (boolean) is required"
       });
     }
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -927,7 +936,7 @@ exports.cancelContract = async (req, res) => {
     const {
       cancellationReason = null
     } = req.body || {};
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -949,7 +958,7 @@ exports.cancelContract = async (req, res) => {
 
     // Clear org.currentContractId if it still points to this (now canceled) contract.
     // Prevents ORG_CURRENT_CONTRACT_POINTER_INTEGRITY violation on next Guardian run.
-    await Organization.updateOne({
+    await Organization().updateOne({
       _id: contract.organizationId,
       currentContractId: contract._id
     }, {
@@ -1047,7 +1056,7 @@ exports.getContractChain = async (req, res) => {
     }
 
     // Load the root contract
-    const root = await OrgContract.findById(contractId).lean();
+    const root = await OrgContract().findById(contractId).lean();
     if (!root) {
       return res.status(404).json({
         success: false,
@@ -1076,7 +1085,7 @@ exports.getContractChain = async (req, res) => {
       });
       const nextId = direction === "backward" ? current.previousContractId : current.supersededById;
       if (!nextId) break;
-      current = await OrgContract.findById(nextId).lean();
+      current = await OrgContract().findById(nextId).lean();
       depth++;
     }
     const truncated = depth >= MAX_CHAIN_DEPTH;

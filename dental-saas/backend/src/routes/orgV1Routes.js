@@ -145,6 +145,11 @@ const checkoutController = require("../organization/billing/checkout/checkout.co
 
 router.post("/billing/checkout-session", checkoutController.createSession);
 
+// Phase 4 — Unified Checkout (provider-agnostic, single pipeline).
+// Request: { planVersionId, interval, provider }
+// Response: { success, data: { checkoutUrl, provider, contractId, invoiceId } }
+router.post("/checkout", checkoutController.createUnified);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Phase B — Module Runtime Engine
 // ═══════════════════════════════════════════════════════════════════════════════

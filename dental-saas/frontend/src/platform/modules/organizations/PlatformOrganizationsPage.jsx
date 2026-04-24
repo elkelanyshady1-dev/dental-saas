@@ -401,7 +401,7 @@ function CreateOrgModal({ onClose, onSuccess }) {
                                 <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
                                 <span className="text-xs font-semibold text-slate-300">Trial Period</span>
                             </div>
-                            <span className="text-xs font-black text-emerald-400">Free · 14 days</span>
+                            <span className="text-xs font-black text-emerald-400">Free · 30 days</span>
                         </div>
 
                         {/* Post-trial */}

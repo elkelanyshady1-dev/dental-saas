@@ -8,7 +8,10 @@
 // Sprint 6: BillingInvoice removed — tombstone proxy re-exports PlatformInvoice
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingInvoiceDef = require("../../../shared/models/BillingInvoice");
-const BillingInvoice = getPlatformModel(BillingInvoiceDef);
+let _BillingInvoice_cache = null;
+function BillingInvoice() {
+    return _BillingInvoice_cache || (_BillingInvoice_cache = getPlatformModel(BillingInvoiceDef));
+}
 const usageService = require("../../communicationDomain/services/usage.service");
 const invoiceService = require("../organizationFinance/services/invoice.service");
 const logger = require("@utils/logger");
@@ -28,7 +31,7 @@ exports.getOrgBillingOverview = async (req, res) => {
     const {
       start
     } = getCurrentBillingCycle();
-    const [usage, invoice] = await Promise.all([usageService.getUsageForCycle(orgId, start), BillingInvoice.findOne({
+    const [usage, invoice] = await Promise.all([usageService.getUsageForCycle(orgId, start), BillingInvoice().findOne({
       organizationId: orgId,
       billingCycleStart: start,
       status: "draft"
@@ -62,7 +65,7 @@ exports.getOrgInvoices = async (req, res) => {
     const {
       orgId
     } = req.params;
-    const invoices = await BillingInvoice.find({
+    const invoices = await BillingInvoice().find({
       organizationId: orgId
     }).sort({
       billingCycleStart: -1

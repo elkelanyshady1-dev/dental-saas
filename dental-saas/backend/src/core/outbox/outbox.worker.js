@@ -27,7 +27,10 @@
 // silently has no model methods.
 const getSharedModel = require("@core/db/getSharedModel");
 const OutboxDef = require("./Outbox.model");
-const Outbox = getSharedModel(OutboxDef);
+let _Outbox_cache = null;
+function Outbox() {
+    return _Outbox_cache || (_Outbox_cache = getSharedModel(OutboxDef));
+}
 const eventBus = require("@core/eventBus");
 const logger = require("@utils/logger");
 
@@ -59,7 +62,7 @@ function _instanceId() {
  */
 async function reclaimStuckProcessing() {
   const cutoff = new Date(Date.now() - VISIBILITY_TIMEOUT_MS);
-  const result = await Outbox.updateMany({
+  const result = await Outbox().updateMany({
     status: "processing",
     lockedAt: {
       $lt: cutoff
@@ -97,7 +100,7 @@ async function processOne() {
   // won't match once the first has claimed the record.
   const instanceId = _instanceId();
   const now = new Date();
-  const record = await Outbox.findOneAndUpdate({
+  const record = await Outbox().findOneAndUpdate({
     status: "pending"
   }, {
     $set: {
@@ -150,7 +153,7 @@ async function processOne() {
     // Mark as processed. Clear lock fields so stale lockedBy/lockedAt
     // don't linger on terminal rows (and so the reclaim sweep's
     // `status: "processing"` filter naturally excludes them).
-    await Outbox.updateOne({
+    await Outbox().updateOne({
       _id: record._id
     }, {
       $set: {
@@ -171,7 +174,7 @@ async function processOne() {
   } catch (err) {
     // Check if exhausted
     if (record.attempts >= record.maxAttempts) {
-      await Outbox.updateOne({
+      await Outbox().updateOne({
         _id: record._id
       }, {
         $set: {
@@ -193,7 +196,7 @@ async function processOne() {
       // Phase A: flip status back to "pending" (from "processing") and
       // clear the lock so the next poll cycle on any instance can
       // claim it again.
-      await Outbox.updateOne({
+      await Outbox().updateOne({
         _id: record._id
       }, {
         $set: {

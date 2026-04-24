@@ -25,7 +25,10 @@
 const crypto    = require("crypto");
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OtpRecordDef = require("./otp.model");
-const OtpRecord = getPlatformModel(OtpRecordDef);
+let _OtpRecord_cache = null;
+function OtpRecord() {
+    return _OtpRecord_cache || (_OtpRecord_cache = getPlatformModel(OtpRecordDef));
+}
 const { sendCommunication } = require("@services/communicationService");
 const { checkRateLimit, resetRateLimit } = require("./rateLimiter");
 const logger    = require("@utils/logger");
@@ -170,7 +173,7 @@ async function sendOtp({ channel, phone, email, ipAddress, userAgent } = {}) {
 
     // 1. Rate limit check (per subject+channel) — per-request cooldown
     const cutoff = new Date(Date.now() - RATE_LIMIT_MS);
-    const recent = await OtpRecord.findOne({
+    const recent = await OtpRecord().findOne({
         subject,
         channel,
         createdAt: { $gt: cutoff },
@@ -216,9 +219,9 @@ async function sendOtp({ channel, phone, email, ipAddress, userAgent } = {}) {
     await sendCommunication(dispatchArgs);
 
     // 4. Delivery succeeded — replace any prior records for this subject+channel.
-    await OtpRecord.deleteMany({ subject, channel });
+    await OtpRecord().deleteMany({ subject, channel });
 
-    await OtpRecord.create({
+    await OtpRecord().create({
         subject,
         channel,
         otpHash:   hashOtp(otp),
@@ -234,14 +237,14 @@ async function sendOtp({ channel, phone, email, ipAddress, userAgent } = {}) {
 async function verifyOtp({ channel, phone, email, otp } = {}) {
     const subject = resolveSubject({ channel, phone, email });
 
-    const record = await OtpRecord.findOne({ subject, channel }).sort({ createdAt: -1 });
+    const record = await OtpRecord().findOne({ subject, channel }).sort({ createdAt: -1 });
 
     if (!record) {
         throw makeError("No OTP found for this subject", 400, "OTP_NOT_FOUND");
     }
 
     if (record.expiresAt < new Date()) {
-        await OtpRecord.deleteOne({ _id: record._id });
+        await OtpRecord().deleteOne({ _id: record._id });
         throw makeError("OTP has expired", 400, "OTP_EXPIRED");
     }
 
@@ -271,7 +274,7 @@ async function verifyOtp({ channel, phone, email, otp } = {}) {
         );
     }
 
-    await OtpRecord.deleteOne({ _id: record._id });
+    await OtpRecord().deleteOne({ _id: record._id });
 
     // Clear rate limit on success
     await resetRateLimit("otp", subject);

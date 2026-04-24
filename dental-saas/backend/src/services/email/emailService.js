@@ -37,12 +37,19 @@ const EMAIL_TYPE_MAP = Object.freeze({
     MAGIC_LINK: "magicLink",
     PASSWORD_RESET: "resetPassword",
     EMAIL_OTP: "otp",
+    EMAIL_VERIFY: "emailVerify",
     INVOICE: "invoice",
     REFUND: "refund",
     TICKET_REPLY: "ticketReply",
     GRACE: "grace",
     SUSPENSION: "suspension",
     RETRY_FAILED: "retryFailed",
+    // ── Patient-facing (Phase Email v2) ──
+    APPOINTMENT_REMINDER: "patient/appointmentReminder",
+    TREATMENT_UPDATE: "patient/treatmentUpdate",
+    // ── System / Supervisory ──
+    SUPERVISOR_NOTIFICATION: "system/supervisorNotification",
+    REPORT_READY: "system/reportReady",
 });
 
 // ─── Default subjects per type ────────────────────────────────────────────────
@@ -50,12 +57,17 @@ const DEFAULT_SUBJECTS = Object.freeze({
     MAGIC_LINK: "Your Magic Login Link",
     PASSWORD_RESET: "Password Reset Request",
     EMAIL_OTP: "Your Verification Code",
+    EMAIL_VERIFY: "Verify Your Email Address",
     INVOICE: "New Invoice Generated",
     REFUND: "Refund Confirmation",
     TICKET_REPLY: "Reply to Your Support Ticket",
     GRACE: "Action Required: Payment Overdue — Your Grace Period Has Started",
     SUSPENSION: "Account Suspended — Immediate Action Required",
     RETRY_FAILED: "Payment Failed — Action Required",
+    APPOINTMENT_REMINDER: "Appointment Reminder — OrthoNoe",
+    TREATMENT_UPDATE: "Your Treatment Plan Has Been Updated",
+    SUPERVISOR_NOTIFICATION: "Supervisor Alert — OrthoNoe",
+    REPORT_READY: "Your Report Is Ready",
 });
 
 // ─── EmailService ─────────────────────────────────────────────────────────────
@@ -80,6 +92,29 @@ const EmailService = {
         if (!payload.email) {
             logger.error({ emailType: type }, "[EmailService] Payload missing required field: email");
             throw new Error(`[EmailService] Missing required field "email" in payload for type "${type}"`);
+        }
+
+        // ── Per-type payload validation ────────────────────────────────────────
+        const REQUIRED_FIELDS = {
+            EMAIL_OTP: ["otp"],
+            MAGIC_LINK: ["link"],
+            PASSWORD_RESET: ["resetUrl"],
+            INVOICE: ["invoiceNumber", "totalAmount"],
+            APPOINTMENT_REMINDER: ["patientName", "date", "time", "doctorName"],
+            TREATMENT_UPDATE: ["patientName", "treatment"],
+            SUPERVISOR_NOTIFICATION: ["message"],
+            REPORT_READY: ["reportName", "link"],
+        };
+        const requiredForType = REQUIRED_FIELDS[type];
+        if (requiredForType) {
+            const missing = requiredForType.filter(f => !payload[f]);
+            if (missing.length > 0) {
+                logger.error(
+                    { emailType: type, missingFields: missing },
+                    "[EmailService] Payload validation failed — missing required fields"
+                );
+                throw new Error(`[EmailService] Missing required field(s) [${missing.join(", ")}] for type "${type}"`);
+            }
         }
 
         const subject = payload.subject || DEFAULT_SUBJECTS[type] || type;
@@ -193,6 +228,38 @@ const EmailService = {
         return this.process("TICKET_REPLY", {
             email, recipientName, ticketId, ticketSubject, ticketStatus,
             agentName, replyBody, repliedAt: new Date(), ticketUrl
+        });
+    },
+
+    // ── Patient-Facing Email Senders (Phase Email v2) ─────────────────────────
+
+    async sendAppointmentReminder({ email, patientName, date, time, doctorName, clinicName, clinicPhone, clinicAddress, portalUrl }) {
+        return this.process("APPOINTMENT_REMINDER", {
+            email, patientName, date, time, doctorName,
+            clinicName, clinicPhone, clinicAddress, portalUrl
+        });
+    },
+
+    async sendTreatmentUpdate({ email, patientName, treatment, notes, doctorName, portalUrl }) {
+        return this.process("TREATMENT_UPDATE", {
+            email, patientName, treatment, notes, doctorName,
+            updatedAt: new Date(), portalUrl
+        });
+    },
+
+    // ── System / Supervisory Email Senders ────────────────────────────────────
+
+    async sendSupervisorNotification({ email, recipientName, message, studentName, eventType, actionUrl }) {
+        return this.process("SUPERVISOR_NOTIFICATION", {
+            email, recipientName, message, studentName,
+            eventType, timestamp: new Date(), actionUrl
+        });
+    },
+
+    async sendReportReady({ email, recipientName, reportName, reportType, link, expiresIn }) {
+        return this.process("REPORT_READY", {
+            email, recipientName, reportName, reportType,
+            generatedAt: new Date(), link, expiresIn
         });
     }
 };

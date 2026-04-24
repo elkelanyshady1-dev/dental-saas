@@ -42,8 +42,7 @@ class CaseAccessService {
    * @returns {object[]} access records
    */
   async listByCase({
-    caseId,
-    organizationId
+    caseId
   }) {
     // @rls-supervisor-plane — separate auth model, no org-scoped req context
     return _getCaseAccess().find({

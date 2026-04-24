@@ -27,7 +27,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const ExchangeRateDef = require("../models/ExchangeRate.model");
-const ExchangeRate = getPlatformModel(ExchangeRateDef);
+let _ExchangeRate_cache = null;
+function ExchangeRate() {
+    return _ExchangeRate_cache || (_ExchangeRate_cache = getPlatformModel(ExchangeRateDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -61,7 +64,7 @@ async function resolveExchangeRate(fromCurrency, toCurrency, date = new Date()) 
   };
 
   // ── Tier 1: Manual override (highest priority) ─────────────────────────────
-  const override = await ExchangeRate.findOne({
+  const override = await ExchangeRate().findOne({
     ...baseQuery,
     isOverride: true
   }).sort({
@@ -84,7 +87,7 @@ async function resolveExchangeRate(fromCurrency, toCurrency, date = new Date()) 
   }
 
   // ── Tier 2: Auto rate (fallback) ───────────────────────────────────────────
-  const autoRate = await ExchangeRate.findOne({
+  const autoRate = await ExchangeRate().findOne({
     ...baseQuery,
     isOverride: false
   }).sort({

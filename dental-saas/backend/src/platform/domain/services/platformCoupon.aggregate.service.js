@@ -7,13 +7,16 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const CouponDef = require("../models/coupon.model");
-const Coupon = getPlatformModel(CouponDef);
+let _Coupon_cache = null;
+function Coupon() {
+    return _Coupon_cache || (_Coupon_cache = getPlatformModel(CouponDef));
+}
 async function createCoupon(data) {
   if (data.code) data.code = data.code.toUpperCase();
-  return await Coupon.create(data);
+  return await Coupon().create(data);
 }
 async function updateCoupon(id, version, updateData) {
-  const coupon = await Coupon.findById(id);
+  const coupon = await Coupon().findById(id);
   if (!coupon) throw new Error("COUPON_NOT_FOUND");
   if (version !== undefined && coupon.version !== version) {
     throw new Error("COUPON_VERSION_CONFLICT");

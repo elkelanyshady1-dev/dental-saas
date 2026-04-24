@@ -30,7 +30,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   MODULE_REGISTRY,
   getModule,
@@ -76,7 +79,7 @@ async function enableModule(organizationId, registryKey, opts = {}) {
   }
 
   // Load organization
-  const org = await Organization.findById(organizationId).select("modules subscription").lean();
+  const org = await Organization().findById(organizationId).select("modules subscription").lean();
   if (!org) {
     throw Object.assign(new Error(`Organization not found: ${organizationId}`), {
       code: "ORG_NOT_FOUND",
@@ -128,7 +131,7 @@ async function enableModule(organizationId, registryKey, opts = {}) {
   }
 
   // Perform the update
-  await Organization.findByIdAndUpdate(organizationId, {
+  await Organization().findByIdAndUpdate(organizationId, {
     $set: {
       [`modules.${moduleDef.key}`]: true,
       modulesUpdatedAt: new Date()
@@ -195,7 +198,7 @@ async function disableModule(organizationId, registryKey, opts = {}) {
   }
 
   // Load organization
-  const org = await Organization.findById(organizationId).select("modules").lean();
+  const org = await Organization().findById(organizationId).select("modules").lean();
   if (!org) {
     throw Object.assign(new Error(`Organization not found: ${organizationId}`), {
       code: "ORG_NOT_FOUND",
@@ -241,7 +244,7 @@ async function disableModule(organizationId, registryKey, opts = {}) {
   }
 
   // Perform the update
-  await Organization.findByIdAndUpdate(organizationId, {
+  await Organization().findByIdAndUpdate(organizationId, {
     $set: {
       [`modules.${moduleDef.key}`]: false,
       modulesUpdatedAt: new Date()
@@ -286,7 +289,7 @@ async function disableModule(organizationId, registryKey, opts = {}) {
  * @returns {Promise<{ modules: Object[], plan: string }>}
  */
 async function getModuleStatus(organizationId) {
-  const org = await Organization.findById(organizationId).select("modules subscription").lean();
+  const org = await Organization().findById(organizationId).select("modules subscription").lean();
   if (!org) {
     throw Object.assign(new Error(`Organization not found: ${organizationId}`), {
       code: "ORG_NOT_FOUND",
@@ -362,7 +365,7 @@ async function bulkSetModules(organizationId, moduleMap, opts = {}) {
   }
   if (Object.keys(updateSet).length > 0) {
     updateSet.modulesUpdatedAt = new Date();
-    await Organization.findByIdAndUpdate(organizationId, {
+    await Organization().findByIdAndUpdate(organizationId, {
       $set: updateSet,
       $inc: {
         version: 1

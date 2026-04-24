@@ -22,7 +22,10 @@ const {
   revenueSnapshotProjectionSchema
 } = require("../models/RevenueSnapshotProjection.model");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const auditService = require("../../../services/auditService");
 const logger = require("@utils/logger");
 
@@ -80,7 +83,7 @@ async function reconcileOne(regionCode, mutation, mongooseConnection) {
     organizationId,
     type
   } = mutation;
-  const org = await Organization.findById(organizationId);
+  const org = await Organization().findById(organizationId);
   // Resolve provider from org subscription — default to stripe for existing data
   const provider = getProvider(org?.subscription?.paymentProvider || "stripe");
   if (!org) {

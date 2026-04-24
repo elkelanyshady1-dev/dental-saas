@@ -32,7 +32,10 @@ import SignupPage from "./modules/public-site/SignupPage";
 import PrivacyPage from "./modules/public-site/PrivacyPage";
 import TermsPage from "./modules/public-site/TermsPage";
 import VerifyEmailPage from "./modules/auth/pages/VerifyEmailPage";
+import GoogleCallbackPage from "./modules/auth/pages/GoogleCallbackPage";
+import MagicLinkCallbackPage from "./modules/auth/pages/MagicLinkCallbackPage";
 import SharedCaseView from "./pages/SharedCaseView";
+import PhotoShareViewer from "./pages/share/PhotoShareViewer";
 
 /* =========================
    Org Auth & Layout
@@ -99,6 +102,8 @@ import OrgInvoicesPage from "./modules/org/finance/pages/InvoicesPage";
    Orthodontics Phase 6
 ========================= */
 import OrthodonticCasesPage from "./modules/org/orthodontics/pages/OrthodonticCasesPage";
+import RetryDashboard from "./modules/org/orthodontics/pages/RetryDashboard";
+import AdminDashboard from "./modules/org/orthodontics/pages/AdminDashboard";
 import OrthodonticSituationRoom from "./modules/org/orthodontics/pages/OrthodonticSituationRoom";
 import OrthodonticCasePage from "./modules/org/orthodontics/pages/OrthodonticCasePage";
 
@@ -212,12 +217,17 @@ function OrgShell() {
 
 /* =========================
    APP ROOT
+   Rule 11.5 — a SINGLE shared QueryClient is mounted at the tree root so
+   every plane (platform / org / portal / public share) reuses the same
+   instance. PhotoShareViewer used to self-wrap; that shim is unnecessary
+   now but kept harmless by using the same singleton.
 ========================= */
 export default function App() {
   return (
-    <BrowserRouter>
-      <GlobalToaster />
-      <Routes>
+    <QueryProvider>
+      <BrowserRouter>
+        <GlobalToaster />
+        <Routes>
 
         {/* =========================
            🌐 Public Marketing Layer
@@ -237,6 +247,13 @@ export default function App() {
            🔗 Public Shared Case Viewer (Magic Links)
         ========================== */}
         <Route path="/share/:token" element={<SharedCaseView />} />
+
+        {/* =========================
+           🔗 Public Photo/Asset Share Link (Phase 2 — Unified Assets)
+           Uses the same renderer registry as the org plane — so the
+           viewer handles image / pdf / 3d / dicom uniformly.
+        ========================== */}
+        <Route path="/share/photo/:token" element={<PhotoShareViewer />} />
 
         {/* =========================
            🏛 PLATFORM PLANE (Isolated)
@@ -308,6 +325,8 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+          <Route path="/auth/magic" element={<MagicLinkCallbackPage />} />
 
           {/* ── Profile Completion (outside OrgLayout — no sidebar) ── */}
           <Route
@@ -340,6 +359,8 @@ export default function App() {
             <Route path="orthodontics" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticSituationRoom /></RequireOrgPermission></FeatureGate>} />
             {/* Case list moved off the root so the Situation Room can take `/orthodontics`. Specific `/cases` route MUST precede `/:caseId`. */}
             <Route path="orthodontics/cases" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticCasesPage /></RequireOrgPermission></FeatureGate>} />
+            <Route path="orthodontics/assets/recovery" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.full"><RetryDashboard /></RequireOrgPermission></FeatureGate>} />
+            <Route path="admin/assets" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.full"><AdminDashboard /></RequireOrgPermission></FeatureGate>} />
             <Route path="orthodontics/:caseId" element={<FeatureGate module="orthodontics" fallback={<UpgradePlanBanner feature="orthodontics" />}><RequireOrgPermission permission="orthodontics.read"><OrthodonticCasePage /></RequireOrgPermission></FeatureGate>} />
 
             {/* ── Lab Domain ───────────────────────────────────────────── */}
@@ -432,7 +453,8 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </QueryProvider>
   );
 }

@@ -22,6 +22,7 @@
 
 const nodemailer = require("nodemailer");
 const logger = require("../../utils/logger");
+const smtpProvider = require("../../infrastructure/communication/providers/email/smtp.provider");
 
 const ENV = process.env.NODE_ENV || "development";
 const IS_DEV = ENV === "development";
@@ -79,23 +80,17 @@ async function _buildSendgridTransport() {
 }
 
 /**
- * Generic SMTP provider (Mailtrap / SES SMTP / any)
+ * Generic SMTP provider (Mailtrap / Office365 / SES SMTP / any).
+ *
+ * Delegates to the canonical infrastructure-layer SMTP provider so there
+ * is a single source of truth for SMTP configuration. The failover chain
+ * still treats this as one step in its walk; only the nodemailer setup
+ * has moved.
  */
 async function _buildSmtpTransport() {
-    const host = process.env.SMTP_HOST;
-    const port = parseInt(process.env.SMTP_PORT || "587", 10);
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    if (!host) throw new Error("[ProviderRouter] SMTP_HOST not set");
     return {
         name: "smtp",
-        transporter: nodemailer.createTransport({
-            host, port,
-            secure: port === 465,
-            auth: user && pass ? { user, pass } : undefined,
-            pool: true, maxConnections: 5,
-            tls: { rejectUnauthorized: IS_PROD },
-        }),
+        transporter: smtpProvider.buildTransport(),
     };
 }
 

@@ -41,6 +41,7 @@ import Card, { CardHeader } from '../core/ui/Card';
 import { LiveBadge } from '../core/ui/StatusBadge';
 import { AlertBanner } from '../core/ui/Feedback';
 import EmailQueueWidget from './EmailQueueWidget';
+import { BRAND } from '@/config/brand';
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 const StatSkeleton = () => (
@@ -303,7 +304,7 @@ const DashboardPageContent = () => {
                         </div>
                         Platform Overview
                     </h1>
-                    <p className="text-slate-500 text-sm ml-[52px]">Real-time health of the DentalSaaS ecosystem.</p>
+                    <p className="text-slate-500 text-sm ml-[52px]">{BRAND.platform.tagline}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <HealthBadge health={health} />

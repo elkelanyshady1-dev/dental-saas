@@ -6,7 +6,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const CouponDef = require("../../platform/domain/models/coupon.model");
-const Coupon = getPlatformModel(CouponDef);
+let _Coupon_cache = null;
+function Coupon() {
+    return _Coupon_cache || (_Coupon_cache = getPlatformModel(CouponDef));
+}
 class CouponValidationError extends Error {
   constructor(message) {
     super(message);
@@ -31,7 +34,7 @@ async function applyCoupon(invoiceDraft, couponCode, orgContext) {
   if (!couponCode) return invoiceDraft;
 
   // 1. Fetch Coupon
-  const coupon = await Coupon.findOne({
+  const coupon = await Coupon().findOne({
     code: couponCode.toUpperCase()
   });
   if (!coupon) {
@@ -95,7 +98,7 @@ async function incrementCouponUsage(couponCode) {
   if (!couponCode) return;
 
   // OAV-style increment
-  const result = await Coupon.updateOne({
+  const result = await Coupon().updateOne({
     code: couponCode,
     $or: [{
       maxUses: null

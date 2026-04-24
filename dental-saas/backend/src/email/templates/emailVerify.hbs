@@ -1,39 +1,46 @@
 {{#> layout subject=subject}}
 {{#*inline "body"}}
-<p style="font-size:15px; margin:0 0 8px;">Hello <strong>{{or name email}}</strong>,</p>
-<p style="color:#64748b; font-size:14px; margin:0 0 24px; line-height:1.6;">
-    Thank you for registering! Please verify your email address to enable password recovery
-    and important notifications for your account.
+<!--
+  Email Verification Template
+  Sent during signup flow to verify email ownership.
+-->
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Welcome to <strong>OrthoNoe</strong>!</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    Please verify your email address to complete your account setup.
+    Enter the code below in the verification screen.
 </p>
 
-<div style="text-align:center; margin:32px 0;">
-    <a href="{{verifyUrl}}" 
-       style="display:inline-block; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-              color:#fff; text-decoration:none; padding:16px 48px; border-radius:8px;
-              font-size:16px; font-weight:600; letter-spacing:0.5px;">
-        Verify Email Address
-    </a>
+<div style="text-align: center; margin: 36px 0;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+        <tr>
+            <td style="background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border: 2px solid #10b981; border-radius: 16px; padding: 28px 56px; text-align: center;">
+                <p style="margin: 0 0 6px; font-size: 10px; color: #065f46; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;">
+                    Email Verification Code
+                </p>
+                <p style="margin: 0; font-size: 44px; font-weight: 900; letter-spacing: 14px; color: #0f172a; font-family: 'Courier New', monospace;">
+                    {{otp}}
+                </p>
+            </td>
+        </tr>
+    </table>
 </div>
 
 <table class="data">
     <tr>
         <th>Expires in</th>
-        <td>24 hours</td>
+        <td><span class="pill pill-amber">10 minutes</span></td>
     </tr>
+    {{#if email}}
     <tr>
-        <th>Issued at</th>
-        <td>{{formatDate issuedAt}}</td>
+        <th>Email</th>
+        <td>{{email}}</td>
     </tr>
+    {{/if}}
 </table>
 
-<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
-    If you did not create an account, please ignore this email.
-    This link can only be used once and will expire after 24 hours.
-</p>
-
-<p style="font-size:11px; color:#aaa; margin-top:16px; word-break:break-all;">
-    If the button above doesn't work, copy and paste this URL into your browser:<br/>
-    <a href="{{verifyUrl}}" style="color:#2563eb;">{{verifyUrl}}</a>
-</p>
+<div class="info-box">
+    If you did not create an OrthoNoe account, please ignore this email.
+    No action is needed — the verification code will expire automatically.
+</div>
 {{/inline}}
 {{/layout}}

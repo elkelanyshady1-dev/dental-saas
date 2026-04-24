@@ -16,14 +16,23 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const BillingLedgerDef = require("../models/BillingLedger.model");
-const BillingLedger = getPlatformModel(BillingLedgerDef);
+let _BillingLedger_cache = null;
+function BillingLedger() {
+    return _BillingLedger_cache || (_BillingLedger_cache = getPlatformModel(BillingLedgerDef));
+}
 const {
   LEDGER_EVENT_TYPES
 } = require("../models/BillingLedger.model");
 const LedgerTransactionDef = require("../models/LedgerTransaction.model");
-const LedgerTransaction = getPlatformModel(LedgerTransactionDef);
+let _LedgerTransaction_cache = null;
+function LedgerTransaction() {
+    return _LedgerTransaction_cache || (_LedgerTransaction_cache = getPlatformModel(LedgerTransactionDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   streamLedgerCsv
 } = require("../services/financeExport.service");
@@ -49,15 +58,15 @@ exports.list = async (req, res) => {
       if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
       if (req.query.to) filter.createdAt.$lte = new Date(req.query.to);
     }
-    const [entries, total] = await Promise.all([BillingLedger.find(filter).select("createdAt eventType amount amountMinor currency organizationId contractId invoiceId provider providerEventId source actorType metadata").sort({
+    const [entries, total] = await Promise.all([BillingLedger().find(filter).select("createdAt eventType amount amountMinor currency organizationId contractId invoiceId provider providerEventId source actorType metadata").sort({
       createdAt: -1
-    }).skip(skip).limit(limit).lean(), BillingLedger.countDocuments(filter)]);
+    }).skip(skip).limit(limit).lean(), BillingLedger().countDocuments(filter)]);
 
     // ── Enrich entries with LedgerTransaction link (non-fatal if unavailable) ────
     let enriched = entries;
     try {
       const entryIds = entries.map(e => e._id);
-      const txns = await LedgerTransaction.find({
+      const txns = await LedgerTransaction().find({
         billingLedgerRef: {
           $in: entryIds
         }
@@ -89,7 +98,7 @@ exports.list = async (req, res) => {
     try {
       const orgIds = [...new Set(enriched.map(e => e.organizationId).filter(Boolean).map(String))];
       if (orgIds.length > 0) {
-        const orgs = await Organization.find({
+        const orgs = await Organization().find({
           _id: {
             $in: orgIds
           }
@@ -146,7 +155,7 @@ exports.getTransaction = async (req, res) => {
         requestId: req.requestId
       });
     }
-    const txn = await LedgerTransaction.findById(id).lean();
+    const txn = await LedgerTransaction().findById(id).lean();
     if (!txn) {
       return res.status(404).json({
         success: false,
@@ -159,7 +168,7 @@ exports.getTransaction = async (req, res) => {
     let originEvent = null;
     if (txn.billingLedgerRef) {
       try {
-        originEvent = await BillingLedger.findById(txn.billingLedgerRef).select("eventType amount currency provider actorType source createdAt organizationId").lean();
+        originEvent = await BillingLedger().findById(txn.billingLedgerRef).select("eventType amount currency provider actorType source createdAt organizationId").lean();
       } catch (_) {/* non-fatal */}
     }
     return res.json({

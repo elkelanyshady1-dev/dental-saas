@@ -25,13 +25,25 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   activateContract
 } = require("@billing/services/contractActivation.service");
@@ -67,7 +79,7 @@ async function generateInvoiceNumber() {
   const prefix = `INV-${year}${month}-`;
 
   // Count existing invoices this month (simple sequence — atomic at DB level)
-  const count = await PlatformInvoice.countDocuments({
+  const count = await PlatformInvoice().countDocuments({
     createdAt: {
       $gte: new Date(`${year}-${month}-01T00:00:00.000Z`),
       $lt: new Date(year, now.getUTCMonth() + 1, 1)
@@ -95,7 +107,7 @@ exports.generateInvoice = async (req, res) => {
     } = req.body;
 
     // ── Load Contract ──────────────────────────────────────────────────────
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -114,7 +126,7 @@ exports.generateInvoice = async (req, res) => {
     const cycleEnd = new Date(cycleStart);
     if (billingInterval === "yearly") cycleEnd.setFullYear(cycleEnd.getFullYear() + 1);else if (billingInterval === "biennial") cycleEnd.setFullYear(cycleEnd.getFullYear() + 2);else cycleEnd.setMonth(cycleEnd.getMonth() + 1);
     const idempotencyKey = `contract:${contract._id}:${cycleStart.getFullYear()}-${cycleStart.getMonth()}`;
-    const existing = await PlatformInvoice.findOne({
+    const existing = await PlatformInvoice().findOne({
       idempotencyKey
     });
     if (existing) {
@@ -126,7 +138,7 @@ exports.generateInvoice = async (req, res) => {
     }
 
     // ── Load Organization for tax country ──────────────────────────────────
-    const org = await Organization.findById(contract.organizationId).select("billingCountry regionCode");
+    const org = await Organization().findById(contract.organizationId).select("billingCountry regionCode");
     const taxPercent = TAX_RATES_BY_COUNTRY[org?.billingCountry] || 0;
 
     // ── Resolve base price ─────────────────────────────────────────────────
@@ -227,7 +239,7 @@ exports.generateInvoice = async (req, res) => {
     }
 
     // ── Persist ────────────────────────────────────────────────────────────
-    const invoice = await PlatformInvoice.create({
+    const invoice = await PlatformInvoice().create({
       organizationId: contract.organizationId,
       contractId: contract._id,
       planVersionId: contract.planVersionId,
@@ -347,7 +359,7 @@ exports.recordPayment = async (req, res) => {
     }
 
     // ── Load Invoice ───────────────────────────────────────────────────────
-    const invoice = await PlatformInvoice.findById(id);
+    const invoice = await PlatformInvoice().findById(id);
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -389,7 +401,7 @@ exports.recordPayment = async (req, res) => {
       // ── Activate contract if draft ─────────────────────────────────────
       let activationResult = null;
       if (invoice.contractId) {
-        const contract = await OrgContract.findById(invoice.contractId);
+        const contract = await OrgContract().findById(invoice.contractId);
         if (contract && contract.contractStatus === "draft") {
           try {
             activationResult = await activateContract(invoice.contractId, invoice._id, {
@@ -487,7 +499,7 @@ exports.recordPayment = async (req, res) => {
 
 exports.getInvoice = async (req, res) => {
   try {
-    const invoice = await PlatformInvoice.findById(req.params.id).populate("contractId", "planCode planVersionTag lockedPrice currency contractStatus").populate("planVersionId", "versionTag templateCode").lean();
+    const invoice = await PlatformInvoice().findById(req.params.id).populate("contractId", "planCode planVersionTag lockedPrice currency contractStatus").populate("planVersionId", "versionTag templateCode").lean();
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -520,7 +532,7 @@ exports.listContractInvoices = async (req, res) => {
       page = 1,
       limit = 20
     } = req.query;
-    const contract = await OrgContract.findById(id);
+    const contract = await OrgContract().findById(id);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -529,11 +541,11 @@ exports.listContractInvoices = async (req, res) => {
     }
     const clampedLimit = Math.min(Number(limit), 100);
     const skip = (Number(page) - 1) * clampedLimit;
-    const [invoices, total] = await Promise.all([PlatformInvoice.find({
+    const [invoices, total] = await Promise.all([PlatformInvoice().find({
       contractId: id
     }).sort({
       createdAt: -1
-    }).skip(skip).limit(clampedLimit).lean(), PlatformInvoice.countDocuments({
+    }).skip(skip).limit(clampedLimit).lean(), PlatformInvoice().countDocuments({
       contractId: id
     })]);
     return res.json({

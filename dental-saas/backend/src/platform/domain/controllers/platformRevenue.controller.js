@@ -7,17 +7,29 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformInvoiceDef = require("../../billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrgContractDef = require("../../billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const {
   getProviderForOrg,
   getProvider
 } = require("../../billing/providers/paymentProviderFactory");
 const AuditLogDef = require("@shared/models/AuditLog");
-const AuditLog = getPlatformModel(AuditLogDef);
+let _AuditLog_cache = null;
+function AuditLog() {
+    return _AuditLog_cache || (_AuditLog_cache = getPlatformModel(AuditLogDef));
+}
 const Money = require("@utils/money");
 const salesMetricsService = require("../services/platformSalesMetrics.service");
 
@@ -33,13 +45,13 @@ exports.toggleAutoRenew = async (req, res) => {
     const {
       autoRenew
     } = req.body;
-    const org = await Organization.findById(id);
+    const org = await Organization().findById(id);
     if (!org) return res.status(404).json({
       message: "Organization not found"
     });
 
     // Sprint 6: autoRenew lives on OrgContract, not org.subscription
-    const contract = await OrgContract.findOne({
+    const contract = await OrgContract().findOne({
       organizationId: id,
       contractStatus: "active"
     });
@@ -53,7 +65,7 @@ exports.toggleAutoRenew = async (req, res) => {
       await provider.updateAutoRenew(org.subscription.providerSubscriptionId, autoRenew);
     }
     await contract.save();
-    await AuditLog.create({
+    await AuditLog().create({
       organizationId: id,
       actorId: req.user.userId,
       actorType: "platform_user",
@@ -102,7 +114,7 @@ exports.recordManualPayment = async (req, res) => {
     }
 
     // Sprint 6: PlatformInvoice — no BillingInvoice
-    const [org, invoice] = await Promise.all([Organization.findById(id), PlatformInvoice.findById(invoiceId)]);
+    const [org, invoice] = await Promise.all([Organization().findById(id), PlatformInvoice().findById(invoiceId)]);
     if (!org || !invoice) return res.status(404).json({
       message: "Org or Invoice not found"
     });
@@ -122,7 +134,7 @@ exports.recordManualPayment = async (req, res) => {
 
     // Sprint 6→7: activate via contractActivation.service — NEVER direct mutation
     if (invoice.contractId) {
-      const contract = await OrgContract.findById(invoice.contractId);
+      const contract = await OrgContract().findById(invoice.contractId);
       if (contract && contract.contractStatus !== "active") {
         try {
           const {
@@ -131,7 +143,7 @@ exports.recordManualPayment = async (req, res) => {
           await activateContract(invoice.contractId, invoice._id, {
             activatedBy: req.user.userId
           });
-          await AuditLog.create({
+          await AuditLog().create({
             organizationId: id,
             actorId: req.user.userId,
             actorType: "platform_user",
@@ -156,7 +168,7 @@ exports.recordManualPayment = async (req, res) => {
         }
       }
     }
-    await AuditLog.create({
+    await AuditLog().create({
       organizationId: id,
       actorId: req.user.userId,
       actorType: "platform_user",
@@ -198,7 +210,7 @@ exports.generatePaymentLink = async (req, res) => {
       currency,
       autoRenew
     } = req.body;
-    const org = await Organization.findById(id);
+    const org = await Organization().findById(id);
     if (!org) return res.status(404).json({
       message: "Organization not found"
     });
@@ -216,7 +228,7 @@ exports.generatePaymentLink = async (req, res) => {
       autoRenew,
       salesOwnerId: req.user.userId
     });
-    await AuditLog.create({
+    await AuditLog().create({
       organizationId: id,
       actorId: req.user.userId,
       actorType: "platform_user",
@@ -252,7 +264,7 @@ exports.getPortalUrl = async (req, res) => {
     const {
       organizationId
     } = req.user;
-    const org = await Organization.findById(organizationId);
+    const org = await Organization().findById(organizationId);
     if (!org.subscription.providerCustomerId) {
       return res.status(400).json({
         message: "No active billing customer found for this organization."

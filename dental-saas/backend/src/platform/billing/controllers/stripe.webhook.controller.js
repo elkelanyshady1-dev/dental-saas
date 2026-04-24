@@ -30,7 +30,10 @@ const {
   assertPaymentMatchesContract
 } = require("../services/billingValidation.service");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 const distributedLock = require("../../../utils/DistributedLock");
 const {
@@ -176,7 +179,7 @@ exports.handleWebhook = async (req, res) => {
         }
 
         // Validate against the contract (SSOT for amount + currency).
-        const contract = await OrgContract.findById(parsed.contractId);
+        const contract = await OrgContract().findById(parsed.contractId);
         if (!contract) {
           logger.error({
             correlationId,

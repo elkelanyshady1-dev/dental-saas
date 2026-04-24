@@ -1,13 +1,22 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const platformSubscriptionService = require("../billing/services/platformSubscriptionService");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("../billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformConfigDef = require("../models/PlatformConfig");
-const PlatformConfig = getPlatformModel(PlatformConfigDef); // ─── Helper: resolve org + 404 guard ─────────────────────────────────────────
+let _PlatformConfig_cache = null;
+function PlatformConfig() {
+    return _PlatformConfig_cache || (_PlatformConfig_cache = getPlatformModel(PlatformConfigDef));
+} // ─── Helper: resolve org + 404 guard ─────────────────────────────────────────
 async function resolveOrg(id, res) {
-  const org = await Organization.findById(id);
+  const org = await Organization().findById(id);
   if (!org) {
     res.status(404).json({
       message: "Organization not found"
@@ -33,7 +42,7 @@ exports.extendSubscription = async (req, res) => {
         message: "extraMonths must be an integer 1–24."
       });
     }
-    const config = await PlatformConfig.findOne();
+    const config = await PlatformConfig().findOne();
     if (config && !config.allowTrialExtension && org.status === "trial") {
       return res.status(403).json({
         message: "Trial extensions are disabled by platform policy."
@@ -41,7 +50,7 @@ exports.extendSubscription = async (req, res) => {
     }
 
     // Sprint 6: extend OrgContract.effectiveTo — not org.subscription.currentPeriodEnd
-    const contract = await OrgContract.findOne({
+    const contract = await OrgContract().findOne({
       organizationId: org._id,
       contractStatus: "active"
     });
@@ -124,7 +133,7 @@ exports.reactivateOrganization = async (req, res) => {
     const now = new Date();
 
     // Sprint 6: check OrgContract.effectiveTo, not org.subscription.currentPeriodEnd
-    const contract = await OrgContract.findOne({
+    const contract = await OrgContract().findOne({
       organizationId: org._id,
       contractStatus: "active"
     });

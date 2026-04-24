@@ -7,7 +7,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const CampaignDef = require("../../platform/domain/models/campaign.model");
-const Campaign = getPlatformModel(CampaignDef);
+let _Campaign_cache = null;
+function Campaign() {
+    return _Campaign_cache || (_Campaign_cache = getPlatformModel(CampaignDef));
+}
 const {
   Money
 } = require("../../utils/money");
@@ -25,7 +28,7 @@ async function applyCampaigns(invoiceDraft, orgContext) {
   const currency = invoiceDraft.currency || "USD";
 
   // Find active campaigns matching date range
-  const activeCampaigns = await Campaign.find({
+  const activeCampaigns = await Campaign().find({
     isActive: true,
     startDate: {
       $lte: now

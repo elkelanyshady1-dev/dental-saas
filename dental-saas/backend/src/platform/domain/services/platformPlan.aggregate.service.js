@@ -2,9 +2,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlanDef = require("../models/plan.model");
-const Plan = getPlatformModel(PlanDef);
+let _Plan_cache = null;
+function Plan() {
+    return _Plan_cache || (_Plan_cache = getPlatformModel(PlanDef));
+}
 const {
   createAuditRecord
 } = require("../../../services/auditService");
@@ -32,10 +38,10 @@ class PlanAggregateService {
     expectedVersion,
     actorId
   }) {
-    const session = await Organization.startSession();
+    const session = await Organization().startSession();
     session.startTransaction();
     try {
-      const [org, newPlan] = await Promise.all([Organization.findById(organizationId).session(session), Plan.findById(newPlanId).session(session)]);
+      const [org, newPlan] = await Promise.all([Organization().findById(organizationId).session(session), Plan().findById(newPlanId).session(session)]);
       if (!org) throw new Error("ORGANIZATION_NOT_FOUND");
       if (!newPlan) throw new Error("PLAN_NOT_FOUND");
       if (!newPlan.isActive) throw new Error("PLAN_INACTIVE");

@@ -26,7 +26,6 @@ class PatientClinicalService {
    */
   async updateMedicalHistory({
     regionCode,
-    organizationId,
     actorId,
     patientId,
     medicalHistory,

@@ -34,7 +34,10 @@ exports.register = asyncHandler(async (req, res) => {
   });
 });
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const {
   isPhoneVerificationRequired
 } = require("@utils/featureFlags");
@@ -53,7 +56,7 @@ exports.loginUser = asyncHandler(async (req, res) => {
   }
 
   // @rls-auth-flow — pre-authentication credential lookup (no JWT context exists)
-  const organization = await Organization.findOne({
+  const organization = await Organization().findOne({
     slug: clinicCode.trim().toLowerCase(),
     isActive: true
   });
@@ -308,7 +311,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   }
 
   // @rls-auth-flow — pre-authentication credential lookup (no JWT context)
-  const organization = await Organization.findOne({
+  const organization = await Organization().findOne({
     slug: clinicCode.toLowerCase().trim()
   });
   if (!organization) {
@@ -504,7 +507,7 @@ exports.verifyEmailOtp = asyncHandler(async (req, res) => {
   // Resolve organization for per-org DB access
   let orgId = null;
   if (clinicCode) {
-    const org = await Organization.findOne({
+    const org = await Organization().findOne({
       slug: clinicCode.toLowerCase().trim()
     });
     if (org) orgId = org._id;
@@ -664,7 +667,7 @@ exports.resendEmailOtp = asyncHandler(async (req, res) => {
   let User;
   let VerificationToken;
   if (clinicCode) {
-    const org = await Organization.findOne({
+    const org = await Organization().findOne({
       slug: clinicCode.toLowerCase().trim()
     });
     if (org) orgId = org._id;

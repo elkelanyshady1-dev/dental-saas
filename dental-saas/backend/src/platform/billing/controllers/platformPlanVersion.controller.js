@@ -22,11 +22,20 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const PlanVersionDef = require("../models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const PlanTemplateDef = require("../models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef);
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+}
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 const {
   getPlanRevenueImpact
@@ -55,7 +64,7 @@ const {
  * @returns {Promise<number>}
  */
 async function countActiveContractsForVersion(versionId) {
-  return OrgContract.countDocuments({
+  return OrgContract().countDocuments({
     planVersionId: versionId,
     contractStatus: "active"
   });
@@ -107,14 +116,14 @@ exports.listPlanVersions = async (req, res) => {
     if (templateCode) {
       filter.templateCode = templateCode.toLowerCase().trim();
     }
-    const versions = await PlanVersion.find(filter).sort({
+    const versions = await PlanVersion().find(filter).sort({
       activatedAt: -1,
       createdAt: -1
     }).lean();
 
     // Enrich with templateName from parent PlanTemplate (for UI display)
-    const templateIds = [...new Set(versions.map(v => v.templateId?.toString()).filter(Boolean))];
-    const templates = await PlanTemplate.find({
+    const templateIds = [...new Set(versions.map(v => v.templateId?.toString()()).filter(Boolean))];
+    const templates = await PlanTemplate().find({
       _id: {
         $in: templateIds
       }
@@ -130,8 +139,8 @@ exports.listPlanVersions = async (req, res) => {
         _id: v._id,
         templateId: v.templateId,
         templateCode: v.templateCode,
-        templateName: templateMap[v.templateId?.toString()]?.name || null,
-        templateDescription: templateMap[v.templateId?.toString()]?.description || null,
+        templateName: templateMap[v.templateId?.toString()()]?.name || null,
+        templateDescription: templateMap[v.templateId?.toString()()]?.description || null,
         versionTag: v.versionTag,
         label: v.label,
         status: v.status,
@@ -176,7 +185,7 @@ exports.listPlanVersions = async (req, res) => {
 // ─── GET /plan-versions/:id ───────────────────────────────────────────────────
 exports.getPlanVersionById = async (req, res) => {
   try {
-    const version = await PlanVersion.findById(req.params.id).lean();
+    const version = await PlanVersion().findById(req.params.id).lean();
     if (!version) {
       return res.status(404).json({
         success: false,
@@ -228,7 +237,7 @@ exports.createPlanVersion = async (req, res) => {
     }
 
     // Validate template exists
-    const template = await PlanTemplate.findById(templateId).lean();
+    const template = await PlanTemplate().findById(templateId).lean();
     if (!template) {
       return res.status(404).json({
         success: false,
@@ -260,7 +269,7 @@ exports.createPlanVersion = async (req, res) => {
       status: "draft",
       createdBy: req.platformUser._id
     };
-    const version = await PlanVersion.create(versionData);
+    const version = await PlanVersion().create(versionData);
     logger.info({
       versionId: version._id,
       templateCode: template.code,
@@ -331,7 +340,7 @@ exports.updatePlanVersion = async (req, res) => {
     const {
       id
     } = req.params;
-    const version = await PlanVersion.findById(id);
+    const version = await PlanVersion().findById(id);
     if (!version) {
       return res.status(404).json({
         success: false,
@@ -475,7 +484,7 @@ exports.updatePlanVersion = async (req, res) => {
       logBillingEvent({
         organizationId: null,
         eventType: "PLAN_VERSION_VISIBILITY_UPDATED",
-        performedBy: req.platformUser?._id?.toString() || "system",
+        performedBy: req.platformUser?._id?.toString()() || "system",
         metadata: {
           versionId: id,
           templateCode: version.templateCode,
@@ -584,7 +593,7 @@ exports.publishPlanVersion = async (req, res) => {
     } = req.params;
 
     // ── Step 1: Verify version exists ───────────────────────────────────────
-    const version = await PlanVersion.findById(id).session(session);
+    const version = await PlanVersion().findById(id).session(session);
     if (!version) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -665,7 +674,7 @@ exports.publishPlanVersion = async (req, res) => {
     // Publishing atomically deprecates the previous version so existing
     // OrgContract snapshots are unaffected — they continue to run on their
     // locked terms regardless of PlanVersion status changes.
-    const previousActive = await PlanVersion.findOne({
+    const previousActive = await PlanVersion().findOne({
       templateCode: version.templateCode,
       status: "active",
       _id: {
@@ -713,14 +722,14 @@ exports.publishPlanVersion = async (req, res) => {
     logBillingEvent({
       organizationId: null,
       eventType: "PLAN_VERSION_PUBLISHED",
-      performedBy: req.platformUser?._id?.toString() || "system",
+      performedBy: req.platformUser?._id?.toString()() || "system",
       metadata: {
         versionId: id,
         templateCode: version.templateCode,
         versionTag: version.versionTag,
         label: version.label,
         activatedAt,
-        previousDeprecatedId: previousActive?._id?.toString() || null,
+        previousDeprecatedId: previousActive?._id?.toString()() || null,
         previousDeprecatedTag: previousActive?.versionTag || null
       }
     }).catch(auditErr => {
@@ -790,7 +799,7 @@ exports.deprecatePlanVersion = async (req, res) => {
     const {
       id
     } = req.params;
-    const version = await PlanVersion.findById(id);
+    const version = await PlanVersion().findById(id);
     if (!version) {
       return res.status(404).json({
         success: false,
@@ -965,7 +974,7 @@ exports.getPlanRevenueImpactController = async (req, res) => {
     }
 
     // Confirm the version exists — gives a clean 404 vs empty impact on unknown IDs
-    const versionExists = await PlanVersion.exists({
+    const versionExists = await PlanVersion().exists({
       _id: id
     });
     if (!versionExists) {
@@ -978,7 +987,7 @@ exports.getPlanRevenueImpactController = async (req, res) => {
 
     // Attach pricing regions from the version for Section 6 modal display.
     // Lightweight: only fetch the pricing subdocument (projection).
-    const versionDoc = await PlanVersion.findById(id, {
+    const versionDoc = await PlanVersion().findById(id, {
       pricing: 1,
       templateCode: 1,
       versionTag: 1
@@ -1093,7 +1102,7 @@ exports.duplicatePlanVersion = async (req, res) => {
     }
 
     // Fetch source version
-    const source = await PlanVersion.findById(id).lean();
+    const source = await PlanVersion().findById(id).lean();
     if (!source) {
       return res.status(404).json({
         success: false,
@@ -1118,7 +1127,7 @@ exports.duplicatePlanVersion = async (req, res) => {
       status: "draft",
       createdBy: req.platformUser._id
     };
-    const duplicate = await PlanVersion.create(duplicateData);
+    const duplicate = await PlanVersion().create(duplicateData);
     logger.info({
       event: "PLAN_VERSION_DUPLICATED",
       sourceVersionId: id,

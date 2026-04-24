@@ -34,7 +34,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const BillingLedgerDef = require("../models/BillingLedger.model");
-const BillingLedger = getPlatformModel(BillingLedgerDef);
+let _BillingLedger_cache = null;
+function BillingLedger() {
+    return _BillingLedger_cache || (_BillingLedger_cache = getPlatformModel(BillingLedgerDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -92,7 +95,7 @@ async function replayBillingEvent(ledgerEntryId, {
   replayedBy
 } = {}) {
   // ── 1. Load ledger entry ─────────────────────────────────────────────────
-  const entry = await BillingLedger.findById(ledgerEntryId).lean();
+  const entry = await BillingLedger().findById(ledgerEntryId).lean();
   if (!entry) {
     throw new Error(`[BillingReplay] Ledger entry not found: ${ledgerEntryId}`);
   }
@@ -184,9 +187,9 @@ async function listReplayableEvents({
   if (provider) filter.provider = provider;
   if (eventType && REPLAYABLE_TYPES.has(eventType)) filter.eventType = eventType;
   const skip = (page - 1) * Math.min(limit, 200);
-  const [entries, total] = await Promise.all([BillingLedger.find(filter).sort({
+  const [entries, total] = await Promise.all([BillingLedger().find(filter).sort({
     createdAt: -1
-  }).skip(skip).limit(Math.min(limit, 200)).lean(), BillingLedger.countDocuments(filter)]);
+  }).skip(skip).limit(Math.min(limit, 200)).lean(), BillingLedger().countDocuments(filter)]);
   return {
     entries,
     total,

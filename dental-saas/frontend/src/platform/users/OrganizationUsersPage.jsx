@@ -143,7 +143,7 @@ const OrganizationUsersPageContent = () => {
                                     )}
                                 >
                                     <div className="font-medium truncate">{org.name}</div>
-                                    <div className="text-xs opacity-60 truncate">{org.slug}.dentalsaas.com</div>
+                                    <div className="text-xs opacity-60 truncate">{org.slug}.orthonoe.com</div>
                                 </button>
                             ))}
                         </div>

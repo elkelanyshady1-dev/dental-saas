@@ -14,9 +14,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const PlanTemplateDef = require("../../platform/billing/models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef);
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+}
 const PlanVersionDef = require("../../platform/billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const Money = require("../../utils/money");
 
 /**
@@ -27,14 +33,14 @@ const Money = require("../../utils/money");
  * @returns {Promise<Array>} List of Plan DTOs
  */
 async function buildPlanCatalog() {
-  const templates = await PlanTemplate.find({
+  const templates = await PlanTemplate().find({
     status: "published"
   }).lean();
   if (templates.length === 0) return [];
 
   // Batch-load active versions for all templates in one query
   const templateIds = templates.map(t => t._id);
-  const activeVersions = await PlanVersion.find({
+  const activeVersions = await PlanVersion().find({
     templateId: {
       $in: templateIds
     },

@@ -7,7 +7,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 /**
  * GET /api/platform/trials
  * Retrieves all active trial organizations.
@@ -15,7 +18,7 @@ const Organization = getPlatformModel(OrganizationDef);
 exports.getTrials = async (req, res) => {
   try {
     // v20.1 Phase 3 — Unified: use subscription.status instead of legacy trial subdocument
-    const trials = await Organization.find({
+    const trials = await Organization().find({
       "subscription.status": "trial"
     }).select("name slug subscription.trialEndsAt subscription.status ownerId createdAt isActive").sort({
       "subscription.trialEndsAt": 1

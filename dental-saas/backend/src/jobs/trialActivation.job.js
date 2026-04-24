@@ -33,11 +33,20 @@ const mongoose = require("mongoose");
 const logger = require("../utils/logger");
 const cronLock = require("../services/cronLockService");
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const {
   activateContract,
   ContractActivationError
@@ -55,10 +64,10 @@ const LOCK_TTL_MS = 5 * 60 * 1000; // 5 minutes
 async function resolveInvoice(pending, organizationId, session) {
   // First try the direct pointer on the contract
   if (pending.activatingInvoiceId) {
-    return PlatformInvoice.findById(pending.activatingInvoiceId).session(session).lean();
+    return PlatformInvoice().findById(pending.activatingInvoiceId).session(session).lean();
   }
   // Fallback: most recent paid invoice linked to this contract
-  return PlatformInvoice.findOne({
+  return PlatformInvoice().findOne({
     organizationId,
     contractId: pending._id,
     status: "paid"
@@ -88,7 +97,7 @@ async function processTrial(trialSummary) {
   try {
     // ── Idempotency Re-check ───────────────────────────────────────────────
     // Re-read inside transaction to prevent double-processing.
-    const trial = await OrgContract.findOne({
+    const trial = await OrgContract().findOne({
       _id: trialId,
       contractStatus: "active",
       trialDays: {
@@ -112,7 +121,7 @@ async function processTrial(trialSummary) {
     // Sprint 8: filter by previousContractId = trialId to match the exact
     // pending_activation contract scheduled at provisioning time.
     // Falls back to unfiltered query if no linked contract found (legacy orgs).
-    let pending = await OrgContract.findOne({
+    let pending = await OrgContract().findOne({
       organizationId,
       previousContractId: trialId,
       // Sprint 8: exact chain link
@@ -124,7 +133,7 @@ async function processTrial(trialSummary) {
 
     // Fallback: legacy pending contracts without previousContractId set
     if (!pending) {
-      pending = await OrgContract.findOne({
+      pending = await OrgContract().findOne({
         organizationId,
         previousContractId: {
           $in: [null, undefined]
@@ -256,7 +265,7 @@ async function processTrial(trialSummary) {
  * Does NOT modify the contract chain.
  */
 async function suspendOrgInSession(organizationId, reason, session) {
-  await Organization.findByIdAndUpdate(organizationId, {
+  await Organization().findByIdAndUpdate(organizationId, {
     $set: {
       "subscription.status": "suspended",
       "subscription.suspendedAt": new Date(),
@@ -289,7 +298,7 @@ async function processExpiredTrials() {
 
   // ── Indexed scan — uses { contractStatus: 1, trialDays: 1, trialEndDate: 1 } ──
   const now = new Date();
-  const expiredTrials = await OrgContract.find({
+  const expiredTrials = await OrgContract().find({
     contractStatus: "active",
     trialDays: {
       $gt: 0

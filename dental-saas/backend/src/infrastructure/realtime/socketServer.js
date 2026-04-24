@@ -100,12 +100,15 @@ const initSocket = server => {
   // Two-step resolution (v9.4):
   //   1. ShareLink (platform) holds { token → caseId, organizationId }
   //   2. Once orgId is known, SharedCase is fetched from that org's tenant DB
-  const ShareLink = getPlatformModel(ShareLinkDef);
   const collabNs = io.of("/collab");
   collabNs.use(async (socket, next) => {
     const token = socket.handshake.auth?.shareToken;
     if (!token) return next(new Error("Share token required"));
     try {
+      // Bind ShareLink lazily — initSocket() can run before
+      // platformConnection.init() resolves, so compilation must happen
+      // at request time (when a client actually connects to /collab).
+      const ShareLink = getPlatformModel(ShareLinkDef);
       const link = await ShareLink.findOne({ token, isRevoked: false }).lean();
       if (!link) return next(new Error("Invalid share token"));
       if (link.expiresAt && new Date() > new Date(link.expiresAt)) {

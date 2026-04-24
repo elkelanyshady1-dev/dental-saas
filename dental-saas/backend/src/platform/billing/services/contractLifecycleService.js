@@ -26,9 +26,15 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const OrgContractDef = require("../models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const {
   writeLedgerEntry
 } = require("../models/BillingLedger.model");
@@ -66,7 +72,7 @@ async function suspendContract(contractId, opts = {}) {
     actorType = "system",
     requestId = null
   } = opts;
-  const contract = await OrgContract.findById(contractId);
+  const contract = await OrgContract().findById(contractId);
   if (!contract) {
     const err = new Error("Contract not found");
     err.statusCode = 404;
@@ -154,7 +160,7 @@ async function voidContract(contractId, opts = {}) {
     actorId = null,
     requestId = null
   } = opts;
-  const [contract, paidInvoiceCount] = await Promise.all([OrgContract.findById(contractId), PlatformInvoice.countDocuments({
+  const [contract, paidInvoiceCount] = await Promise.all([OrgContract().findById(contractId), PlatformInvoice().countDocuments({
     contractId,
     status: "paid"
   })]);
@@ -251,7 +257,7 @@ async function graceContract(contractId, opts = {}) {
     failureReason = "Payment failed",
     gracePeriodDays = 7
   } = opts;
-  const contract = await OrgContract.findById(contractId);
+  const contract = await OrgContract().findById(contractId);
   if (!contract) {
     const err = new Error("Contract not found");
     err.statusCode = 404;

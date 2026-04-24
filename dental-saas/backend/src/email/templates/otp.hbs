@@ -1,35 +1,72 @@
 {{#> layout subject=subject}}
 {{#*inline "body"}}
-<p style="font-size:15px; margin:0 0 8px;">Hello <strong>{{or name email}}</strong>,</p>
-<p style="color:#64748b; font-size:14px; margin:0 0 24px; line-height:1.6;">
-    Your one-time verification code is below. Use it to complete your action.
+<p style="font-size: 16px; margin: 0 0 8px; font-weight: 600;">Hello <strong>{{or name email}}</strong>,</p>
+<p style="color: #64748b; font-size: 14px; margin: 0 0 28px; line-height: 1.7;">
+    Your one-time verification code is ready. Enter it in the OrthoNoe verification screen to continue.
 </p>
 
-<div style="text-align:center; margin:32px 0;">
-    <div
-        style="display:inline-block; background:#f8fafc; border:2px dashed #2563eb; border-radius:12px; padding:24px 48px;">
-        <p style="margin:0; font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:2px;">Your OTP Code
-        </p>
-        <p
-            style="margin:8px 0 0; font-size:42px; font-weight:800; letter-spacing:12px; color:#1e3a5f; font-family:monospace;">
-            {{otp}}</p>
-    </div>
+<div style="text-align: center; margin: 36px 0;">
+    <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+        <tr>
+            <td style="background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 2px solid #2563eb; border-radius: 16px; padding: 28px 56px; text-align: center;">
+                <p style="margin: 0 0 6px; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;">
+                    Verification Code
+                </p>
+                <p style="margin: 0; font-size: 44px; font-weight: 900; letter-spacing: 14px; color: #0f172a; font-family: 'Courier New', monospace;">
+                    {{otp}}
+                </p>
+            </td>
+        </tr>
+    </table>
 </div>
 
 <table class="data">
     <tr>
         <th>Expires in</th>
-        <td>5 minutes</td>
+        <td><span class="pill pill-amber">5 minutes</span></td>
     </tr>
     <tr>
         <th>Issued at</th>
         <td>{{formatDate issuedAt}}</td>
     </tr>
+    {{#if ipAddress}}
+    <tr>
+        <th>Request IP</th>
+        <td style="font-family: monospace; font-size: 13px;">{{ipAddress}}</td>
+    </tr>
+    {{/if}}
+    {{#if userAgent}}
+    <tr>
+        <th>Device</th>
+        <td style="font-size: 13px;">{{userAgent}}</td>
+    </tr>
+    {{/if}}
 </table>
 
-<p style="font-size:13px; color:#888; margin-top:24px; line-height:1.6;">
-    Never share this code with anyone. Our team will never ask for your OTP.
+{{#if magicLinkUrl}}
+<hr class="divider" />
+
+<div style="text-align: center; margin: 28px 0 12px;">
+    <p style="color: #64748b; font-size: 13px; margin: 0 0 16px;">
+        Prefer a one-click login? Use the magic link instead:
+    </p>
+    <table cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+            <td style="background: #10b981; border-radius: 10px; box-shadow: 0 4px 14px rgba(16,185,129,0.25);">
+                <a href="{{magicLinkUrl}}" style="display: inline-block; padding: 14px 36px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; letter-spacing: 0.3px;">
+                    ✨ Sign In Instantly
+                </a>
+            </td>
+        </tr>
+    </table>
+</div>
+{{/if}}
+
+<div class="security-box">
+    <strong>🔒 Security Notice:</strong> This code expires in <strong>5 minutes</strong>. 
+    Never share this code with anyone. 
+    OrthoNoe staff will never ask for your OTP via phone, email, or chat. 
     If you did not request this code, please ignore this email.
-</p>
+</div>
 {{/inline}}
 {{/layout}}

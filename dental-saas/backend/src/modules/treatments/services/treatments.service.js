@@ -49,7 +49,6 @@ class TreatmentService {
   // ─── Treatment CRUD ──────────────────────────────────────────────────────
 
   async createTreatment({
-    organizationId,
     branchId,
     data,
     userId,
@@ -133,7 +132,6 @@ class TreatmentService {
     return treatment;
   }
   async updateTreatmentStatus({
-    organizationId,
     treatmentId,
     newStatus,
     userId,

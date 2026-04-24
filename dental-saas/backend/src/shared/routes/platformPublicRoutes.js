@@ -106,4 +106,11 @@ router.post("/webhooks/:regionCode/stripe", stripeWebhookController.handleWebhoo
 // DEPRECATED: Global webhook path (v13.0)
 router.post("/stripe/webhook", stripeWebhookController.handleWebhook);
 
+// ─── Phase 2 — Kashier Webhook (EG, one-time payments) ──────────────────────
+// Mounted in app.js with route-scoped raw-body capture (mirroring the Stripe
+// + QStash patterns). Mounting it here as well would create a duplicate
+// registration that the global express.json could intercept first, stripping
+// req.rawBody before the handler sees it. Keep this comment so the next
+// reviewer knows where to look.
+
 module.exports = router;

@@ -23,7 +23,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const ExchangeRateDef = require("../finance/models/ExchangeRate.model");
-const ExchangeRate = getPlatformModel(ExchangeRateDef);
+let _ExchangeRate_cache = null;
+function ExchangeRate() {
+    return _ExchangeRate_cache || (_ExchangeRate_cache = getPlatformModel(ExchangeRateDef));
+}
 const logger = require("@utils/logger");
 
 /**
@@ -46,7 +49,7 @@ async function resolveRate(fromCurrency, toCurrency, onDate = new Date()) {
   const to = toCurrency.toUpperCase();
 
   // ── Query: most recent rate on or before onDate ───────────────────────────
-  const rate = await ExchangeRate.findOne({
+  const rate = await ExchangeRate().findOne({
     fromCurrency: from,
     toCurrency: to,
     effectiveDate: {
@@ -101,7 +104,7 @@ async function upsertRate({
   const isOverride = source === "manual";
 
   // Upsert — unique index on (from, to, effectiveDate, isOverride) ensures idempotency
-  const doc = await ExchangeRate.findOneAndUpdate({
+  const doc = await ExchangeRate().findOneAndUpdate({
     fromCurrency: from,
     toCurrency: to,
     effectiveDate: date,
@@ -149,7 +152,7 @@ async function listRates({
   if (fromCurrency) filter.fromCurrency = fromCurrency.toUpperCase();
   if (toCurrency) filter.toCurrency = toCurrency.toUpperCase();
   if (isOverride !== undefined) filter.isOverride = isOverride;
-  return ExchangeRate.find(filter).sort({
+  return ExchangeRate().find(filter).sort({
     isOverride: -1,
     effectiveDate: -1
   }) // overrides first within same date bucket

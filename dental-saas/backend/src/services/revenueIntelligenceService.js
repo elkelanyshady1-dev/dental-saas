@@ -20,15 +20,30 @@
  */
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const RevenueScheduleDef = require("../platform/finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const AuditLogDef = require("../shared/models/AuditLog");
-const AuditLog = getPlatformModel(AuditLogDef);
+let _AuditLog_cache = null;
+function AuditLog() {
+    return _AuditLog_cache || (_AuditLog_cache = getPlatformModel(AuditLogDef));
+}
 const logger = require("../utils/logger");
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,7 +68,7 @@ exports.computeRevenueIntelligence = async () => {
   // Per-org: take the most recent schedule and use normalizedRecognizedAmount / periodsRecognized
   // as a monthly proxy. For fully_recognized, we skip — they no longer contribute.
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const mrrAgg = await RevenueSchedule.aggregate([{
+  const mrrAgg = await RevenueSchedule().aggregate([{
     $match: {
       status: "active"
     }
@@ -82,7 +97,7 @@ exports.computeRevenueIntelligence = async () => {
 
   // ── 2. Total Deferred Revenue ──────────────────────────────────────────────
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const deferredAgg = await RevenueSchedule.aggregate([{
+  const deferredAgg = await RevenueSchedule().aggregate([{
     $match: {
       status: "active"
     }
@@ -98,7 +113,7 @@ exports.computeRevenueIntelligence = async () => {
 
   // ── 3. Revenue At Risk (open + uncollectible PlatformInvoice totals) ───────
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const riskAgg = await PlatformInvoice.aggregate([{
+  const riskAgg = await PlatformInvoice().aggregate([{
     $match: {
       status: {
         $in: ["open", "uncollectible"]
@@ -127,14 +142,14 @@ exports.computeRevenueIntelligence = async () => {
 
   // ── 4. Churn Rate ─────────────────────────────────────────────────────────
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const churnsThisMonth = await AuditLog.countDocuments({
+  const churnsThisMonth = await AuditLog().countDocuments({
     action: "SUBSCRIPTION_AUTO_SUSPENDED",
     createdAt: {
       $gte: startOfMonth
     }
   });
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const currentActive = await Organization.countDocuments({
+  const currentActive = await Organization().countDocuments({
     "subscription.status": {
       $in: ["active", "trial"]
     }
@@ -151,7 +166,7 @@ exports.computeRevenueIntelligence = async () => {
   let churnedMRR = 0;
 
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const activeOrgsInvoices = await PlatformInvoice.aggregate([{
+  const activeOrgsInvoices = await PlatformInvoice().aggregate([{
     $match: {
       status: "paid"
     }
@@ -188,7 +203,7 @@ exports.computeRevenueIntelligence = async () => {
 
   // Churned MRR: last paid invoice amount for orgs suspended this month
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const churnLogs = await AuditLog.find({
+  const churnLogs = await AuditLog().find({
     action: "SUBSCRIPTION_AUTO_SUSPENDED",
     createdAt: {
       $gte: startOfMonth
@@ -196,7 +211,7 @@ exports.computeRevenueIntelligence = async () => {
   }).select("organizationId").lean();
   for (const log of churnLogs) {
     // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-    const lastPaid = await PlatformInvoice.findOne({
+    const lastPaid = await PlatformInvoice().findOne({
       organizationId: log.organizationId,
       status: "paid"
     }).sort({
@@ -216,7 +231,7 @@ exports.computeRevenueIntelligence = async () => {
   let next90Days = 0;
 
   // @rls-platform-analytics — cross-org revenue metrics, no org-scoped req
-  const activeContracts = await OrgContract.find({
+  const activeContracts = await OrgContract().find({
     contractStatus: {
       $in: ["active", "in_grace"]
     },

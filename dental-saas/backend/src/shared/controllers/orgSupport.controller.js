@@ -10,7 +10,10 @@ const getPlatformModel = require("@core/db/getPlatformModel");
  * Uses shared models only (Ticket).
  */
 const TicketDef = require("../models/Ticket");
-const Ticket = getPlatformModel(TicketDef);
+let _Ticket_cache = null;
+function Ticket() {
+    return _Ticket_cache || (_Ticket_cache = getPlatformModel(TicketDef));
+}
 const {
   authorize
 } = require("../../utils/authorize");
@@ -46,7 +49,7 @@ exports.createTicket = async (req, res) => {
       organizationId,
       userId
     } = req.context;
-    const ticket = await Ticket.create({
+    const ticket = await Ticket().create({
       organizationId,
       createdBy: userId,
       category,
@@ -72,7 +75,7 @@ exports.createTicket = async (req, res) => {
 exports.getOrgTickets = async (req, res) => {
   try {
     authorize(req, "support.read");
-    const tickets = await Ticket.find({
+    const tickets = await Ticket().find({
       organizationId: req.context.organizationId
     }).sort({
       createdAt: -1
@@ -99,7 +102,7 @@ exports.addMessage = async (req, res) => {
       message
     } = req.body;
     const actorType = req.user.type === "platform" ? "platform_user" : "tenant_user";
-    const ticket = await Ticket.findById(id);
+    const ticket = await Ticket().findById(id);
     if (!ticket) return res.status(404).json({
       message: "Ticket not found"
     });

@@ -17,6 +17,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { portalAccessApi } from "../services/portalAccess.api";
+import { BRAND } from "@/config/brand";
 
 const CHRONIC_OPTIONS = [
     "Diabetes", "Hypertension", "Heart Disease", "Asthma",
@@ -114,7 +115,7 @@ export default function PortalSetupPage() {
                             <path d="M8 12h8M12 8v8" />
                         </svg>
                     </div>
-                    <span className="text-white font-bold text-2xl tracking-tight">DentalSaaS</span>
+                    <span className="text-white font-bold text-2xl tracking-tight">{BRAND.name}</span>
                 </div>
 
                 {/* Setup Card */}

@@ -24,7 +24,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const BillingEventLogDef = require("@shared/models/BillingEventLog");
-const BillingEventLog = getPlatformModel(BillingEventLogDef);
+let _BillingEventLog_cache = null;
+function BillingEventLog() {
+    return _BillingEventLog_cache || (_BillingEventLog_cache = getPlatformModel(BillingEventLogDef));
+}
 const {
   computePayloadHash
 } = require("@shared/models/BillingEventLog");
@@ -35,13 +38,25 @@ const {
   updatePaymentStatusByProviderPaymentId
 } = require("./paymentStatusService");
 const PlatformInvoiceDef = require("../../../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const PaymentAttemptDef = require("../models/PaymentAttempt.model");
-const PaymentAttempt = getPlatformModel(PaymentAttemptDef);
+let _PaymentAttempt_cache = null;
+function PaymentAttempt() {
+    return _PaymentAttempt_cache || (_PaymentAttempt_cache = getPlatformModel(PaymentAttemptDef));
+}
 const TicketDef = require("@shared/models/Ticket");
-const Ticket = getPlatformModel(TicketDef);
+let _Ticket_cache = null;
+function Ticket() {
+    return _Ticket_cache || (_Ticket_cache = getPlatformModel(TicketDef));
+}
 const AuditLogDef = require("@shared/models/AuditLog");
-const AuditLog = getPlatformModel(AuditLogDef);
+let _AuditLog_cache = null;
+function AuditLog() {
+    return _AuditLog_cache || (_AuditLog_cache = getPlatformModel(AuditLogDef));
+}
 const logger = require("@utils/logger");
 // Sprint 8: BillingTimeline projection
 const {
@@ -114,7 +129,7 @@ async function handleCanonicalEvent(event, options = {}) {
 
   // ── Guard 4: Idempotency check ────────────────────────────────────────────
   const payloadHash = computePayloadHash(event);
-  const alreadyProcessed = await BillingEventLog.exists({
+  const alreadyProcessed = await BillingEventLog().exists({
     provider: event.provider,
     externalEventId: event.externalId
   });
@@ -146,7 +161,7 @@ async function handleCanonicalEvent(event, options = {}) {
   });
 
   // ── Record in idempotency log (only after successful processing) ───────────
-  await BillingEventLog.create({
+  await BillingEventLog().create({
     provider: event.provider,
     externalEventId: event.externalId,
     type: event.type,
@@ -199,7 +214,7 @@ async function handlePaymentSucceeded(event, {
   //
   let invoice = null;
   if (platformInvoiceId) {
-    invoice = await PlatformInvoice.findById(platformInvoiceId);
+    invoice = await PlatformInvoice().findById(platformInvoiceId);
     if (invoice) {
       logger.info({
         platformInvoiceId,
@@ -209,7 +224,7 @@ async function handlePaymentSucceeded(event, {
     }
   }
   if (!invoice && paymentIntentId) {
-    invoice = await PlatformInvoice.findOne({
+    invoice = await PlatformInvoice().findOne({
       providerPaymentId: paymentIntentId
     });
     if (invoice) {
@@ -379,7 +394,7 @@ async function handlePaymentFailed(event, {
     externalId: providerPaymentId,
     metadata
   } = event;
-  const invoice = await PlatformInvoice.findOne({
+  const invoice = await PlatformInvoice().findOne({
     providerPaymentId
   });
   if (!invoice) {
@@ -488,7 +503,7 @@ async function handleRefundCompleted(event, {
     amount,
     metadata
   } = event;
-  const invoice = await PlatformInvoice.findOne({
+  const invoice = await PlatformInvoice().findOne({
     providerPaymentId
   });
   if (!invoice) {
@@ -577,7 +592,7 @@ async function handleDisputeCreated(event, {
     externalId: providerPaymentId,
     metadata
   } = event;
-  const invoice = await PlatformInvoice.findOne({
+  const invoice = await PlatformInvoice().findOne({
     providerPaymentId
   });
   if (!invoice) {
@@ -589,7 +604,7 @@ async function handleDisputeCreated(event, {
   }
 
   // Idempotency check — avoid duplicate dispute tickets
-  const existing = await Ticket.findOne({
+  const existing = await Ticket().findOne({
     providerDisputeId: event.externalId
   });
   if (existing) {
@@ -612,7 +627,7 @@ async function handleDisputeCreated(event, {
   });
 
   // Create dispute ticket
-  await Ticket.create({
+  await Ticket().create({
     organizationId: invoice.organizationId,
     regionCode: regionCode || invoice.regionCode,
     createdBy: "000000000000000000000000",
@@ -736,7 +751,7 @@ async function _writeAudit({
   details
 }) {
   try {
-    await AuditLog.create({
+    await AuditLog().create({
       organizationId,
       actorId: "000000000000000000000000",
       actorType: "system",
@@ -778,10 +793,10 @@ async function _persistPaymentAttempt({
   metadata
 }) {
   try {
-    const existingCount = await PaymentAttempt.countDocuments({
+    const existingCount = await PaymentAttempt().countDocuments({
       invoiceId
     });
-    await PaymentAttempt.create({
+    await PaymentAttempt().create({
       invoiceId,
       contractId,
       organizationId,

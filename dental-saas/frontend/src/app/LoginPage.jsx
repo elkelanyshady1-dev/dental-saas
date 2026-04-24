@@ -1,8 +1,31 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
-import api from "../services/api";
-import { Button, Input, Card, FeatureItem, StatsBadge } from "@/design-system";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import api, { publicApi } from "@/services/api";
+import { Button, Input, Card } from "@/design-system";
+import { 
+    ShieldCheck, 
+    Zap, 
+    ArrowRight, 
+    Lock, 
+    Mail, 
+    ChevronRight,
+    Sparkles,
+    KeyRound,
+    Search
+} from "lucide-react";
+import OrthoNoeLogo from "@/components/brand/OrthoNoeLogo";
+import { BRAND } from "@/config/brand";
+
+// ─── Google SVG Icon ─────────────────────────────────────────────────────────
+const GoogleIcon = () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+);
 
 // ─── Org Selector Card ────────────────────────────────────────────────────────
 function OrgCard({ org, onSelect, loading }) {
@@ -18,60 +41,39 @@ function OrgCard({ org, onSelect, loading }) {
             type="button"
             disabled={loading}
             onClick={() => onSelect(org.organizationId)}
-            className="group w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
-            style={{
-                borderColor: org.primaryColor || "#e2e8f0",
-                "--tw-ring-color": org.primaryColor || "#3b82f6",
-            }}
+            className="group w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 bg-white transition-all duration-200 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
         >
-            {/* Logo / Avatar */}
             <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-sm shadow"
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-sm shadow-inner transition-transform group-hover:scale-110"
                 style={{ background: org.primaryColor || "#3b82f6" }}
             >
                 {org.logoUrl ? (
-                    <img
-                        src={org.logoUrl}
-                        alt={org.name}
-                        className="w-full h-full object-contain rounded-xl"
-                    />
+                    <img src={org.logoUrl} alt={org.name} className="w-full h-full object-contain rounded-xl" />
                 ) : (
                     initials
                 )}
             </div>
-
-            {/* Name + slug */}
             <div className="flex-1 text-left">
-                <div className="font-semibold text-slate-800 text-sm group-hover:text-blue-700 transition-colors">
+                <div className="font-bold text-slate-800 text-[15px] group-hover:text-blue-700 transition-colors tracking-tight">
                     {org.name}
                 </div>
                 {org.slug && (
-                    <div className="text-xs text-slate-400 mt-0.5">@{org.slug}</div>
+                    <div className="text-xs text-slate-400 font-medium">@{org.slug}</div>
                 )}
             </div>
-
-            {/* Arrow */}
-            <svg
-                className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                />
-            </svg>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-transform group-hover:translate-x-1" />
         </button>
     );
 }
 
-// ─── Main Login Page ──────────────────────────────────────────────────────────
+// ─── Main Login Page — Email-First Auth ──────────────────────────────────────
 export default function LoginPage() {
     const { login, smartLogin, completeSmartLogin } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // Auth mode: "magic" (default), "password"
+    const [authMode, setAuthMode] = useState("magic");
 
     // Form state
     const [email, setEmail] = useState("");
@@ -79,17 +81,37 @@ export default function LoginPage() {
     const [clinicCode, setClinicCode] = useState("");
     const [showClinicCode, setShowClinicCode] = useState(false);
 
+    // Magic link state
+    const [magicSent, setMagicSent] = useState(false);
+    const [magicLoading, setMagicLoading] = useState(false);
+
     // Smart-login state
     const [orgOptions, setOrgOptions] = useState([]);
     const [showOrgSelector, setShowOrgSelector] = useState(false);
     const [selectingOrg, setSelectingOrg] = useState(false);
 
     // UX state
-    const [error, setError] = useState(null);
+    const [error, setError] = useState(searchParams.get("error") ? "Authentication failed. Please try again." : null);
     const [loading, setLoading] = useState(false);
 
-    // ── Smart Login (primary path) ─────────────────────────────
-    const handleSmartSubmit = async (e) => {
+    // ── Magic Link ─────────────────────────────────────────────
+    const handleMagicLink = async (e) => {
+        e.preventDefault();
+        setMagicLoading(true);
+        setError(null);
+
+        try {
+            await publicApi.post("/auth/magic-link", { email });
+            setMagicSent(true);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to send magic link.");
+        } finally {
+            setMagicLoading(false);
+        }
+    };
+
+    // ── Smart Login (password path) ─────────────────────────────
+    const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
@@ -98,9 +120,6 @@ export default function LoginPage() {
             const data = await smartLogin({ email, password });
 
             if (data.type === "SINGLE_ORG") {
-                // Session is FULLY initialized inside smartLogin():
-                // token stored, CSRF stored, profile fetched, socket connected.
-                // Navigate immediately — DO NOT call completeSmartLogin again.
                 navigate("/org/dashboard", { replace: true });
                 return;
             }
@@ -117,7 +136,7 @@ export default function LoginPage() {
         }
     };
 
-    // ── Legacy Clinic Code Login ───────────────────────────────
+    // ── Legacy Clinic Code Login ────────────────────────────────
     const handleLegacySubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -147,7 +166,6 @@ export default function LoginPage() {
             });
             const { token, csrfToken } = res.data?.data || {};
             if (!token) throw new Error("No token received from server");
-            // completeSmartLogin stores token + csrfToken, fetches profile, connects socket
             await completeSmartLogin(token, csrfToken);
             navigate("/org/dashboard", { replace: true });
         } catch (err) {
@@ -163,172 +181,249 @@ export default function LoginPage() {
         setPassword("");
     };
 
-    const activeForm = showClinicCode ? handleLegacySubmit : handleSmartSubmit;
+    // ── Google Login ─────────────────────────────────────────
+    const handleGoogleLogin = () => {
+        const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        window.location.href = `${backendUrl.replace(/\/api$/, "")}/api/auth/google`;
+    };
+
+    const activeForm = showClinicCode ? handleLegacySubmit : handlePasswordSubmit;
 
     return (
-        <div className="min-h-screen grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] bg-[#F0F6FF] relative overflow-hidden font-sans">
-            {/* Background Layers */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-300 opacity-20 rounded-full blur-3xl z-0" />
-            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-400 opacity-10 rounded-full blur-3xl z-0" />
-
-            {/* LEFT COLUMN (Branding Section) — hidden on mobile */}
-            <div className="hidden md:flex flex-col justify-center px-24 py-16 z-10 w-full h-full">
-                <Link to="/" className="flex items-center gap-3 mb-4 w-max hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div className="font-extrabold text-2xl text-slate-800 tracking-tight">DentalSaaS Platform</div>
+        <div className="min-h-screen grid lg:grid-cols-[1fr_1.2fr] bg-white font-sans overflow-hidden">
+            
+            {/* LEFT COLUMN: BRAND & VALUE */}
+            <div className="hidden lg:flex flex-col justify-between p-16 bg-slate-900 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.15),transparent)] pointer-events-none" />
+                
+                <Link to="/" className="flex items-center gap-3 relative z-10 transition-opacity hover:opacity-80">
+                    <OrthoNoeLogo className="w-10 h-10" variant="mono-light" />
+                    <span className="text-2xl font-black text-white tracking-tighter">{BRAND.name}</span>
                 </Link>
 
-                <h1 className="text-6xl font-bold leading-tight text-slate-900 mt-2">
-                    Welcome Back to<br />
-                    <span className="text-blue-600">DentalSaaS</span>
-                </h1>
+                <div className="relative z-10 max-w-lg">
+                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-1.5 rounded-full text-xs font-black tracking-widest uppercase mb-8 border border-white/5">
+                        <Lock className="w-4 h-4" />
+                        Secure Practitioner Access
+                    </div>
+                    
+                    <h1 className="text-[52px] font-black text-white leading-[1.05] mb-8 tracking-tight">
+                        Experience <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Clinical </span> <br />
+                        Excellence.
+                    </h1>
 
-                <p className="mt-6 text-lg text-slate-600">Powering Modern Dental Clinics Worldwide</p>
-
-                <div className="mt-10 space-y-6">
-                    <FeatureItem
-                        icon={<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>}
-                        title="Manage Patients"
-                    />
-                    <FeatureItem
-                        icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                        title="Smart Appointments"
-                    />
-                    <FeatureItem
-                        icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                        title="Billing & Analytics"
-                    />
-                    <FeatureItem
-                        icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
-                        title="Secure & HIPAA Compliant"
-                    />
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm shadow-xl">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0">
+                                <Zap className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-white font-bold text-sm">Real-time Synchronization</p>
+                                <p className="text-slate-400 text-xs">Clinical state mirrored across all branches instantly.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm shadow-xl">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-white font-bold text-sm">HIPAA & GDPR Compliant</p>
+                                <p className="text-slate-400 text-xs">Patient records hardened by AES-256 cloud encryption.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="mt-16 bg-white rounded-2xl shadow-xl px-10 py-6 flex gap-12 w-max">
-                    <StatsBadge
-                        icon={<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
-                        number="250+"
-                        label="Clinics"
-                    />
-                    <StatsBadge
-                        icon={<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
-                        number="10k+"
-                        label="Patients"
-                    />
-                    <StatsBadge
-                        icon={<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
-                        number="99.9%"
-                        label="Secure & Reliable"
-                    />
+                <div className="relative z-10 text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">
+                    {BRAND.copyright}
                 </div>
             </div>
 
-            {/* RIGHT COLUMN */}
-            <div className="relative flex items-center justify-center z-10">
-                <div className="absolute right-0 top-0 h-full w-[60%] bg-gradient-to-br from-blue-200 to-blue-400 rounded-l-[120px] opacity-20 z-0" />
+            {/* RIGHT COLUMN: LOGIN FORM */}
+            <div className="flex flex-col justify-center items-center px-6 py-12 lg:px-20 relative">
+                {/* Mobile Logo */}
+                <div className="flex lg:hidden justify-center mb-12">
+                    <Link to="/" className="flex items-center gap-2">
+                        <OrthoNoeLogo className="w-8 h-8" />
+                        <span className="text-xl font-black text-slate-900 tracking-tight">{BRAND.name}</span>
+                    </Link>
+                </div>
 
-                <div className="relative z-10 w-full max-w-md px-4">
-                    <Card>
-                        {/* Logo in card */}
-                        <div className="flex justify-center mb-6 mt-1">
-                            <Link to="/" className="flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full shadow-sm border border-slate-100 hover:bg-slate-100 transition-colors">
-                                <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                <Card className="w-full max-w-md shadow-2xl shadow-slate-200/50 rounded-3xl border-slate-100 p-8 md:p-10 animate-in fade-in zoom-in-95 duration-500">
+                    {/* Logo in card */}
+                    <div className="flex justify-center mb-10">
+                        <Link to="/" className="flex flex-col items-center gap-2 group">
+                            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center transition-transform group-hover:scale-110">
+                                <OrthoNoeLogo className="w-10 h-10" />
+                            </div>
+                            <span className="font-black text-slate-900 text-lg tracking-tighter">{BRAND.name}</span>
+                        </Link>
+                    </div>
+
+                    {showOrgSelector ? (
+                        /* ── ORG SELECTOR ────────────────────────── */
+                        <div id="org-selector-panel" className="animate-in slide-in-from-right-4 duration-300">
+                            <div className="text-center mb-8">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Select Clinic</h2>
+                                <p className="text-sm font-medium text-slate-400 mt-1">You belong to multiple organizations.</p>
+                            </div>
+
+                            {error && (
+                                <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100">
+                                    {error}
                                 </div>
-                                <span className="font-extrabold text-slate-800 text-[15px]">DentalSaaS Platform</span>
-                            </Link>
+                            )}
+
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {orgOptions.map((org) => (
+                                    <OrgCard
+                                        key={org.organizationId}
+                                        org={org}
+                                        onSelect={handleSelectOrg}
+                                        loading={selectingOrg}
+                                    />
+                                ))}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleBackToLogin}
+                                className="mt-8 w-full py-4 rounded-2xl border-2 border-slate-100 text-sm font-black text-slate-500 hover:text-slate-900 hover:border-slate-200 transition-all flex items-center justify-center gap-2"
+                            >
+                                <ChevronRight className="w-4 h-4 rotate-180" />
+                                Back to login
+                            </button>
                         </div>
 
-                        {/* ── ORG SELECTOR PANEL ──────────────────── */}
-                        {showOrgSelector ? (
-                            <div id="org-selector-panel">
-                                <div className="text-center mb-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                    </div>
-                                    <h2 className="text-xl font-semibold text-slate-900">Select Your Clinic</h2>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        You have access to {orgOptions.length} clinics
-                                    </p>
-                                </div>
+                    ) : magicSent ? (
+                        /* ── MAGIC LINK SENT ────────────────────── */
+                        <div className="text-center animate-in fade-in zoom-in-95 duration-500">
+                            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                                <Mail className="w-8 h-8 text-emerald-600" />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Check Your Email</h2>
+                            <p className="text-sm text-slate-500 mb-2">
+                                We've sent a magic sign-in link to
+                            </p>
+                            <p className="text-sm font-black text-blue-600 mb-6">{email}</p>
+                            <p className="text-xs text-slate-400 mb-8">
+                                The link expires in 10 minutes. Click it to sign in instantly.
+                            </p>
 
-                                {error && (
-                                    <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm font-medium text-red-600 flex items-center gap-2">
-                                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    {orgOptions.map((org) => (
-                                        <OrgCard
-                                            key={org.organizationId}
-                                            org={org}
-                                            onSelect={handleSelectOrg}
-                                            loading={selectingOrg}
-                                        />
-                                    ))}
-                                </div>
-
+                            <div className="space-y-3">
                                 <button
                                     type="button"
-                                    onClick={handleBackToLogin}
-                                    className="mt-6 w-full text-center text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors flex items-center justify-center gap-1"
+                                    onClick={() => { setMagicSent(false); setAuthMode("password"); }}
+                                    className="w-full py-3.5 rounded-2xl border-2 border-slate-100 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                                    </svg>
-                                    Back to login
+                                    <KeyRound className="w-4 h-4" />
+                                    Use password instead
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMagicSent(false)}
+                                    className="w-full text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors py-2"
+                                >
+                                    Try a different email
                                 </button>
                             </div>
-                        ) : (
-                            /* ── LOGIN FORM ─────────────────────────── */
-                            <>
-                                <div className="text-center mb-8">
-                                    <h2 className="text-2xl font-semibold text-slate-900 mb-1">Sign In to Your Clinic</h2>
-                                    <p className="text-sm text-slate-500">Secure • Fast • Reliable</p>
-                                </div>
+                        </div>
 
-                                <form id="login-form" onSubmit={activeForm} className="space-y-5">
-                                    {/* Clinic Code — optional, collapsed by default */}
-                                    {showClinicCode && (
-                                        <div className="space-y-2">
-                                            <Input
-                                                id="clinic-code-input"
-                                                type="text"
-                                                name="clinicCode"
-                                                value={clinicCode}
-                                                onChange={(e) => setClinicCode(e.target.value)}
-                                                required={showClinicCode}
-                                                placeholder="Clinic Code (e.g. apex)"
-                                                icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
-                                            />
+                    ) : (
+                        /* ── LOGIN FORM ─────────────────────────── */
+                        <div className="animate-in slide-in-from-left-4 duration-300">
+                            <div className="text-center mb-8">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Welcome Back</h2>
+                                <p className="text-sm font-medium text-slate-400 mt-1">Sign in to manage your practice.</p>
+                            </div>
+
+                            {/* ── Auth Mode Toggle ────────────────── */}
+                            <div className="flex items-center p-1 bg-slate-50 rounded-2xl mb-6">
+                                <button
+                                    type="button"
+                                    onClick={() => { setAuthMode("magic"); setError(null); }}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                                        authMode === "magic"
+                                            ? "bg-white text-blue-600 shadow-sm"
+                                            : "text-slate-400 hover:text-slate-600"
+                                    }`}
+                                >
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    Magic Link
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setAuthMode("password"); setError(null); }}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                                        authMode === "password"
+                                            ? "bg-white text-blue-600 shadow-sm"
+                                            : "text-slate-400 hover:text-slate-600"
+                                    }`}
+                                >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                    Password
+                                </button>
+                            </div>
+
+                            {authMode === "magic" ? (
+                                /* ── MAGIC LINK FORM ─────────────── */
+                                <form id="magic-link-form" onSubmit={handleMagicLink} className="space-y-5">
+                                    <Input
+                                        id="email-input"
+                                        label="Practitioner Email"
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        placeholder="doctor@clinic.com"
+                                        icon={<Mail className="w-4 h-4 text-slate-400" />}
+                                    />
+
+                                    {error && (
+                                        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                                            {error}
                                         </div>
                                     )}
 
-                                    <div className="space-y-2">
+                                    <Button id="magic-submit-btn" type="submit" disabled={magicLoading} className="h-14 font-black text-lg">
+                                        {magicLoading ? "Sending..." : "Send Magic Link"}
+                                        {!magicLoading && <Sparkles className="w-5 h-5 ml-2" />}
+                                    </Button>
+                                </form>
+                            ) : (
+                                /* ── PASSWORD FORM ────────────────── */
+                                <form id="login-form" onSubmit={activeForm} className="space-y-5">
+                                    {showClinicCode && (
                                         <Input
-                                            id="email-input"
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                            placeholder="admin@clinic.com"
-                                            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                                            id="clinic-code-input"
+                                            label="Clinic Identifier"
+                                            name="clinicCode"
+                                            value={clinicCode}
+                                            onChange={(e) => setClinicCode(e.target.value)}
+                                            required={showClinicCode}
+                                            placeholder="e.g. city-ortho"
+                                            icon={<Search className="w-4 h-4 text-slate-400" />}
                                         />
-                                    </div>
+                                    )}
+
+                                    <Input
+                                        id="email-input"
+                                        label="Practitioner Email"
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        placeholder="doctor@clinic.com"
+                                        icon={<Mail className="w-4 h-4 text-slate-400" />}
+                                    />
 
                                     <div className="space-y-2">
+                                        <div className="flex justify-between items-center px-1">
+                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
+                                            <Link to="/forgot-password" id="forgot-password-link" className="text-xs font-black text-blue-600 hover:underline">Reset?</Link>
+                                        </div>
                                         <Input
                                             id="password-input"
                                             type="password"
@@ -336,78 +431,70 @@ export default function LoginPage() {
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
                                             placeholder="••••••••"
-                                            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>}
+                                            icon={<Lock className="w-4 h-4 text-slate-400" />}
                                         />
                                     </div>
 
-                                    <div className="flex flex-row justify-between items-center text-sm pt-1">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300" />
-                                            <span className="text-slate-600 font-medium">Remember me</span>
-                                        </label>
-                                        <Link to="/forgot-password" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                                            Forgot Password?
-                                        </Link>
-                                    </div>
-
                                     {error && (
-                                        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm font-medium text-red-600 flex items-center gap-2 shadow-sm">
-                                            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
+                                        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
                                             {error}
                                         </div>
                                     )}
 
-                                    <div className="pt-2">
-                                        <Button id="login-submit-btn" type="submit" disabled={loading}>
-                                            {loading ? "Signing in..." : "Sign In to Dashboard"}
-                                        </Button>
+                                    <Button id="login-submit-btn" type="submit" disabled={loading} className="h-14 font-black text-lg">
+                                        {loading ? "Authenticating..." : "Sign In"}
+                                        {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
+                                    </Button>
+
+                                    <div className="text-center">
+                                        <button
+                                            type="button"
+                                            id="toggle-clinic-code"
+                                            onClick={() => {
+                                                setShowClinicCode((v) => !v);
+                                                setError(null);
+                                            }}
+                                            className="text-[11px] font-black text-slate-400 hover:text-blue-600 transition-colors uppercase tracking-widest underline underline-offset-4"
+                                        >
+                                            {showClinicCode ? "Hide Identifier" : "Sign in with Clinic Identifier"}
+                                        </button>
                                     </div>
                                 </form>
+                            )}
 
-                                {/* Clinic code toggle */}
-                                <div className="mt-5 text-center">
-                                    <button
-                                        type="button"
-                                        id="toggle-clinic-code"
-                                        onClick={() => {
-                                            setShowClinicCode((v) => !v);
-                                            setError(null);
-                                        }}
-                                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2"
-                                    >
-                                        {showClinicCode ? "Hide clinic code" : "Sign in with clinic code instead"}
-                                    </button>
-                                </div>
+                            {/* ── Divider ─────────────────────────── */}
+                            <div className="flex items-center gap-4 my-8">
+                                <div className="flex-1 h-px bg-slate-100" />
+                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Or Continue With</span>
+                                <div className="flex-1 h-px bg-slate-100" />
+                            </div>
 
-                                <div className="flex items-center gap-4 mt-6 mb-6">
-                                    <div className="flex-1 border-t border-slate-200" />
-                                    <div className="text-sm font-medium text-slate-400">Or sign in with</div>
-                                    <div className="flex-1 border-t border-slate-200" />
-                                </div>
+                            {/* ── Google Auth ─────────────────────── */}
+                            <button
+                                id="google-login-btn"
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                className="w-full flex items-center justify-center gap-3 rounded-2xl border-2 border-slate-100 h-14 hover:bg-slate-50 hover:border-slate-200 transition-all font-bold text-slate-700 text-sm"
+                            >
+                                <GoogleIcon />
+                                Continue with Google
+                            </button>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 h-12 hover:bg-slate-50 transition font-semibold text-slate-700">
-                                        <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                                        Google
-                                    </button>
-                                    <button className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 h-12 hover:bg-slate-50 transition font-semibold text-slate-700">
-                                        <svg className="w-5 h-5" viewBox="0 0 21 21"><path fill="#f25022" d="M0 0h10v10H0z" /><path fill="#7fba00" d="M11 0h10v10H11z" /><path fill="#00a4ef" d="M0 11h10v10H0z" /><path fill="#ffb900" d="M11 11h10v10H11z" /></svg>
-                                        Microsoft
-                                    </button>
-                                </div>
+                            {/* ── Footer links ────────────────────── */}
+                            <div className="mt-10 bg-slate-50 p-4 rounded-2xl flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-500">New practice?</p>
+                                <Link to="/signup" className="text-xs font-black text-blue-600 hover:underline">Start 30-Day Free Trial</Link>
+                            </div>
 
-                                <p className="text-center mt-8 text-sm text-slate-500 font-medium">
-                                    Don't have an account?{" "}
-                                    <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-bold ml-1">
-                                        Sign Up
-                                    </Link>
-                                </p>
-                            </>
-                        )}
-                    </Card>
-                </div>
+                            <div className="mt-8 flex items-center justify-center gap-4 border-t border-slate-100 pt-6">
+                                <Link to="/terms" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 uppercase tracking-widest">Terms</Link>
+                                <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                <Link to="/privacy" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 uppercase tracking-widest">Privacy</Link>
+                            </div>
+                        </div>
+                    )}
+                </Card>
             </div>
         </div>
     );

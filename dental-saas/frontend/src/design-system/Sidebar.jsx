@@ -27,6 +27,7 @@ import { useFeatures } from "@/context/FeatureContext";
 import { useCapability } from "@/hooks/useCapability";
 import { P } from "@/generated/permissionKeys";
 import { useOrgBranding } from "@/context/OrgBrandingContext";
+import { BRAND } from "@/config/brand";
 
 const STORAGE_KEY = "org:sidebar:collapsed";
 
@@ -207,7 +208,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         <div className="flex-1 min-w-0 flex items-center justify-between">
                             <div className="min-w-0">
                                 <p className="text-sm font-bold tracking-tight text-slate-900 leading-none truncate">
-                                    {orgName || "DentalSaaS"}
+                                    {orgName || BRAND.name}
                                 </p>
                                 <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">
                                     Clinical Excellence

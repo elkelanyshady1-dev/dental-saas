@@ -22,9 +22,15 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const logger = require("@utils/logger");
 
 // ─── Duration helpers ────────────────────────────────────────────────────────
@@ -130,7 +136,7 @@ async function _doActivate({
       code: "PROVIDER_REQUIRED"
     });
   }
-  const org = await Organization.findById(orgId);
+  const org = await Organization().findById(orgId);
   if (!org) {
     throw Object.assign(new Error(`ORG_NOT_FOUND: ${orgId}`), {
       code: "ORG_NOT_FOUND"
@@ -178,7 +184,7 @@ async function _doActivate({
   let activatedContract = null;
   if (contractId) {
     try {
-      const contract = await OrgContract.findById(contractId);
+      const contract = await OrgContract().findById(contractId);
       if (contract) {
         const wasActive = contract.contractStatus === "active";
         contract.contractStatus = "active";

@@ -29,7 +29,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const TicketDef = require("@shared/models/Ticket");
-const Ticket = getPlatformModel(TicketDef);
+let _Ticket_cache = null;
+function Ticket() {
+    return _Ticket_cache || (_Ticket_cache = getPlatformModel(TicketDef));
+}
 const {
   extractOrgId,
   assertOrgContext
@@ -57,7 +60,7 @@ const logger = require("@utils/logger");
 async function listTickets(req, options = {}) {
   const limit = Math.min(options.limit || 20, 50);
   const skip = Math.max(options.skip || 0, 0);
-  const tickets = await Ticket.find({}).sort({
+  const tickets = await Ticket().find({}).sort({
     createdAt: -1
   }).skip(skip).limit(limit).select("subject category status priority createdAt updatedAt").lean();
   return tickets.map(t => enforceDTO(mapTicket, t));
@@ -72,7 +75,7 @@ async function listTickets(req, options = {}) {
  * @throws {Error} TICKET_NOT_FOUND if ticket doesn't exist or belongs to another org
  */
 async function getTicketDetail(req, ticketId) {
-  const ticket = await Ticket.findOne({
+  const ticket = await Ticket().findOne({
     _id: ticketId
   }).select("-internalNotes -linkedInvoiceId -linkedSubscriptionId -linkedMutationId -providerDisputeId -financialImpactMinor -escalationLevel -breachFlag").lean();
   if (!ticket) {
@@ -123,7 +126,7 @@ async function createTicket(req, data) {
       message: data.description
     }]
   };
-  const ticket = await Ticket.create(ticketData);
+  const ticket = await Ticket().create(ticketData);
   logger.info({
     event: "SUPPORT_TICKET_CREATED",
     ticketId: ticket._id.toString(),
@@ -151,7 +154,7 @@ async function addComment(req, ticketId, message) {
     err.status = 400;
     throw err;
   }
-  const ticket = await Ticket.findOne({
+  const ticket = await Ticket().findOne({
     _id: ticketId
   });
   if (!ticket) {

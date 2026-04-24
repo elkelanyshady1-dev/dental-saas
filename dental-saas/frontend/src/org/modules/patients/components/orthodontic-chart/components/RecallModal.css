@@ -1,0 +1,307 @@
+/* ── RecallModal.css — Recall scheduling modal ─────────────────────────────── */
+
+/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+
+.rm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  animation: rmFadeIn 0.2s ease-out;
+}
+
+@keyframes rmFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Dialog ────────────────────────────────────────────────────────────────── */
+
+.rm-dialog {
+  position: relative;
+  width: 440px;
+  max-width: 92vw;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: rmSlideUp 0.25s ease-out;
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes rmSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Close button ──────────────────────────────────────────────────────────── */
+
+.rm-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rm-close-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.rm-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.rm-header__icon-wrap {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border-radius: 14px;
+  color: #0D9488;
+  border: 1px solid #99f6e4;
+}
+
+.rm-header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rm-header__subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Interval Grid ─────────────────────────────────────────────────────────── */
+
+.rm-intervals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.rm-interval-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.rm-interval-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.rm-interval-btn--selected {
+  border-color: #0D9488;
+  background: #f0fdfa;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.rm-interval-btn__icon {
+  color: #94a3b8;
+  transition: color 0.15s ease;
+}
+
+.rm-interval-btn--selected .rm-interval-btn__icon {
+  color: #0D9488;
+}
+
+.rm-interval-btn__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.rm-interval-btn--selected .rm-interval-btn__label {
+  color: #0D9488;
+}
+
+/* ── Custom Date ───────────────────────────────────────────────────────────── */
+
+.rm-custom-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rm-custom-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.rm-custom-toggle:hover {
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.rm-custom-toggle--active {
+  border-color: #0D9488;
+  background: #f0fdfa;
+  color: #0D9488;
+}
+
+.rm-date-input {
+  padding: 10px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.rm-date-input:focus {
+  border-color: #0D9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+/* ── Preview ───────────────────────────────────────────────────────────────── */
+
+.rm-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+}
+
+.rm-preview__icon {
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.rm-preview__label {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.rm-preview__date {
+  font-size: 14px;
+  font-weight: 700;
+  color: #047857;
+  margin-left: auto;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+
+.rm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+
+.rm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.rm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rm-btn--skip {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.rm-btn--skip:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.rm-btn--confirm {
+  background: #0D9488;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.25);
+}
+
+.rm-btn--confirm:hover:not(:disabled) {
+  background: #0f766e;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────────── */
+
+.rm-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: rmSpin 0.7s linear infinite;
+}
+
+@keyframes rmSpin {
+  to { transform: rotate(360deg); }
+}

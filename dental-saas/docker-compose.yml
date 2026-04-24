@@ -1,0 +1,51 @@
+version: "3.8"
+
+# ══════════════════════════════════════════════════════════════
+#  DentalSaaS — Local Development Infrastructure
+#  MongoDB only (Redis removed in Phase 6)
+#
+#  USAGE:
+#    Start:    docker-compose up -d
+#    Stop:     docker-compose stop          # keeps data
+#    Destroy:  docker-compose down          # keeps volume (data safe)
+#    Nuke all: docker-compose down -v       # ⚠️  DELETES DATA — dev reset only
+#
+#  VOLUME GUARANTEE:
+#    dental_mongo_data is a named Docker volume.
+#    Data survives: container restart, container deletion, system reboot.
+#    Data is only lost if you explicitly run:  docker-compose down -v
+#    or:  docker volume rm dental-saas_dental_mongo_data
+#
+#  CAUTION:
+#    • NEVER run `docker system prune -a --volumes` in dev without backup
+#    • NEVER remove dental_mongo_data accidentally
+#    • NEVER run Mongo without the volume binding below
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  mongo:
+    image: mongo:7
+    container_name: dental-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - dental_mongo_data:/data/db   # ← Named volume: persists across ALL restarts
+    restart: unless-stopped
+    environment:
+      # No auth in dev — matches MONGO_URI=mongodb://127.0.0.1:27017/saasdental
+      MONGO_INITDB_DATABASE: saasdental
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# ── Named Volumes ─────────────────────────────────────────────
+# Docker manages these independently of containers.
+# They survive: docker-compose down, docker rm, system reboot.
+# Only removed by: docker-compose down -v  OR  docker volume rm
+volumes:
+  dental_mongo_data:
+    driver: local

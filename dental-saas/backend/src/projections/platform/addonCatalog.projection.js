@@ -9,7 +9,10 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const AddOnDef = require("../../platform/domain/models/addOn.model");
-const AddOn = getPlatformModel(AddOnDef);
+let _AddOn_cache = null;
+function AddOn() {
+    return _AddOn_cache || (_AddOn_cache = getPlatformModel(AddOnDef));
+}
 const Money = require("../../utils/money");
 
 /**
@@ -19,7 +22,7 @@ const Money = require("../../utils/money");
  * @returns {Promise<Array>} List of AddOn DTOs
  */
 async function buildAddOnCatalog() {
-  const addons = await AddOn.find({
+  const addons = await AddOn().find({
     isActive: true
   }).lean();
   return addons.map(addon => ({

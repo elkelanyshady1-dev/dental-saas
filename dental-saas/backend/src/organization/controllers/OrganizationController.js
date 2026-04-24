@@ -1,7 +1,10 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const getModel = require("@core/db/getModel");
 const OrganizationDef = require("../../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const OrgSettingsDef = require("../models/OrganizationSettings");
 
 // ── Secure Model Instances ─────────────────────────────────────────────────
@@ -11,7 +14,7 @@ exports.createOrganization = async (req, res) => {
     const {
       name
     } = req.body;
-    const organization = await Organization.create({
+    const organization = await Organization().create({
       name,
       ownerId: req.user._id
     });
@@ -35,7 +38,7 @@ exports.updateAppointmentSettings = async (req, res) => {
     } = req.body;
 
     // Per-org DB: connection-scoped isolation
-    const org = await Organization.findById(req.organizationId);
+    const org = await Organization().findById(req.organizationId);
     if (!org) {
       return res.status(404).json({
         message: "Organization not found"

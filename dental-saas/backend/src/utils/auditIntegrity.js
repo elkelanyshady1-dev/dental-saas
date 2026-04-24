@@ -5,7 +5,10 @@ const getPlatformModel = require("@core/db/getPlatformModel");
  * Audit Chain Verification Utility (v3.1)
  */
 const AuditLogDef = require("../shared/models/AuditLog");
-const AuditLog = getPlatformModel(AuditLogDef);
+let _AuditLog_cache = null;
+function AuditLog() {
+    return _AuditLog_cache || (_AuditLog_cache = getPlatformModel(AuditLogDef));
+}
 const {
   generateHash
 } = require("../services/auditService");
@@ -15,7 +18,7 @@ const {
  * Recomputes hashes for all entries of an organization.
  */
 async function verifyOrganizationChain(organizationId) {
-  const logs = await AuditLog.find({
+  const logs = await AuditLog().find({
     organizationId
   }).sort({
     createdAt: 1

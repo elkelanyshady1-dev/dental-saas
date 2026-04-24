@@ -1,0 +1,84 @@
+name: Orthodontic Domain Enforcement
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/modules/orthodontics/**'
+      - 'backend/src/modules/ortho-todos/**'
+      - 'frontend/src/modules/org/orthodontics/**'
+      - 'frontend/src/org/modules/patients/components/orthodontic-chart/**'
+      - 'backend/eslint-rules/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/src/modules/orthodontics/**'
+      - 'backend/src/modules/ortho-todos/**'
+      - 'frontend/src/modules/org/orthodontics/**'
+      - 'frontend/src/org/modules/patients/components/orthodontic-chart/**'
+      - 'backend/eslint-rules/**'
+
+jobs:
+  lint-enforcement:
+    name: ESLint Architecture Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      - name: Run ESLint with ortho enforcement rules
+        run: |
+          cd backend && npx eslint \
+            src/modules/orthodontics/ \
+            src/modules/ortho-todos/ \
+            --max-warnings 0
+
+  invariant-tests:
+    name: Architectural Invariant Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      - name: Run invariant test suite
+        run: cd backend && npx jest src/tests/invariants/ --runInBand --verbose
+
+  schema-validation:
+    name: Schema & Model Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      - name: Run ortho model tests
+        run: cd backend && npx jest src/tests/orthodonticCases.test.js --runInBand --verbose
+
+  frontend-lint:
+    name: Frontend Ortho Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      - name: Run frontend lint
+        run: cd frontend && npx eslint src/modules/org/orthodontics/ --max-warnings 0

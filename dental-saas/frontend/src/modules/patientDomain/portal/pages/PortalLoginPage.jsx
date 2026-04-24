@@ -13,6 +13,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/design-system";
+import { BRAND } from "@/config/brand";
 import { portalAuthApi } from "../services/portalAuth.api";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -226,7 +227,7 @@ export default function PortalLoginPage() {
                             <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20">
                                 <BrandIcon />
                             </div>
-                            <span className="text-white font-bold text-xl tracking-tight">DentalSaaS</span>
+                            <span className="text-white font-bold text-xl tracking-tight">{BRAND.name}</span>
                         </div>
 
                         {/* Headline + features */}
@@ -248,7 +249,7 @@ export default function PortalLoginPage() {
 
                         {/* Left footer */}
                         <div className="flex items-center justify-between text-blue-200/60 text-xs mt-8">
-                            <span>© {new Date().getFullYear()} DentalSaaS Systems</span>
+                            <span>© {new Date().getFullYear()} {BRAND.portal.copyright}</span>
                             <div className="flex gap-5">
                                 <a href="#" className="hover:text-white transition">Support</a>
                                 <a href="#" className="hover:text-white transition">Privacy</a>
@@ -576,7 +577,7 @@ export default function PortalLoginPage() {
                 BOTTOM FOOTER BAR
                 ═══════════════════════════════════════════════════════════ */}
             <footer className="bg-[#f5f6f8] border-t border-slate-200 px-6 lg:px-12 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-                <span>© {new Date().getFullYear()} DentalSaaS Systems. Clinical Precision and Digital Innovation.</span>
+                <span>© {new Date().getFullYear()} {BRAND.portal.copyright}. {BRAND.portal.tagline}</span>
                 <div className="flex items-center gap-5">
                     <a href="#" className="hover:text-slate-600 transition">HIPAA Compliant</a>
                     <a href="#" className="hover:text-slate-600 transition">Privacy Policy</a>

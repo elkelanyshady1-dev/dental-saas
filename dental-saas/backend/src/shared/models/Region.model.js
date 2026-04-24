@@ -5,6 +5,6 @@
  */
 "use strict";
 
-const getPlatformModel = require("@core/db/getPlatformModel");
+const { makeLazyPlatformModel } = require("@core/db/lazyModelProxy");
 const RegionDef = require("../../platform/domain/models/Region.model");
-module.exports = getPlatformModel(RegionDef);
+module.exports = makeLazyPlatformModel(RegionDef);

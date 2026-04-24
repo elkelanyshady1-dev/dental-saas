@@ -122,7 +122,7 @@ function renderTemplate(templateName, data = {}) {
         const html = compiled({
             ...data,
             year: new Date().getFullYear(),
-            platformName: process.env.PLATFORM_NAME || "DentalSaaS"
+            platformName: process.env.PLATFORM_NAME || "OrthoNoe"
         });
         return html;
     } catch (err) {

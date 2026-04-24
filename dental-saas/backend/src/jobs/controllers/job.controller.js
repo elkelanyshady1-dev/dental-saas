@@ -30,7 +30,10 @@ const {
   dispatch
 } = require("../../infrastructure/communication/communication.dispatcher");
 const IdempotencyKeyDef = require("@core/IdempotencyKey.model");
-const IdempotencyKey = getSharedModel(IdempotencyKeyDef);
+let _IdempotencyKey_cache = null;
+function IdempotencyKey() {
+    return _IdempotencyKey_cache || (_IdempotencyKey_cache = getSharedModel(IdempotencyKeyDef));
+}
 let _receiver = null;
 function _getReceiver() {
   if (_receiver) return _receiver;
@@ -147,7 +150,7 @@ async function handleCommunicationJob(req, res) {
   // in flight: replay the completed row, otherwise 409 IN_FLIGHT (QStash
   // retries with backoff; whichever instance finishes first wins).
   if (idempotencyKeyValue) {
-    const existing = await IdempotencyKey.findOne({
+    const existing = await IdempotencyKey().findOne({
       key: idempotencyKeyValue
     }).lean();
     if (existing?.status === "completed") {
@@ -162,7 +165,7 @@ async function handleCommunicationJob(req, res) {
       });
     }
     try {
-      await IdempotencyKey.create({
+      await IdempotencyKey().create({
         key: idempotencyKeyValue,
         scope: "job",
         organizationId: "platform",
@@ -175,7 +178,7 @@ async function handleCommunicationJob(req, res) {
       }, "[qstash.receiver] claimed idempotency key — proceeding to dispatch");
     } catch (err) {
       if (err?.code !== 11000) throw err;
-      const row = await IdempotencyKey.findOne({
+      const row = await IdempotencyKey().findOne({
         key: idempotencyKeyValue
       }).lean();
       if (row?.status === "completed") {
@@ -213,7 +216,7 @@ async function handleCommunicationJob(req, res) {
       err: err.message
     }, "[qstash.receiver] body is not valid JSON");
     if (idempotencyKeyValue) {
-      await IdempotencyKey.deleteOne({
+      await IdempotencyKey().deleteOne({
         key: idempotencyKeyValue,
         status: "in-flight"
       });
@@ -232,7 +235,7 @@ async function handleCommunicationJob(req, res) {
       job
     }, "[qstash.receiver] missing channel/type");
     if (idempotencyKeyValue) {
-      await IdempotencyKey.deleteOne({
+      await IdempotencyKey().deleteOne({
         key: idempotencyKeyValue,
         status: "in-flight"
       });
@@ -257,7 +260,7 @@ async function handleCommunicationJob(req, res) {
       mode: result?.mode || "sync"
     };
     if (idempotencyKeyValue) {
-      await IdempotencyKey.updateOne({
+      await IdempotencyKey().updateOne({
         key: idempotencyKeyValue
       }, {
         $set: {
@@ -275,7 +278,7 @@ async function handleCommunicationJob(req, res) {
       err: err.message
     }, "[qstash.receiver] dispatch failed — returning 500 for QStash retry");
     if (idempotencyKeyValue) {
-      await IdempotencyKey.deleteOne({
+      await IdempotencyKey().deleteOne({
         key: idempotencyKeyValue,
         status: "in-flight"
       });

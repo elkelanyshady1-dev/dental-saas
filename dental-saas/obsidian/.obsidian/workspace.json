@@ -44,9 +44,93 @@
               "icon": "lucide-git-fork",
               "title": "Graph view"
             }
+          },
+          {
+            "id": "89cee0e7ed1bc58c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture/AI Engine.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "AI Engine"
+            }
+          },
+          {
+            "id": "def6b8c0e2d768dd",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture/AI Cephalometric Analysis Module (Landmarks + Planes + Interactive Correction).md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "AI Cephalometric Analysis Module (Landmarks + Planes + Interactive Correction)"
+            }
+          },
+          {
+            "id": "15b1d0f06d084f15",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture/AI Engine.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "AI Engine"
+            }
+          },
+          {
+            "id": "4a0749af0e37f29b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Orthodontic domain production/Photo Pool System (Phase 1 — No Versioning).md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Photo Pool System (Phase 1 — No Versioning)"
+            }
+          },
+          {
+            "id": "2861f082068467f7",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Orthodontic domain production/U-CAP Background Processing + Upload Tracking System.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "U-CAP Background Processing + Upload Tracking System"
+            }
+          },
+          {
+            "id": "c5f0cb840470315d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Architecture/Database architure/Final Plan.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Final Plan"
+            }
           }
         ],
-        "currentTab": 2
+        "currentTab": 8
       }
     ],
     "direction": "vertical"
@@ -208,45 +292,45 @@
       "bases:Create new base": false
     }
   },
-  "active": "6c36cfd071d11a79",
+  "active": "c5f0cb840470315d",
   "lastOpenFiles": [
+    "Architecture/Database architure/DENTAL SAAS — FINAL MONGOOSE MODELS (TDS).md",
+    "Architecture/Database architure/Final Plan.md",
+    "Architecture/Database architure/TENANT AUTO BALANCER — TDS.md",
+    "Architecture/Database architure/DATABASE CORE.md",
+    "Architecture/Database architure/ARCHITECTURE ROADMAP (LOAD-BASED MULTI-CLUSTER).md",
+    "Architecture/Database architure",
+    "Legal/Untitled.md",
+    "Legal/Privacy Policy.md",
+    "Untitled 4.md",
+    "Legal",
+    "Orthodontic domain production/U-CAP Background Processing + Upload Tracking System.md",
+    "Orthodontic domain production/Unified Case Asset Panel (U-CAP).md",
+    "Orthodontic domain production/Orthodontic Treatment Plan + Unified Case Asset System.md",
+    "Orthodontic domain production/Photo Pool System (Phase 1 — No Versioning).md",
+    "Architecture/Distributed Async & Idempotency Architecture — Dental SaaS Backend.md",
+    "Untitled 3.md",
+    "Architecture/Domain Naming Enforcement.md",
+    "Orthodontic domain production",
+    "Architecture/AI Engine.md",
+    "Untitled 2.md",
+    "Architecture/AI Cephalometric Analysis Module (Landmarks + Planes + Interactive Correction).md",
+    "Architecture/CephAi.md",
+    "Untitled 1.md",
     "Domains/Appointment Domain.md",
     "Domains/Appointment Domain — Stats.md",
     "knowledge-base/00_System/SystemOverview.md",
-    "Architecture/AI Engine.md",
     "Architecture/Auto UI Engine.md",
-    "Architecture/Domain Naming Enforcement.md",
     "Architecture/Finance Domain Consolidation Phase 1.md",
     "Architecture/Finance vs Accounting.md",
-    "Architecture/Org DDD Audit.md",
-    "Architecture/Org Finance Domain Audit.md",
-    "Architecture/Patient Portal.md",
-    "Architecture/Supervisor Plane.md",
-    "Architecture/Platform Plane.md",
-    "Untitled.md",
-    "Architecture/Organization Plane.md",
-    "Untitled/Untitled.md",
-    "Home.md",
-    "Aligner workflow management system.md",
     "Untitled",
-    "Domains/TDS for orthodontic case engine.md",
-    "2026-03-30.md",
     "Untitled.canvas",
-    "Untitled 1.md",
-    "prompts/Untitled.md",
     "prompts",
-    "Domains/Accounting Domain.md",
-    "Planning/Roadmap.md",
-    "Domains/Finance Domain.md",
-    "Planning/Untitled.md",
     "knowledge-base/08_Rules",
     "knowledge-base/07_Audits",
     "knowledge-base/06_Billing",
     "knowledge-base/05_Auth",
     "knowledge-base/04_Pricing",
-    "knowledge-base/03_Frontend",
-    "knowledge-base/02_Backend",
-    "knowledge-base/01_Architecture",
     "Untitled 1.canvas"
   ]
 }

@@ -2,11 +2,20 @@ const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const OrganizationDef = require("@shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const SiteContentDef = require("../models/SiteContent");
-const SiteContent = getPlatformModel(SiteContentDef);
-const LeadDef = require("../models/Lead");
-const Lead = getPlatformModel(LeadDef);
+let _SiteContent_cache = null;
+function SiteContent() {
+    return _SiteContent_cache || (_SiteContent_cache = getPlatformModel(SiteContentDef));
+}
+const LeadDef = require("@shared/models/Lead");
+let _Lead_cache = null;
+function Lead() {
+    return _Lead_cache || (_Lead_cache = getPlatformModel(LeadDef));
+}
 const initializeRolesForOrganization = require("@utils/roleInitializer");
 const logger = require("@utils/logger");
 const {
@@ -32,9 +41,15 @@ const UserDef = require("@shared/models/User");
 
 // v6.0 Geo Pricing Integration using PlanTemplate + PlanVersion engine
 const PlanVersionDef = require("@billing/models/PlanVersion.model");
-const PlanVersion = getPlatformModel(PlanVersionDef);
+let _PlanVersion_cache = null;
+function PlanVersion() {
+    return _PlanVersion_cache || (_PlanVersion_cache = getPlatformModel(PlanVersionDef));
+}
 const PlanTemplateDef = require("@billing/models/PlanTemplate.model");
-const PlanTemplate = getPlatformModel(PlanTemplateDef); // Plan Projection Layer — SSOT for all derived display/routing fields.
+let _PlanTemplate_cache = null;
+function PlanTemplate() {
+    return _PlanTemplate_cache || (_PlanTemplate_cache = getPlatformModel(PlanTemplateDef));
+} // Plan Projection Layer — SSOT for all derived display/routing fields.
 // getPublicPlans uses showInMarketing from the projection — not inline derivations.
 const {
   projectPlanVersionList
@@ -42,9 +57,15 @@ const {
 
 // PHASE 6 Contract-first trial provisioning
 const OrgContractDef = require("@billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef); // PHASE 6 Trial contract billing timeline event
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+} // PHASE 6 Trial contract billing timeline event
 const {
   emitBillingTimelineEvent
 } = require("@billing/services/billingTimeline.service");
@@ -73,7 +94,10 @@ const PASSWORD_COMPLEXITY_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 // PHASE 3 v24.0 — Signup idempotency protection.
 // Pre-auth endpoint (no org exists yet) — bind on the platform connection.
 const SignupIdempotencyDef = require("../models/SignupIdempotency.model");
-const SignupIdempotency = getPlatformModel(SignupIdempotencyDef);
+let _SignupIdempotency_cache = null;
+function SignupIdempotency() {
+    return _SignupIdempotency_cache || (_SignupIdempotency_cache = getPlatformModel(SignupIdempotencyDef));
+}
 
 // ---------------------------------------------------------------------------
 // Public: Signup for a new organization (trial onboarding)
@@ -96,7 +120,7 @@ exports.signup = async (req, res) => {
     const idempotencyKey = req.headers["idempotency-key"];
     if (idempotencyKey) {
       // @rls-public-plane — pre-auth public signup endpoint, no JWT context
-      const existing = await SignupIdempotency.findOne({
+      const existing = await SignupIdempotency().findOne({
         idempotencyKey
       }).lean();
       if (existing && existing.status === "completed" && existing.response) {
@@ -202,7 +226,7 @@ exports.signup = async (req, res) => {
     // We check the platform-level Organization by slug, and rely on the
     // per-org unique index on email within each org DB for isolation.
     // Cross-org email uniqueness is NOT enforced (each org DB is independent).
-    const existingOrg = await Organization.findOne({
+    const existingOrg = await Organization().findOne({
       slug: slug.toLowerCase().trim()
     });
     if (existingOrg) {
@@ -219,7 +243,7 @@ exports.signup = async (req, res) => {
     const billingCountry = isoCode;
 
     // @rls-public-plane — pre-auth public signup endpoint, no JWT context
-    const trialPlanVersion = await PlanVersion.findOne({
+    const trialPlanVersion = await PlanVersion().findOne({
       templateCode: "trial-tier",
       status: "active"
     }).lean();
@@ -248,7 +272,7 @@ exports.signup = async (req, res) => {
     try {
       await session.withTransaction(async () => {
         // 4a. Create Organization
-        [organization] = await Organization.create([{
+        [organization] = await Organization().create([{
           name: organizationName,
           slug: slug.toLowerCase().trim(),
           country: isoCode,
@@ -273,7 +297,7 @@ exports.signup = async (req, res) => {
         // 4e. Contract-First Trial Provisioning
         const planCode = trialPlanVersion.templateCode || "trial-tier";
         const planVersionTag = trialPlanVersion.versionTag || "v1";
-        [trialContract] = await OrgContract.create([{
+        [trialContract] = await OrgContract().create([{
           planVersionId: trialPlanVersion._id,
           planCode,
           planVersionTag,
@@ -364,12 +388,12 @@ exports.signup = async (req, res) => {
       }]);
 
       // 4d. Update ownerId + contract createdBy with actual admin user
-      await Organization.findByIdAndUpdate(organization._id, {
+      await Organization().findByIdAndUpdate(organization._id, {
         $set: {
           ownerId: adminUser._id
         }
       });
-      await OrgContract.findByIdAndUpdate(trialContract._id, {
+      await OrgContract().findByIdAndUpdate(trialContract._id, {
         $set: {
           createdBy: adminUser._id,
           activatedBy: adminUser._id
@@ -394,7 +418,7 @@ exports.signup = async (req, res) => {
         orgId
       }, "[Signup] CRITICAL: Phase B org bootstrap failed. Marking org as PROVISION_FAILED.");
       try {
-        await Organization.findByIdAndUpdate(organization._id, {
+        await Organization().findByIdAndUpdate(organization._id, {
           $set: {
             "subscription.status": "provision_failed",
             provisionError: {
@@ -460,7 +484,7 @@ exports.signup = async (req, res) => {
     if (idempotencyKey) {
       setImmediate(async () => {
         try {
-          await SignupIdempotency.findOneAndUpdate({
+          await SignupIdempotency().findOneAndUpdate({
             idempotencyKey
           }, {
             $set: {
@@ -542,7 +566,7 @@ exports.getSiteContent = async (req, res) => {
     let content = null;
     try {
       // @rls-public-plane — pre-auth public endpoint, no JWT context
-      content = await SiteContent.findOne({
+      content = await SiteContent().findOne({
         isActive: true
       }).lean();
     } catch (dbError) {
@@ -587,7 +611,7 @@ exports.getPublicPlans = async (req, res) => {
     // @rls-public-plane — pre-auth public endpoint, no JWT context
     // Primary safety: DB-level hard filter — only status=active + visibility=public
     // reach this point. This is the first line of defence against leakage.
-    const activeVersions = await PlanVersion.find({
+    const activeVersions = await PlanVersion().find({
       status: "active",
       visibility: "public"
     }).sort({
@@ -612,8 +636,8 @@ exports.getPublicPlans = async (req, res) => {
     const safeVersions = projected.filter(v => v.showInMarketing);
 
     // Enrich with template metadata
-    const templateIds = [...new Set(safeVersions.map(v => v.templateId?.toString()).filter(Boolean))];
-    const templates = await PlanTemplate.find({
+    const templateIds = [...new Set(safeVersions.map(v => v.templateId?.toString()()).filter(Boolean))];
+    const templates = await PlanTemplate().find({
       _id: {
         $in: templateIds
       },
@@ -628,12 +652,12 @@ exports.getPublicPlans = async (req, res) => {
     }).lean();
     const templateMap = Object.fromEntries(templates.map(t => [t._id.toString(), t]));
     const result = safeVersions.filter(v => {
-      const tmpl = templateMap[v.templateId?.toString()];
+      const tmpl = templateMap[v.templateId?.toString()()];
       if (!tmpl) return false;
       if (tmpl.visibility?.hiddenCountries?.includes(countryCode)) return false;
       return true;
     }).map(v => {
-      const tmpl = templateMap[v.templateId?.toString()] || {};
+      const tmpl = templateMap[v.templateId?.toString()()] || {};
       const region = v.pricing?.regions?.find(r => r.countries?.includes(countryCode)) || v.pricing?.regions?.[0];
       const currency = region?.currency || resolvedCurrency;
       const monthlyPrice = showPricing ? region?.monthly ?? null : null;
@@ -691,7 +715,7 @@ exports.submitWhatsAppLead = async (req, res) => {
       organizationInterest
     } = req.body;
     const limitString = str => str ? String(str).substring(0, 500) : undefined;
-    await Lead.create({
+    await Lead().create({
       source: limitString(source) || "landing",
       name: limitString(name),
       phone: limitString(phone),

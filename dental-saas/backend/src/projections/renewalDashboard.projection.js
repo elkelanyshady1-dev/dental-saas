@@ -16,13 +16,25 @@
 
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrgContractDef = require("../platform/billing/models/OrgContract.model");
-const OrgContract = getPlatformModel(OrgContractDef);
+let _OrgContract_cache = null;
+function OrgContract() {
+    return _OrgContract_cache || (_OrgContract_cache = getPlatformModel(OrgContractDef));
+}
 const PlatformInvoiceDef = require("../platform/billing/models/PlatformInvoice.model");
-const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+let _PlatformInvoice_cache = null;
+function PlatformInvoice() {
+    return _PlatformInvoice_cache || (_PlatformInvoice_cache = getPlatformModel(PlatformInvoiceDef));
+}
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const RevenueScheduleDef = require("../platform/finance/models/RevenueSchedule.model");
-const RevenueSchedule = getPlatformModel(RevenueScheduleDef);
+let _RevenueSchedule_cache = null;
+function RevenueSchedule() {
+    return _RevenueSchedule_cache || (_RevenueSchedule_cache = getPlatformModel(RevenueScheduleDef));
+}
 const {
   getBillingSettings
 } = require("../platform/billing/services/billingSettings.service");
@@ -43,11 +55,11 @@ async function getRenewalDashboardMetrics() {
   // ── Run all queries in parallel ────────────────────────────────────────────
   const [totalActiveContracts, expiringNext30Days, contractsInGrace, suspendedCount, failedPaymentsLast7Days, autoRenewEnabled, salesManagedCount, projectedRevenueAgg, recognizedRevenueAgg, deferredRevenueAgg] = await Promise.all([
   // 1. Total active contracts
-  OrgContract.countDocuments({
+  OrgContract().countDocuments({
     contractStatus: "active"
   }),
   // 2. Expiring in next 30 days
-  OrgContract.countDocuments({
+  OrgContract().countDocuments({
     contractStatus: "active",
     effectiveTo: {
       $lte: in30Days,
@@ -55,7 +67,7 @@ async function getRenewalDashboardMetrics() {
     }
   }),
   // 3. Contracts in grace window
-  OrgContract.countDocuments({
+  OrgContract().countDocuments({
     contractStatus: "active",
     "dunning.gracePeriodEndsAt": {
       $exists: true,
@@ -63,28 +75,28 @@ async function getRenewalDashboardMetrics() {
     }
   }),
   // 4. Suspended orgs
-  Organization.countDocuments({
+  Organization().countDocuments({
     status: "suspended"
   }),
   // 5. Failed payment invoices (open) last 7 days
-  PlatformInvoice.countDocuments({
+  PlatformInvoice().countDocuments({
     status: "open",
     createdAt: {
       $gte: ago7Days
     }
   }),
   // 6. Auto-renew enabled
-  OrgContract.countDocuments({
+  OrgContract().countDocuments({
     contractStatus: "active",
     autoRenew: true
   }),
   // 7. Sales-managed
-  OrgContract.countDocuments({
+  OrgContract().countDocuments({
     contractStatus: "active",
     salesManaged: true
   }),
   // 8. Projected renewal revenue (contracts auto-renewing in ≤30d)
-  OrgContract.aggregate([{
+  OrgContract().aggregate([{
     $match: {
       contractStatus: "active",
       effectiveTo: {
@@ -105,7 +117,7 @@ async function getRenewalDashboardMetrics() {
     }
   }]),
   // 9. Normalized recognized revenue (active schedules)
-  RevenueSchedule.aggregate([{
+  RevenueSchedule().aggregate([{
     $match: {
       status: {
         $in: ["active", "fully_recognized"]
@@ -120,7 +132,7 @@ async function getRenewalDashboardMetrics() {
     }
   }]),
   // 10. Normalized deferred revenue (active schedules only — not yet recognized)
-  RevenueSchedule.aggregate([{
+  RevenueSchedule().aggregate([{
     $match: {
       status: "active"
     }
@@ -140,7 +152,7 @@ async function getRenewalDashboardMetrics() {
   // ── MRR / ARR Calculation ─────────────────────────────────────────────────
   // MRR = sum of normalizedAmountPerPeriod across active monthly schedules
   // (i.e. the recurring revenue recognized each month in base currency)
-  const mrrAgg = await RevenueSchedule.aggregate([{
+  const mrrAgg = await RevenueSchedule().aggregate([{
     $match: {
       status: "active",
       recognitionFrequency: "monthly"

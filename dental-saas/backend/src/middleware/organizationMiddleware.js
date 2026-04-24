@@ -1,6 +1,9 @@
 const getPlatformModel = require("@core/db/getPlatformModel");
 const OrganizationDef = require("../shared/models/Organization");
-const Organization = getPlatformModel(OrganizationDef);
+let _Organization_cache = null;
+function Organization() {
+    return _Organization_cache || (_Organization_cache = getPlatformModel(OrganizationDef));
+}
 const logger = require("../utils/logger");
 const {
   normalizeRegion
@@ -15,7 +18,7 @@ const organizationContext = async (req, res, next) => {
         message: "User not assigned to organization"
       });
     }
-    const organization = await Organization.findById(req.user.organizationId);
+    const organization = await Organization().findById(req.user.organizationId);
     if (!organization) {
       return res.status(404).json({
         message: "Organization not found"

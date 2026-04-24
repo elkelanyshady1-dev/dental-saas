@@ -190,7 +190,7 @@ export default function AddPlatformUserModal({ isOpen, onClose, onCreated, platf
                                 <input
                                     id="staff-email" type="email" value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="jane@dentalsaas.com" required disabled={loading}
+                                    placeholder="jane@orthonoe.com" required disabled={loading}
                                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 transition-colors"
                                 />
                             </div>
