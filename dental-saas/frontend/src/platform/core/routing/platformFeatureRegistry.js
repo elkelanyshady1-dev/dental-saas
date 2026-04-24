@@ -54,6 +54,8 @@ const CommunicationCenterPage = lazy(() => import('../../communication/Communica
 const FeatureRegistryPage = lazy(() => import('../../modules/featureRegistry/pages/FeatureRegistryPage'));
 // Phase 8 — Org Cluster Migration
 const MigrationDashboardPage = lazy(() => import('../../modules/migration/MigrationDashboardPage'));
+// v9.4 — Cost Optimization Engine
+const OptimizationDashboardPage = lazy(() => import('../../modules/optimization/OptimizationDashboardPage'));
 
 // Placeholder for unimplemented features
 const ComingSoon = lazy(() => import('../components/ComingSoon'));
@@ -256,6 +258,18 @@ export const PLATFORM_FEATURES = [
         breadcrumb: 'Org Cluster Migration',
         component: MigrationDashboardPage,
         icon: ArrowRightLeft,
+        showInSidebar: true,
+        section: 'Infrastructure'
+    },
+    // v9.4 — Cost Optimization Engine
+    {
+        key: 'OPTIMIZATION',
+        label: 'Cost Optimization',
+        path: 'optimization',
+        capability: 'MANAGE_ORGANIZATIONS',
+        breadcrumb: 'Cost Optimization',
+        component: OptimizationDashboardPage,
+        icon: TrendingUp,
         showInSidebar: true,
         section: 'Infrastructure'
     },

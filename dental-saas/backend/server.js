@@ -594,6 +594,20 @@ connectDB().then(async () => {
         "[BOOT] ✅ Contract expiry scheduler started (hourly — STUCK_EXPIRED_CONTRACTS recovery)"
     );
 
+    // ── Cost Optimization Engine (v9.4) ─────────────────────────────────────
+    // Recommend-only by default. Set OPTIMIZATION_AUTO_EXECUTE=true to act on
+    // recommendations automatically; OPTIMIZATION_RUN_ON_BOOT=true triggers
+    // the first sweep 30s after boot.
+    try {
+        const optimizationScheduler = require("./src/platform/optimization/optimization.scheduler");
+        optimizationScheduler.start();
+    } catch (err) {
+        logger.error(
+            { service: "server", err: err.message },
+            "[BOOT] ⚠️  Cost optimization scheduler failed to start (non-fatal)"
+        );
+    }
+
 });
 
 /* =====================================================

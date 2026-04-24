@@ -77,6 +77,28 @@ const clusterSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+
+        // ─── Cost optimization metadata (v9.4 cost engine) ──────────────────
+        // Cluster tier — drives MOVE/DOWNGRADE recommendations.
+        //   HIGH — premium / dedicated nodes
+        //   MID  — standard tier (default)
+        //   LOW  — budget / shared / cheaper region
+        tier: {
+            type: String,
+            enum: ["HIGH", "MID", "LOW"],
+            default: "MID",
+            uppercase: true,
+            index: true,
+        },
+
+        // Coarse monthly cost in USD for this cluster. Used by the cost
+        // engine to estimate per-org savings on MOVE/DOWNGRADE actions.
+        // Operator-supplied; the engine never derives this.
+        costPerMonthUsd: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
     },
     { timestamps: true }
 );

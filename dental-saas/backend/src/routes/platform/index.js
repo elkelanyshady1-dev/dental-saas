@@ -24,6 +24,7 @@ const communicationRoutes = require("./communication.routes"); // v3.1 — Commu
 const monitoringRoutes = require("./monitoring.routes");    // v4.0 — Monitoring Dashboard
 const featureRegistryRoutes = require("../../platform/domain/routes/featureRegistry.routes"); // Phase 12.1 — Feature Registry
 const migrationRoutes = require("./migration.routes");      // Phase 8 — Org Cluster Migration
+const optimizationRoutes = require("./optimization.routes"); // v9.4 — Cost Optimization Engine
 
 // Mount all sub-routers (no prefix — paths are absolute within /api/platform)
 router.use(authRoutes);
@@ -40,6 +41,7 @@ router.use("/communication", communicationRoutes); // v3.1 — Communication Cen
 router.use("/monitoring", monitoringRoutes);    // v4.0 — Monitoring Dashboard
 router.use(featureRegistryRoutes);    // Phase 12.1 — Feature Registry Admin
 router.use("/migration", migrationRoutes);   // Phase 8 — Org Cluster Migration Admin
+router.use("/optimization", optimizationRoutes); // v9.4 — Cost Optimization Engine Admin
 
 // ─── Enterprise chain verification ───────────────────────────────────────────
 const { isEnterprise } = require("../../config/platformMode");
