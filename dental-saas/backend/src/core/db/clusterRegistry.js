@@ -109,12 +109,11 @@ function seedFromEnv() {
     }
 
     // Dev fallback: no clusters declared → synthesize a default one from
-    // the dev-single URI or the legacy MONGO_URI so the system boots
-    // without any new env vars.
+    // MONGO_URI_DEV_SINGLE or MONGO_URI_PLATFORM so the system boots
+    // without explicit cluster env vars. (Legacy MONGO_URI removed in v9.4.)
     if (Object.keys(CLUSTER_REGISTRY).length === 0) {
         const fallbackUri = process.env.MONGO_URI_DEV_SINGLE
-            || process.env.MONGO_URI_PLATFORM
-            || process.env.MONGO_URI;
+            || process.env.MONGO_URI_PLATFORM;
         if (fallbackUri) {
             CLUSTER_REGISTRY["default"] = {
                 key: "default",
@@ -125,7 +124,7 @@ function seedFromEnv() {
             };
             logger.info(
                 { service: "clusterRegistry", key: "default", region: "MEA" },
-                "[clusterRegistry] No CLUSTER_KEYS configured — synthesized 'default' cluster (MEA) from MONGO_URI fallback"
+                "[clusterRegistry] No CLUSTER_KEYS configured — synthesized 'default' cluster (MEA) from MONGO_URI_DEV_SINGLE/PLATFORM"
             );
         }
     }

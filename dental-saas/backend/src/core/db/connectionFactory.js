@@ -14,7 +14,7 @@
  *
  * CURRENT STATE (Phase 1):
  *   buildConnectionKey("shard-1", orgId) → "shard-1:orgId"
- *   getShardUri("shard-1") → process.env.MONGO_URI (same cluster)
+ *   getShardUri("shard-1") → process.env.MONGO_URI_PLATFORM (same cluster)
  *   buildDbName(orgId) → "dental_org_<orgId>" (unchanged convention)
  *
  *   Since there's only one shard, the key prefix is cosmetic —

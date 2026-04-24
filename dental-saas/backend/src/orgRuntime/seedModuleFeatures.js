@@ -84,7 +84,12 @@ const MODULE_FEATURE_SEEDS = [{
 async function seed() {
   let ownConnection = false;
   if (mongoose.connection.readyState !== 1) {
-    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI, {
+    // CLI seed — connects via the platform URI in v9.4 (legacy MONGO_URI removed).
+    const uri = process.env.MONGO_URI_PLATFORM || process.env.MONGO_URI_DEV_SINGLE;
+    if (!uri) {
+      throw new Error("[seedModuleFeatures] MONGO_URI_PLATFORM (or MONGO_URI_DEV_SINGLE) is required");
+    }
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000
     });
     ownConnection = true;

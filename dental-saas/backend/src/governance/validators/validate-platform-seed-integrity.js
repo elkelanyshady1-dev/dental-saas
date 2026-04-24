@@ -10,7 +10,7 @@ require("module-alias/register");
  *   4. (Dev only) bcrypt.compare against known dev password
  *   5. Structured warnings for edge cases
  *
- * Requires MONGO_URI in environment.
+ * Requires MONGO_URI_PLATFORM in environment.
  * Never logs plaintext passwords or secrets.
  * Never crashes governance engine — safe timeout.
  */
@@ -39,14 +39,14 @@ async function validate() {
     // ── 1. Connect to MongoDB ────────────────────────────────────────────
     let connection;
     try {
-        const mongoUri = process.env.MONGO_URI;
+        const mongoUri = process.env.MONGO_URI_PLATFORM;
         if (!mongoUri) {
             failures.push({
-                type: "MISSING_MONGO_URI",
+                type: "MISSING_MONGO_URI_PLATFORM",
                 severity: "high",
-                message: "MONGO_URI not set — cannot validate seed integrity",
+                message: "MONGO_URI_PLATFORM not set — cannot validate seed integrity",
                 code: "SEED_NO_DB_URI",
-                recommendation: "Set MONGO_URI in .env",
+                recommendation: "Set MONGO_URI_PLATFORM in .env",
             });
             return finish();
         }
@@ -58,7 +58,7 @@ async function validate() {
             severity: "high",
             message: `Cannot connect to database: ${err.message}`,
             code: "SEED_DB_UNREACHABLE",
-            recommendation: "Ensure MongoDB is running and MONGO_URI is correct",
+            recommendation: "Ensure MongoDB is running and MONGO_URI_PLATFORM is correct",
         });
         return finish();
     }

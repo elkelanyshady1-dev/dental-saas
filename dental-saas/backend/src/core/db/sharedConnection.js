@@ -21,8 +21,8 @@
  *
  * ENV RESOLUTION (in order):
  *   MONGO_URI_DEV_SINGLE   — dev convenience: one URI for all three layers
- *   MONGO_URI_SHARED       — production source of truth
- *   MONGO_URI              — legacy fallback so existing dev setups keep booting
+ *   MONGO_URI_SHARED       — production source of truth (REQUIRED)
+ *   (Legacy MONGO_URI fallback removed in v9.4 — 3-layer env contract.)
  *
  * POOL:
  *   maxPoolSize defaults to 30 (MONGO_POOL_SHARED_MAX overrides).
@@ -43,11 +43,7 @@ function resolveUri() {
     const devSingle = process.env.MONGO_URI_DEV_SINGLE;
     if (devSingle) return devSingle;
 
-    return (
-        process.env.MONGO_URI_SHARED ||
-        process.env.MONGO_URI ||
-        null
-    );
+    return process.env.MONGO_URI_SHARED || null;
 }
 
 async function init() {
@@ -58,7 +54,7 @@ async function init() {
     if (!uri) {
         throw new Error(
             "[sharedConnection] No URI configured — set MONGO_URI_SHARED " +
-            "(or MONGO_URI_DEV_SINGLE for dev, or MONGO_URI as legacy fallback)"
+            "(or MONGO_URI_DEV_SINGLE for dev)"
         );
     }
 

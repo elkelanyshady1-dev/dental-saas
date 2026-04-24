@@ -96,13 +96,17 @@ if (process.env.NODE_ENV === "production" && process.env.STORAGE_PROVIDER !== "r
     process.exit(1);
 }
 
-// 🛡️ v11.0 Hardening — Startup Config Validation
+// 🛡️ v9.4 Hardening — Startup Config Validation (3-Layer DB Architecture)
 // REDIS_URL removed from required env — the system is Redis-free (Phase 6).
+// Legacy MONGO_URI removed — the 3-layer architecture requires explicit
+// platform / shared / cluster URIs (see DB_3_LAYER_ARCHITECTURE_PLAN.md).
 const requiredEnv = [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "JWT_SECRET",
-    "MONGO_URI"
+    "MONGO_URI_PLATFORM",
+    "MONGO_URI_SHARED",
+    "MONGO_URI_MEA_EG_1",
 ];
 
 const missingEnv = requiredEnv.filter(key => !process.env[key]);
@@ -357,7 +361,7 @@ connectDB().then(async () => {
         if (process.env.NODE_ENV === "development") {
             const Region = require("./src/platform/domain/models/Region.model").default;
             const REQUIRED_REGIONS = ["EU", "US", "MEA", "APAC"];
-            const controlPlaneUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+            const controlPlaneUri = process.env.MONGO_URI_PLATFORM;
             const defaultRedis = process.env.REDIS_URL || "redis://localhost:6379";
             const REGION_NAMES = { EU: "European Union", US: "North America", MEA: "Middle East & Africa", APAC: "Asia Pacific" };
 

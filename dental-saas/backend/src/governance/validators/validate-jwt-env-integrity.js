@@ -27,7 +27,8 @@ const REQUIRED_VARS = [
     { name: "JWT_SECRET", severity: "CRITICAL" },
     { name: "NODE_ENV", severity: "HIGH" },
     { name: "PORT", severity: "HIGH" },
-    { name: "MONGO_URI", severity: "HIGH" },
+    { name: "MONGO_URI_PLATFORM", severity: "HIGH" },
+    { name: "MONGO_URI_SHARED", severity: "HIGH" },
 ];
 
 console.log("╔══════════════════════════════════════════╗");

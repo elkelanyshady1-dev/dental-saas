@@ -191,16 +191,16 @@ try {
 async function checkDatabase() {
     let connection;
     try {
-        const mongoUri = process.env.MONGO_URI;
+        const mongoUri = process.env.MONGO_URI_PLATFORM;
         if (!mongoUri) {
             warnings.push({
                 type: "NO_DB_URI",
                 severity: "low",
-                message: "MONGO_URI not set — skipping database checks",
+                message: "MONGO_URI_PLATFORM not set — skipping database checks",
                 code: "ALIGN_NO_DB",
-                recommendation: "Set MONGO_URI for full validation",
+                recommendation: "Set MONGO_URI_PLATFORM for full validation",
             });
-            console.log("  ℹ️  MONGO_URI not set — skipping DB checks");
+            console.log("  ℹ️  MONGO_URI_PLATFORM not set — skipping DB checks");
             return;
         }
 

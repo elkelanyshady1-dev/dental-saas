@@ -5,9 +5,10 @@
  * Central definition of all available shards and their connection URIs.
  * This is the SINGLE source of truth for shard topology.
  *
- * CURRENT STATE (Phase 1 — Single Shard):
- *   Only "shard-1" exists, pointing to the existing MONGO_URI.
- *   Identical to the current production behavior.
+ * CURRENT STATE (Legacy alias — v9.4):
+ *   Only "shard-1" exists, mapped to MONGO_URI_PLATFORM.
+ *   This file is retained for back-compat with connectionFactory.getShardUri();
+ *   new code routes via clusterRegistry + clusterConnections.
  *
  * FUTURE:
  *   Add new shards here. Each shard has its own MongoDB URI.
@@ -31,7 +32,7 @@
 const SHARDS = {
     "shard-1": {
         name: "Primary shard",
-        uri: process.env.MONGO_URI, // Current cluster — no change
+        uri: process.env.MONGO_URI_PLATFORM, // v9.4: legacy MONGO_URI removed.
     },
 
     // ──────────────────────────────────────────────────────────────────────
