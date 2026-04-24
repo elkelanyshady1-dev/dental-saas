@@ -234,7 +234,18 @@ module.exports = [
   //   → runtime code must go through the connection resolver, not the global
   //     mongoose namespace
 
-  // ── Rule 1: mongoose.model() — banned in runtime code ──────────────────
+  // ── Rule 1: mongoose.model() — banned in runtime code (FINAL — Step 5f) ──
+  //
+  // Step 5f (complete) removed every `default: mongoose.models[X] || mongoose.model(X, schema)`
+  // and `module.exports = mongoose.model("X", schema)` from model files, lazy-
+  // bound the 2 inline-schema utility callers (DistributedLock, driftAlert),
+  // and resolved the 16 TODO(5e-B-manual) tenant sites. Result: zero
+  // mongoose.model() calls in runtime code. This rule now has NO exemptions
+  // beyond the three connection factories that are the only legitimate
+  // callers of connection.model() (which isn't banned) — and scripts /
+  // migrations / tests which manage their own connections.
+  //
+  // Reintroducing an exemption is an architectural rollback — push back.
   {
     files: ["src/**/*.js"],
     ignores: [
@@ -243,22 +254,6 @@ module.exports = [
       "src/core/db/platformConnection.js",
       "src/core/db/sharedConnection.js",
       "src/core/db/clusterConnections.js",
-      // EXEMPT (model-file self-export layer — Step 5f work):
-      //
-      // Step 5e-B (complete) migrated every .default CALL SITE to
-      // getPlatformModel / getSharedModel / tenant TODO. The next half —
-      // removing `default: mongoose.models[X] || mongoose.model(X, schema)`
-      // from the model files themselves — is Step 5f. Until 5f lands, these
-      // file patterns still contain a mongoose.model() fallback and must
-      // stay exempt from Rule 1. Exemptions lift in Step 5f.
-      "src/**/*.model.js",        // singular
-      "src/**/*.models.js",       // plural variants (e.g., ortho.models.js)
-      "src/**/models/**/*.js",
-      "src/**/*.dlq.js",          // DLQ files follow the same pattern
-      "src/**/*.projection.js",   // projection files often declare their read model globally
-      // Specific infra utilities that manage shared-singleton models.
-      "src/utils/DistributedLock.js",
-      "src/modules/billingDomain/integrity/driftAlert.service.js",
       // Ops scripts / migrations / tests self-manage their own mongoose connection.
       "src/**/scripts/**",
       "src/**/migrations/**",

@@ -249,6 +249,27 @@ let slaTask;
 connectDB().then(async () => {
     logger.info({ service: "server", action: "db_connected" }, "Database connected.");
 
+    // ── Step 5f · Ghost Model Detector (dev-only boot check) ───────────────
+    // After Step 5f removed every runtime mongoose.model() call, the global
+    // `mongoose.models` registry MUST be empty. If any models appear here,
+    // something slipped through the ESLint guard or a new dep compiles a
+    // model on the global root. Warn loudly so the offender is findable.
+    if (process.env.NODE_ENV !== "production") {
+        const mongooseLib = require("mongoose");
+        const ghostModels = Object.keys(mongooseLib.models || {});
+        if (ghostModels.length > 0) {
+            logger.warn(
+                { event: "GHOST_MODELS_DETECTED", models: ghostModels, count: ghostModels.length },
+                `[Step 5f Guard] ${ghostModels.length} model(s) compiled on global mongoose root — check for mongoose.model() regressions: ${ghostModels.join(", ")}`
+            );
+        } else {
+            logger.info(
+                { event: "GHOST_MODELS_CLEAN" },
+                "[Step 5f Guard] Global mongoose.models is empty — all models are connection-bound."
+            );
+        }
+    }
+
     // ── Platform Guardian: Startup Invariants ──────────────────────────────
     // Runs AFTER DB connect so Mongoose models are registered.
     // In PLATFORM_GUARDIAN_MODE=strict → crashes on violation.
