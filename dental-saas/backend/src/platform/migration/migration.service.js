@@ -550,10 +550,238 @@ async function getStatus({ orgId }) {
 async function listOrgs({ limit = 200 } = {}) {
     return Organization()
         .find({})
-        .select("name slug cluster targetCluster region migrationState writeLocked routingEpoch")
+        .select("name slug cluster targetCluster region migrationState writeLocked maintenanceMode routingEpoch")
         .sort({ name: 1 })
         .limit(limit)
         .lean();
+}
+
+// ─── Downtime migration ─────────────────────────────────────────────────────
+/**
+ * runDowntimeMigration — quick, synchronous cluster switch with a short
+ * maintenance window. Use when:
+ *   - the org is small and zero-downtime isn't required, OR
+ *   - the source cluster isn't a replica set (change streams unavailable).
+ *
+ * Flow:
+ *   1. Flip maintenanceMode=true + record start time (blocks tenant requests).
+ *   2. Wait MAINTENANCE_DRAIN_MS (default 3000 ms) for in-flight requests to finish.
+ *   3. Dump every user-facing collection source → target via the same parallel
+ *      upsert-based copier the zero-downtime engine uses.
+ *   4. Atomically swap org.cluster, increment routingEpoch, clear
+ *      maintenanceMode + writeLocked in one findOneAndUpdate.
+ *   5. dbManager.evictByOrg(orgId) — drop all cached tenant connections.
+ *   6. Return a MigrationReport.
+ *
+ * On ANY error: rollback (maintenanceMode = false), MigrationLog entry with
+ * the failure, MigrationError("DOWNTIME_MIGRATION_FAILED") bubbles to the
+ * caller.
+ *
+ * Preconditions:
+ *   - org exists
+ *   - org.cluster === sourceCluster (defensive match)
+ *   - sourceCluster !== targetCluster
+ *   - targetCluster is in the cluster registry + ACTIVE
+ */
+const MAINTENANCE_DRAIN_MS = parseInt(process.env.DOWNTIME_MAINT_DRAIN_MS || "3000", 10);
+
+function _sleepMs(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor, reason }) {
+    // Lazy-require both the sync engine (for the dump routine) and
+    // dbManager to match the Option A lazy-binding contract.
+    const syncEngine = require("./syncEngine.service");
+    const dbManager = require("@core/db/dbManager");
+    const clusterConnections = require("@core/db/clusterConnections");
+
+    if (!mongoose.isValidObjectId(orgId)) {
+        throw new MigrationError("Invalid orgId", "INVALID_ORG_ID", 400);
+    }
+    if (!sourceCluster || !targetCluster) {
+        throw new MigrationError(
+            "sourceCluster and targetCluster are both required",
+            "MISSING_CLUSTER",
+            400
+        );
+    }
+    if (sourceCluster === targetCluster) {
+        throw new MigrationError(
+            "sourceCluster and targetCluster cannot be the same",
+            "SAME_CLUSTER",
+            400
+        );
+    }
+    _validateCluster(targetCluster);
+
+    const org = await Organization().findById(orgId).lean();
+    if (!org) throw new MigrationError(`Organization ${orgId} not found`, "ORG_NOT_FOUND", 404);
+    if (org.cluster !== sourceCluster) {
+        throw new MigrationError(
+            `Source cluster mismatch: org.cluster="${org.cluster}", passed="${sourceCluster}"`,
+            "SOURCE_CLUSTER_MISMATCH",
+            409
+        );
+    }
+    if (org.maintenanceMode) {
+        throw new MigrationError(
+            "Org already in maintenanceMode — concurrent migration?",
+            "ALREADY_IN_MAINTENANCE",
+            409
+        );
+    }
+
+    const startedAt = new Date();
+    const migrationId = crypto.randomUUID();
+    const report = {
+        orgId: String(orgId),
+        migrationId,
+        sourceCluster,
+        targetCluster,
+        mode: "DOWNTIME",
+        startedAt,
+        success: false,
+    };
+
+    // ── Step 1: enable maintenance ──────────────────────────────────────
+    const entered = await Organization().findOneAndUpdate(
+        { _id: orgId, maintenanceMode: { $ne: true } },
+        {
+            $set: {
+                maintenanceMode: true,
+                maintenanceStartedAt: startedAt,
+                migrationId,
+            },
+        },
+        { new: true }
+    );
+    if (!entered) {
+        throw new MigrationError(
+            "Failed to enter maintenanceMode (race with concurrent migration?)",
+            "MAINTENANCE_RACE",
+            409
+        );
+    }
+    await _logTransition({
+        org: entered, from: null, to: "MAINTENANCE_ENABLED",
+        actor, reason: reason || "downtime-migration",
+        details: { sourceCluster, targetCluster, mode: "DOWNTIME" },
+    });
+
+    try {
+        // ── Step 2: drain window ────────────────────────────────────────
+        await _sleepMs(MAINTENANCE_DRAIN_MS);
+        report.drainMs = MAINTENANCE_DRAIN_MS;
+
+        // ── Step 3: dump source → target ────────────────────────────────
+        const sourceDb = clusterConnections.getSync(sourceCluster)
+            .useDb(`dental_org_${orgId}`, { useCache: true, noListener: true }).db;
+        const targetDb = clusterConnections.getSync(targetCluster)
+            .useDb(`dental_org_${orgId}`, { useCache: true, noListener: true }).db;
+
+        report.dump = await syncEngine._dumpAndRestore({
+            sourceDb, targetDb,
+        });
+
+        // ── Step 4: atomic cluster swap ─────────────────────────────────
+        const swapped = await Organization().findOneAndUpdate(
+            { _id: orgId, maintenanceMode: true },
+            {
+                $set: {
+                    cluster: targetCluster,
+                    maintenanceMode: false,
+                    maintenanceStartedAt: null,
+                    writeLocked: false,
+                    targetCluster: null,
+                    migrationId: null,
+                },
+                $inc: { routingEpoch: 1 },
+            },
+            { new: true }
+        );
+        if (!swapped) {
+            throw new Error("Cluster swap lost the atomic update (maintenanceMode flipped externally)");
+        }
+
+        // ── Step 5: evict cached connections ────────────────────────────
+        let evicted = 0;
+        try {
+            evicted = dbManager.evictByOrg(String(orgId));
+        } catch (err) {
+            logger.warn(
+                { event: "DOWNTIME_EVICT_FAILED", orgId: String(orgId), err: err.message },
+                "[Migration] evictByOrg failed (non-fatal — routingEpoch already bumped)"
+            );
+        }
+        report.cacheEvicted = evicted;
+        report.routingEpoch = swapped.routingEpoch;
+
+        await _logTransition({
+            org: swapped,
+            from: "MAINTENANCE_ENABLED",
+            to: "DOWNTIME_COMPLETE",
+            actor,
+            reason: reason || "downtime-migration",
+            details: { ...report },
+        });
+
+        // ── Step 6: report ──────────────────────────────────────────────
+        report.finishedAt = new Date();
+        report.durationMs = report.finishedAt - report.startedAt;
+        report.success = true;
+
+        logger.info(
+            { event: "DOWNTIME_MIGRATION_SUCCESS", ...report },
+            `[Migration] DOWNTIME ${sourceCluster} → ${targetCluster} in ${report.durationMs}ms`
+        );
+
+        return report;
+    } catch (err) {
+        // Rollback: clear maintenanceMode so the org isn't left stuck.
+        try {
+            await Organization().findOneAndUpdate(
+                { _id: orgId, maintenanceMode: true },
+                {
+                    $set: {
+                        maintenanceMode: false,
+                        maintenanceStartedAt: null,
+                        migrationId: null,
+                    },
+                }
+            );
+            await _logTransition({
+                org: entered,
+                from: "MAINTENANCE_ENABLED",
+                to: "DOWNTIME_FAILED",
+                actor,
+                reason: err.message,
+                details: { sourceCluster, targetCluster, error: err.message },
+            });
+        } catch (cleanupErr) {
+            logger.error(
+                { event: "DOWNTIME_ROLLBACK_FAILED", orgId: String(orgId), err: cleanupErr.message },
+                "[Migration] Failed to rollback maintenanceMode after downtime failure"
+            );
+        }
+
+        logger.error(
+            { event: "DOWNTIME_MIGRATION_FAILED", orgId: String(orgId),
+              sourceCluster, targetCluster, err: err.message },
+            `[Migration] DOWNTIME migration FAILED: ${err.message}`
+        );
+
+        report.finishedAt = new Date();
+        report.durationMs = report.finishedAt - report.startedAt;
+        report.success = false;
+        report.error = err.message;
+
+        throw new MigrationError(
+            `Downtime migration failed: ${err.message}`,
+            "DOWNTIME_MIGRATION_FAILED",
+            500
+        );
+    }
 }
 
 module.exports = {
@@ -566,4 +794,5 @@ module.exports = {
     rollback,
     getStatus,
     listOrgs,
+    runDowntimeMigration,
 };

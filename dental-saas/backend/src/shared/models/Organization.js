@@ -554,6 +554,19 @@ const organizationSchema = new mongoose.Schema({
   migrationId: {
     type: String,
     default: null
+  },
+  // Downtime migration: when true, all tenant-plane requests are rejected
+  // with 503 MAINTENANCE_MODE (platform_admin bypass). Set by
+  // migration.service.runDowntimeMigration for the duration of a cluster
+  // switch; cleared on success OR on rollback.
+  maintenanceMode: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  maintenanceStartedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

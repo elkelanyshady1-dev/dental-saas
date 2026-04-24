@@ -8,7 +8,10 @@
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { Activity, ArrowRightLeft, Lock, Unlock, AlertTriangle, RefreshCw } from "lucide-react";
+import {
+    Activity, ArrowRightLeft, Lock, Unlock, AlertTriangle, RefreshCw,
+    Zap, Clock, CheckCircle2, Loader2,
+} from "lucide-react";
 import platformApi from "../../auth/platformApi";
 
 const STATE_PROGRESS = {
@@ -80,15 +83,87 @@ function StateStepper({ current }) {
 
 // ─── Migration Modal ────────────────────────────────────────────────────────
 
+const DOWNTIME_STAGES = [
+    { key: "ENTER",    label: "Entering maintenance mode…",  icon: Lock },
+    { key: "DRAIN",    label: "Draining in-flight requests…", icon: Clock },
+    { key: "DUMP",     label: "Migrating data…",              icon: ArrowRightLeft },
+    { key: "SWAP",     label: "Switching database…",          icon: Zap },
+    { key: "DONE",     label: "Migration completed successfully", icon: CheckCircle2 },
+];
+
+function Toggle({ checked, onChange, disabled, label }) {
+    return (
+        <button
+            type="button"
+            onClick={() => !disabled && onChange(!checked)}
+            className={`flex items-center gap-3 w-full p-3 rounded border transition-colors ${
+                checked ? "bg-amber-50 border-amber-300" : "bg-slate-50 border-slate-200"
+            } ${disabled ? "opacity-60 cursor-not-allowed" : "hover:border-amber-400"}`}
+            disabled={disabled}
+        >
+            <span
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
+                    checked ? "bg-amber-500" : "bg-slate-300"
+                }`}
+            >
+                <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
+                        checked ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                />
+            </span>
+            <span className="text-sm font-medium text-slate-700 text-left">{label}</span>
+        </button>
+    );
+}
+
+function DowntimeProgress({ stage, error }) {
+    const currentIdx = DOWNTIME_STAGES.findIndex((s) => s.key === stage);
+    return (
+        <div className="space-y-2">
+            {DOWNTIME_STAGES.map((s, i) => {
+                const Icon = s.icon;
+                const state =
+                    error ? (i <= currentIdx ? "done" : "idle")
+                    : i < currentIdx ? "done"
+                    : i === currentIdx ? "active"
+                    : "idle";
+                return (
+                    <div key={s.key} className="flex items-center gap-2 text-xs">
+                        {state === "active" ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                        ) : state === "done" ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                            <Icon className="w-4 h-4 text-slate-300" />
+                        )}
+                        <span
+                            className={
+                                state === "active" ? "text-indigo-700 font-medium"
+                                : state === "done" ? "text-emerald-700"
+                                : "text-slate-400"
+                            }
+                        >
+                            {s.label}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function MigrationModal({ org, clusters, onClose, onStarted }) {
     const [target, setTarget] = useState("");
     const [reason, setReason] = useState("");
+    const [downtime, setDowntime] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [downtimeStage, setDowntimeStage] = useState(null);
 
     const choices = clusters.filter((c) => c !== org?.cluster);
 
-    const submit = async () => {
+    const startZeroDowntime = async () => {
         setError(null);
         setSubmitting(true);
         try {
@@ -106,6 +181,49 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
         }
     };
 
+    const startDowntime = async () => {
+        setError(null);
+        setSubmitting(true);
+        setDowntimeStage("ENTER");
+        try {
+            // UI stage progression runs in parallel to the real request.
+            // The backend call is synchronous — it only returns when the
+            // migration is complete (or has failed). We advance the UI
+            // stages on a timer to give the operator feedback during the
+            // wait. If the response comes back before a given stage, we
+            // skip ahead.
+            const stageTicker = (async () => {
+                await new Promise((r) => setTimeout(r, 600));
+                setDowntimeStage("DRAIN");
+                await new Promise((r) => setTimeout(r, 2200));
+                setDowntimeStage("DUMP");
+                await new Promise((r) => setTimeout(r, 1000));
+                setDowntimeStage("SWAP");
+            })();
+
+            const { data } = await platformApi.post("/migration/downtime", {
+                orgId: org._id,
+                sourceCluster: org.cluster,
+                targetCluster: target,
+                reason: reason || undefined,
+            });
+
+            await stageTicker.catch(() => {});
+            setDowntimeStage("DONE");
+            onStarted?.(data?.data);
+
+            // Give the success frame ~1.2s to be visible before closing.
+            setTimeout(onClose, 1200);
+        } catch (err) {
+            setError(err?.response?.data?.message || err.message || "Downtime migration failed");
+            setDowntimeStage(null);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const submit = () => (downtime ? startDowntime() : startZeroDowntime());
+
     if (!org) return null;
 
     return (
@@ -117,54 +235,88 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                 </h3>
                 <p className="text-sm text-slate-500 mb-4">{org.name}</p>
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Source cluster</label>
-                        <div className="px-3 py-2 bg-slate-50 rounded text-sm text-slate-700 font-mono">
-                            {org.cluster}
+                {/* ─── Running state (downtime) ──────────────────────── */}
+                {submitting && downtime && (
+                    <div className="space-y-4">
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded">
+                            <DowntimeProgress stage={downtimeStage} error={error} />
                         </div>
+                        {error && (
+                            <div className="flex items-start gap-2 p-3 bg-rose-50 text-rose-700 rounded text-xs">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                                {error}
+                            </div>
+                        )}
                     </div>
+                )}
 
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Target cluster</label>
-                        <select
-                            value={target}
-                            onChange={(e) => setTarget(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            disabled={submitting}
-                        >
-                            <option value="">Select a target cluster…</option>
-                            {choices.map((k) => (
-                                <option key={k} value={k}>{k}</option>
-                            ))}
-                        </select>
-                    </div>
+                {/* ─── Idle / form state ────────────────────────────── */}
+                {!(submitting && downtime) && (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-medium text-slate-600 block mb-1">Source cluster</label>
+                            <div className="px-3 py-2 bg-slate-50 rounded text-sm text-slate-700 font-mono">
+                                {org.cluster}
+                            </div>
+                        </div>
 
-                    <div>
-                        <label className="text-xs font-medium text-slate-600 block mb-1">Reason (optional)</label>
-                        <input
-                            type="text"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            placeholder="e.g. capacity rebalance"
-                            className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        <div>
+                            <label className="text-xs font-medium text-slate-600 block mb-1">Target cluster</label>
+                            <select
+                                value={target}
+                                onChange={(e) => setTarget(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                disabled={submitting}
+                            >
+                                <option value="">Select a target cluster…</option>
+                                {choices.map((k) => (
+                                    <option key={k} value={k}>{k}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-medium text-slate-600 block mb-1">Reason (optional)</label>
+                            <input
+                                type="text"
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder="e.g. capacity rebalance"
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                disabled={submitting}
+                            />
+                        </div>
+
+                        <Toggle
+                            checked={downtime}
+                            onChange={setDowntime}
                             disabled={submitting}
+                            label="Downtime Migration Mode"
                         />
-                    </div>
 
-                    {error && (
-                        <div className="flex items-start gap-2 p-3 bg-rose-50 text-rose-700 rounded text-xs">
-                            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                            {error}
-                        </div>
-                    )}
+                        {error && (
+                            <div className="flex items-start gap-2 p-3 bg-rose-50 text-rose-700 rounded text-xs">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                                {error}
+                            </div>
+                        )}
 
-                    <div className="text-xs text-slate-500 bg-amber-50 p-3 rounded border border-amber-200">
-                        Starting migration will <strong>lock writes</strong> on this org and put it in
-                        the PREPARING state. Use the per-row controls below to advance through Sync,
-                        Cutover, and Verify.
+                        {downtime ? (
+                            <div className="text-xs text-amber-800 bg-amber-50 p-3 rounded border border-amber-300">
+                                <strong>Warning:</strong> downtime mode will temporarily make this organization
+                                unavailable during migration. All tenant requests will be rejected with
+                                <span className="font-mono"> 503 MAINTENANCE_MODE </span>
+                                until the cluster swap completes.
+                            </div>
+                        ) : (
+                            <div className="text-xs text-slate-500 bg-indigo-50 p-3 rounded border border-indigo-200">
+                                <strong>Zero-downtime:</strong> starts a PREPARING state. Use the per-row controls
+                                in the table to advance through Sync, Cutover, and Verify. Writes are locked
+                                only for the brief cutover window.
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2 mt-6">
                     <button
@@ -172,14 +324,18 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                         className="px-3 py-2 text-sm text-slate-600 hover:text-slate-800"
                         disabled={submitting}
                     >
-                        Cancel
+                        {submitting ? "Running…" : "Cancel"}
                     </button>
                     <button
                         onClick={submit}
                         disabled={!target || submitting}
-                        className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
+                        className={`px-3 py-2 text-white rounded text-sm font-medium disabled:bg-slate-300 disabled:cursor-not-allowed ${
+                            downtime ? "bg-amber-600 hover:bg-amber-700" : "bg-indigo-600 hover:bg-indigo-700"
+                        }`}
                     >
-                        {submitting ? "Starting…" : "Start migration"}
+                        {submitting
+                            ? (downtime ? "Migrating…" : "Starting…")
+                            : (downtime ? "Start Downtime Migration" : "Start migration")}
                     </button>
                 </div>
             </div>

@@ -82,6 +82,33 @@ router.post("/start", ...ADMIN, ctrl.startMigration);
 
 /**
  * @swagger
+ * /api/platform/migration/downtime:
+ *   post:
+ *     summary: "Synchronous downtime migration"
+ *     description: "Flips maintenanceMode, copies data source -> target, swaps cluster, clears flags. Use for small orgs OR when change streams are unavailable."
+ *     tags: [Migration]
+ *     security: [{ platformToken: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [orgId, sourceCluster, targetCluster]
+ *             properties:
+ *               orgId:         { type: string }
+ *               sourceCluster: { type: string }
+ *               targetCluster: { type: string }
+ *               reason:        { type: string }
+ *     responses:
+ *       200: { description: "Migration complete (success=true)" }
+ *       409: { description: "Maintenance race / same cluster / cluster mismatch" }
+ *       500: { description: "DOWNTIME_MIGRATION_FAILED" }
+ */
+router.post("/downtime", ...ADMIN, ctrl.runDowntimeMigration);
+
+/**
+ * @swagger
  * /api/platform/migration/{orgId}/sync:
  *   post:
  *     summary: "Run the sync phase (PREPARING -> SYNCING -> CUTOVER_PENDING)"

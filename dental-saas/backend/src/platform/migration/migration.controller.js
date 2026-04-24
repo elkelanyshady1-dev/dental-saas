@@ -162,6 +162,31 @@ exports.verifyAndComplete = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /api/platform/migration/downtime
+ * Body: { orgId, sourceCluster, targetCluster, reason? }
+ *
+ * Synchronous downtime migration — flips maintenanceMode, copies data,
+ * swaps cluster, clears flags. All in one request (no sync engine,
+ * no change streams). Use for small orgs or when the source cluster
+ * isn't a replica set.
+ */
+exports.runDowntimeMigration = asyncHandler(async (req, res) => {
+    try {
+        const { orgId, sourceCluster, targetCluster, reason } = req.body || {};
+        const report = await migrationService.runDowntimeMigration({
+            orgId,
+            sourceCluster,
+            targetCluster,
+            actor: _actorFromReq(req),
+            reason,
+        });
+        return res.status(200).json({ success: true, data: report });
+    } catch (err) {
+        return _handleServiceError(err, res);
+    }
+});
+
+/**
  * POST /api/platform/migration/:orgId/rollback
  * Body: { reason? }
  *
