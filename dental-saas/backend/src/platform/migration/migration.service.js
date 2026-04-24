@@ -255,16 +255,24 @@ async function startMigration({ orgId, targetCluster, actor, reason }) {
 }
 
 /**
- * Sync stub. In a real implementation this opens a change stream on the
- * source cluster's per-org DB, replays into the target, and tracks lag.
- * Here we just transition PREPARING → SYNCING → CUTOVER_PENDING and
- * record a placeholder progress %.
+ * syncOrgData — runs the real data sync via the Phase 8 sync engine.
  *
- * Replace this body with the real sync engine when the data-movement
- * strategy is chosen (resume token + dump+catchup is the recommended
- * shape — see DB_3_LAYER_ARCHITECTURE_PLAN.md §"Sync invariant").
+ * Flow:
+ *   PREPARING → SYNCING   (state transition, optimistic lock)
+ *   → syncEngine.syncOrgData (resumeToken-first, dump, replay, catch-up)
+ *   SYNCING → CUTOVER_PENDING  (on success)
+ *   SYNCING → FAILED           (on error, with writeLocked cleared)
+ *
+ * Preconditions (asserted by startMigration before this runs):
+ *   - org.writeLocked === true
+ *   - org.targetCluster !== org.cluster
+ *   - org.migrationState === "PREPARING"
  */
-async function syncOrgData({ orgId, actor }) {
+async function syncOrgData({ orgId, actor, onProgress }) {
+    // Lazy-require the sync engine to avoid boot-order issues (engine
+    // pulls in clusterConnections + requires platformConnection ready).
+    const syncEngine = require("./syncEngine.service");
+
     // PREPARING → SYNCING
     let org = await _transition({
         orgId,
@@ -274,22 +282,64 @@ async function syncOrgData({ orgId, actor }) {
         details: { phase: "sync-started" },
     });
 
-    // ── STUB: real implementation goes here. For now we just advance.
-    //   const sourceConn = clusterConnections.getSync(org.cluster).useDb(`dental_org_${orgId}`);
-    //   const targetConn = clusterConnections.getSync(org.targetCluster).useDb(`dental_org_${orgId}`);
-    //   ... change-stream replay ...
-    //   ... lag tracking via MigrationLog updates ...
+    try {
+        const summary = await syncEngine.syncOrgData({
+            orgId: String(orgId),
+            sourceCluster: org.cluster,
+            targetCluster: org.targetCluster,
+            onProgress,
+        });
 
-    // SYNCING → CUTOVER_PENDING
-    org = await _transition({
-        orgId,
-        from: STATES.SYNCING,
-        to: STATES.CUTOVER_PENDING,
-        actor,
-        details: { phase: "sync-complete-awaiting-cutover" },
-    });
-
-    return org;
+        // SYNCING → CUTOVER_PENDING (on clean catch-up)
+        return await _transition({
+            orgId,
+            from: STATES.SYNCING,
+            to: STATES.CUTOVER_PENDING,
+            actor,
+            details: {
+                phase: "sync-complete-awaiting-cutover",
+                dumpDocs: summary.stages?.dump?.copied,
+                replayEvents: summary.stages?.replay?.eventsProcessed,
+                lastLagMs: summary.stages?.replay?.lastLagMs,
+                totalDurationMs: summary.durationMs,
+            },
+        });
+    } catch (err) {
+        // SYNCING → FAILED — unlock writes so operator can retry or roll back.
+        logger.error(
+            { event: "SYNC_FAILED", orgId: String(orgId), err: err.message, stack: err.stack },
+            "[Migration] Sync engine failed — transitioning to FAILED"
+        );
+        try {
+            await Organization().findOneAndUpdate(
+                { _id: orgId, migrationState: STATES.SYNCING },
+                {
+                    $set: {
+                        migrationState: STATES.FAILED,
+                        writeLocked: false,
+                    },
+                }
+            );
+            await _logTransition({
+                org: { ...org, migrationState: STATES.FAILED },
+                from: STATES.SYNCING,
+                to: STATES.FAILED,
+                actor,
+                reason: err.message,
+                details: { phase: "sync-failed", errorMessage: err.message },
+            });
+        } catch (cleanupErr) {
+            logger.error(
+                { err: cleanupErr.message },
+                "[Migration] Failed to mark migration as FAILED after sync error"
+            );
+        }
+        throw new MigrationError(
+            `Sync failed: ${err.message}`,
+            "SYNC_FAILED",
+            500
+        );
+    }
 }
 
 /**
