@@ -60,6 +60,5 @@ stageTemplateSchema.index({});
 const modelName = "StageTemplate";
 module.exports = {
   modelName,
-  schema: stageDefinitionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, stageDefinitionSchema)
+  schema: stageDefinitionSchema
 };

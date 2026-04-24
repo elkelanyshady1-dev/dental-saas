@@ -122,6 +122,5 @@ reviewStageSchema.index({
 const modelName = "ReviewStage";
 module.exports = {
   modelName,
-  schema: reviewStageSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, reviewStageSchema)
+  schema: reviewStageSchema
 };

@@ -34,6 +34,5 @@ const inventoryItemSchema = new mongoose.Schema({
 const modelName = "InventoryItem";
 module.exports = {
   modelName,
-  schema: inventoryItemSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, inventoryItemSchema)
+  schema: inventoryItemSchema
 };

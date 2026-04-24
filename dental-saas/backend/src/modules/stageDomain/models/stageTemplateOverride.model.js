@@ -37,6 +37,5 @@ stageTemplateOverrideSchema.index({
 const modelName = "StageTemplateOverride";
 module.exports = {
   modelName,
-  schema: stageOverrideSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, stageOverrideSchema)
+  schema: stageOverrideSchema
 };

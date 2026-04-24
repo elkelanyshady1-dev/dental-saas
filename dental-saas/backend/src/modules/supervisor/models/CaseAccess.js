@@ -107,6 +107,5 @@ caseAccessSchema.index({
 const modelName = "CaseAccess";
 module.exports = {
   modelName,
-  schema: caseAccessSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, caseAccessSchema)
+  schema: caseAccessSchema
 };

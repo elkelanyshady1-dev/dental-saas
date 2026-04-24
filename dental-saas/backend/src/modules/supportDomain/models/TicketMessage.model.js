@@ -106,6 +106,5 @@ ticketMessageSchema.index({
 const modelName = "TicketMessage";
 module.exports = {
   modelName,
-  schema: ticketMessageSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, ticketMessageSchema)
+  schema: ticketMessageSchema
 };

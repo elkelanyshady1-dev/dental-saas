@@ -102,6 +102,5 @@ refundSchema.index({
 const modelName = "Refund";
 module.exports = {
   modelName,
-  schema: refundSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, refundSchema)
+  schema: refundSchema
 };

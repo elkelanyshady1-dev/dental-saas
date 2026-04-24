@@ -81,6 +81,5 @@ documentTemplateSchema.index({});
 const modelName = "DocumentTemplate";
 module.exports = {
   modelName,
-  schema: documentTemplateSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, documentTemplateSchema)
+  schema: documentTemplateSchema
 };

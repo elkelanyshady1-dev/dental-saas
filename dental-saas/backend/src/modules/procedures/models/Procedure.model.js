@@ -94,6 +94,5 @@ procedureSchema.index({
 const modelName = "Procedure";
 module.exports = {
   modelName,
-  schema: procedureSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, procedureSchema)
+  schema: procedureSchema
 };

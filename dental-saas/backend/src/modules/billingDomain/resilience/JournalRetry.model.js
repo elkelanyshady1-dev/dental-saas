@@ -110,6 +110,5 @@ journalRetrySchema.index({
 const modelName = "JournalRetry";
 module.exports = {
   modelName,
-  schema: journalRetrySchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, journalRetrySchema)
+  schema: journalRetrySchema
 };

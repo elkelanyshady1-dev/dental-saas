@@ -108,6 +108,5 @@ supervisorInvitationSchema.index({
 const modelName = "SupervisorInvitation";
 module.exports = {
   modelName,
-  schema: supervisorInvitationSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, supervisorInvitationSchema)
+  schema: supervisorInvitationSchema
 };

@@ -19,56 +19,54 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
 const organizationModuleStateSchema = new mongoose.Schema({
-    organizationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Organization",
-        required: true,
-        index: true,
-    },
-    moduleKey: {
-        type: String,
-        required: true,
-        index: true,
-    },
-    enabled: {
-        type: Boolean,
-        required: true,
-        default: false,
-    },
-    enabledAt: {
-        type: Date,
-        default: null,
-    },
-    disabledAt: {
-        type: Date,
-        default: null,
-    },
-    lastSyncedAt: {
-        type: Date,
-        default: Date.now,
-    },
-    // Track who/what triggered the last state change
-    lastChangedBy: {
-        type: String,
-        default: "system",
-    },
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+    index: true
+  },
+  moduleKey: {
+    type: String,
+    required: true,
+    index: true
+  },
+  enabled: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
+  enabledAt: {
+    type: Date,
+    default: null
+  },
+  disabledAt: {
+    type: Date,
+    default: null
+  },
+  lastSyncedAt: {
+    type: Date,
+    default: Date.now
+  },
+  // Track who/what triggered the last state change
+  lastChangedBy: {
+    type: String,
+    default: "system"
+  }
 }, {
-    timestamps: true,
-    collection: "organizationModuleStates",
+  timestamps: true,
+  collection: "organizationModuleStates"
 });
 
 // Compound unique index — one record per org per module
-organizationModuleStateSchema.index(
-    { organizationId: 1, moduleKey: 1 },
-    { unique: true }
-);
-
+organizationModuleStateSchema.index({
+  organizationId: 1,
+  moduleKey: 1
+}, {
+  unique: true
+});
 const modelName = "OrganizationModuleState";
-
 module.exports = {
-    modelName,
-    schema: organizationModuleStateSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, organizationModuleStateSchema),
+  modelName,
+  schema: organizationModuleStateSchema
 };

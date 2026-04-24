@@ -82,6 +82,5 @@ signupIdempotencySchema.index({
 const modelName = "SignupIdempotency";
 module.exports = {
   modelName,
-  schema: signupIdempotencySchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, signupIdempotencySchema)
+  schema: signupIdempotencySchema
 };

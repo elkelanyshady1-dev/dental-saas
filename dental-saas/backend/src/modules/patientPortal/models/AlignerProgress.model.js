@@ -104,6 +104,5 @@ alignerProgressSchema.index({
 const modelName = "AlignerProgress";
 module.exports = {
   modelName,
-  schema: alignerProgressSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, alignerProgressSchema)
+  schema: alignerProgressSchema
 };

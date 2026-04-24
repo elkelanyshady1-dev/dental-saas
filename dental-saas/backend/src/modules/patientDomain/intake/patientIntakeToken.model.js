@@ -48,6 +48,5 @@ patientIntakeTokenSchema.index({
 const modelName = "PatientIntakeToken";
 module.exports = {
   modelName,
-  schema: patientIntakeTokenSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, patientIntakeTokenSchema)
+  schema: patientIntakeTokenSchema
 };

@@ -33,6 +33,5 @@ const inventoryTransactionSchema = new mongoose.Schema({
 const modelName = "InventoryTransaction";
 module.exports = {
   modelName,
-  schema: inventoryTransactionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, inventoryTransactionSchema)
+  schema: inventoryTransactionSchema
 };

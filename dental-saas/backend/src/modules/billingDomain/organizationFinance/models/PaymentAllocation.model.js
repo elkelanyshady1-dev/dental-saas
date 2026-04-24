@@ -37,6 +37,5 @@ paymentAllocationSchema.index({
 const modelName = "PaymentAllocation";
 module.exports = {
   modelName,
-  schema: paymentAllocationSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, paymentAllocationSchema)
+  schema: paymentAllocationSchema
 };

@@ -69,6 +69,5 @@ printSettingSchema.index({
 const modelName = "PrintSetting";
 module.exports = {
   modelName,
-  schema: printSettingSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, printSettingSchema)
+  schema: printSettingSchema
 };

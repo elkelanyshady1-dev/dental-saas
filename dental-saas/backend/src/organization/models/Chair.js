@@ -23,6 +23,5 @@ chairSchema.index({
 const modelName = "Chair";
 module.exports = {
   modelName,
-  schema: chairSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, chairSchema)
+  schema: chairSchema
 };

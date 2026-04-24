@@ -29,6 +29,5 @@ const intelligenceWeightsSchema = new mongoose.Schema({
 const modelName = "IntelligenceWeights";
 module.exports = {
   modelName,
-  schema: intelligenceWeightsSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, intelligenceWeightsSchema)
+  schema: intelligenceWeightsSchema
 };

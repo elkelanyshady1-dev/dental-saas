@@ -76,6 +76,5 @@ prescriptionSchema.index({
 const modelName = "Prescription";
 module.exports = {
   modelName,
-  schema: prescriptionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, prescriptionSchema)
+  schema: prescriptionSchema
 };

@@ -33,6 +33,5 @@ const patientPolicySchema = new mongoose.Schema({
 const modelName = "PatientPolicy";
 module.exports = {
   modelName,
-  schema: patientPolicySchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, patientPolicySchema)
+  schema: patientPolicySchema
 };

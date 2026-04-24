@@ -28,6 +28,5 @@ caseCostSnapshotSchema.index({
 const modelName = "CaseCostSnapshot";
 module.exports = {
   modelName,
-  schema: caseCostSnapshotSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, caseCostSnapshotSchema)
+  schema: caseCostSnapshotSchema
 };

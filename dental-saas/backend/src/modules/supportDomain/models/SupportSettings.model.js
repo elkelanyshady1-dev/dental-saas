@@ -157,7 +157,6 @@ const modelName = "SupportSettings";
 module.exports = {
   modelName,
   schema: supportSettingsSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, supportSettingsSchema),
   SINGLETON_KEY,
   PRIORITIES,
   KNOWN_CATEGORIES,

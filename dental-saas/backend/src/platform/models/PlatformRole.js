@@ -10,32 +10,26 @@
  */
 
 const mongoose = require("mongoose");
-
-const PlatformRoleSchema = new mongoose.Schema(
-    {
-        name: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-        capabilities: [
-            {
-                type: String,
-            },
-        ],
-        plane: {
-            type: String,
-            default: "platform",
-            enum: ["platform"],
-        },
-    },
-    { collection: "platformroles", timestamps: true }
-);
-
+const PlatformRoleSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  capabilities: [{
+    type: String
+  }],
+  plane: {
+    type: String,
+    default: "platform",
+    enum: ["platform"]
+  }
+}, {
+  collection: "platformroles",
+  timestamps: true
+});
 const modelName = "PlatformRole";
-
 module.exports = {
-    modelName,
-    schema: PlatformRoleSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, PlatformRoleSchema),
+  modelName,
+  schema: PlatformRoleSchema
 };

@@ -32,6 +32,5 @@ clinicalRecordSchema.index({
 const modelName = "ClinicalRecord";
 module.exports = {
   modelName,
-  schema: clinicalRecordSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, clinicalRecordSchema)
+  schema: clinicalRecordSchema
 };

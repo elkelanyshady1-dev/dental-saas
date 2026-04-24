@@ -92,6 +92,5 @@ portalInviteSchema.index({
 const modelName = "PortalInvite";
 module.exports = {
   modelName,
-  schema: portalInviteSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, portalInviteSchema)
+  schema: portalInviteSchema
 };

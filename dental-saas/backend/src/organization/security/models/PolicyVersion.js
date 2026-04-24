@@ -65,6 +65,5 @@ policyVersionSchema.pre(["deleteOne", "findOneAndDelete", "deleteMany"], functio
 const modelName = "PolicyVersion";
 module.exports = {
   modelName,
-  schema: policyVersionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, policyVersionSchema)
+  schema: policyVersionSchema
 };

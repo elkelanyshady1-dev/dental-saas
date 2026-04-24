@@ -51,6 +51,5 @@ const clinicalMediaAssetSchema = new mongoose.Schema({
 const modelName = "ClinicalMediaAsset";
 module.exports = {
   modelName,
-  schema: clinicalMediaAssetSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, clinicalMediaAssetSchema)
+  schema: clinicalMediaAssetSchema
 };

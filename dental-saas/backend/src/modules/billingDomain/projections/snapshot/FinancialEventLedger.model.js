@@ -17,6 +17,5 @@ financialEventLedgerSchema.index({
 const modelName = "FinancialEventLedger";
 module.exports = {
   modelName,
-  schema: financialEventLedgerSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, financialEventLedgerSchema)
+  schema: financialEventLedgerSchema
 };

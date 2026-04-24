@@ -28,6 +28,5 @@ organizationSettingsSchema.index({}, {
 const modelName = "OrganizationSettings";
 module.exports = {
   modelName,
-  schema: organizationSettingsSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, organizationSettingsSchema)
+  schema: organizationSettingsSchema
 };

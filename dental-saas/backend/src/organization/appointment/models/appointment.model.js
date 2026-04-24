@@ -216,6 +216,5 @@ appointmentSchema.index({
 const modelName = "Appointment";
 module.exports = {
   modelName,
-  schema: appointmentSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, appointmentSchema)
+  schema: appointmentSchema
 };

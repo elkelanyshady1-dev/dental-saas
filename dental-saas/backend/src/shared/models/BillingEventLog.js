@@ -22,75 +22,71 @@
 
 const mongoose = require("mongoose");
 const crypto = require("crypto");
-
 const billingEventLogSchema = new mongoose.Schema({
-    // Which provider emitted this event (stripe, paymob, paypal)
-    provider: {
-        type: String,
-        enum: ["stripe", "paymob", "paypal"],
-        required: true
-    },
-
-    // Provider-assigned unique event ID (e.g. Stripe: evt_xxx, Paymob: hmac_ref)
-    externalEventId: {
-        type: String,
-        required: true,
-        trim: true
-    },
-
-    // Canonical event type (never provider-specific: use payment.succeeded not payment_intent.succeeded)
-    type: {
-        type: String,
-        required: true,
-        enum: [
-            "payment.succeeded",
-            "payment.failed",
-            "refund.completed",
-            "dispute.created",
-            "subscription.created",
-            "subscription.canceled",
-            "subscription.updated"
-        ]
-    },
-
-    // SHA-256 hash of the canonical event payload — detects payload mutations across retries
-    payloadHash: {
-        type: String,
-        required: true
-    },
-
-    // ISO timestamp of when we first successfully processed this event
-    processedAt: {
-        type: Date,
-        default: Date.now
-    },
-
-    // regionCode of the event source
-    regionCode: {
-        type: String,
-        uppercase: true
-    },
-
-    // Optional: link to the payment or invoice this event affected
-    linkedPaymentId: {
-        type: String
-    }
+  // Which provider emitted this event (stripe, paymob, paypal)
+  provider: {
+    type: String,
+    enum: ["stripe", "paymob", "paypal"],
+    required: true
+  },
+  // Provider-assigned unique event ID (e.g. Stripe: evt_xxx, Paymob: hmac_ref)
+  externalEventId: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  // Canonical event type (never provider-specific: use payment.succeeded not payment_intent.succeeded)
+  type: {
+    type: String,
+    required: true,
+    enum: ["payment.succeeded", "payment.failed", "refund.completed", "dispute.created", "subscription.created", "subscription.canceled", "subscription.updated"]
+  },
+  // SHA-256 hash of the canonical event payload — detects payload mutations across retries
+  payloadHash: {
+    type: String,
+    required: true
+  },
+  // ISO timestamp of when we first successfully processed this event
+  processedAt: {
+    type: Date,
+    default: Date.now
+  },
+  // regionCode of the event source
+  regionCode: {
+    type: String,
+    uppercase: true
+  },
+  // Optional: link to the payment or invoice this event affected
+  linkedPaymentId: {
+    type: String
+  }
 }, {
-    timestamps: false // processedAt is the authoritative timestamp
+  timestamps: false // processedAt is the authoritative timestamp
 });
 
 // ─── Idempotency Enforcement Index ────────────────────────────────────────────
 // Unique compound — prevents duplicate event processing at DB level.
 // This is the enforcement backstop. Application-level check should happen first.
-billingEventLogSchema.index(
-    { provider: 1, externalEventId: 1 },
-    { unique: true, name: "billing_event_idempotency" }
-);
+billingEventLogSchema.index({
+  provider: 1,
+  externalEventId: 1
+}, {
+  unique: true,
+  name: "billing_event_idempotency"
+});
 
 // Query performance indexes
-billingEventLogSchema.index({ processedAt: 1 });
-billingEventLogSchema.index({ type: 1, processedAt: -1 });
-billingEventLogSchema.index({ regionCode: 1, processedAt: -1 });
+billingEventLogSchema.index({
+  processedAt: 1
+});
+billingEventLogSchema.index({
+  type: 1,
+  processedAt: -1
+});
+billingEventLogSchema.index({
+  regionCode: 1,
+  processedAt: -1
+});
 
 /**
  * computePayloadHash
@@ -100,23 +96,19 @@ billingEventLogSchema.index({ regionCode: 1, processedAt: -1 });
  * @returns {string} hex SHA-256
  */
 function computePayloadHash(canonicalEvent) {
-    const normalized = JSON.stringify({
-        provider: canonicalEvent.provider,
-        type: canonicalEvent.type,
-        externalId: canonicalEvent.externalId,
-        amount: canonicalEvent.amount,
-        currency: canonicalEvent.currency
-    });
-    return crypto.createHash("sha256").update(normalized).digest("hex");
+  const normalized = JSON.stringify({
+    provider: canonicalEvent.provider,
+    type: canonicalEvent.type,
+    externalId: canonicalEvent.externalId,
+    amount: canonicalEvent.amount,
+    currency: canonicalEvent.currency
+  });
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
-
 const modelName = "BillingEventLog";
-
 module.exports = {
-    modelName,
-    schema: billingEventLogSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, billingEventLogSchema),
+  modelName,
+  schema: billingEventLogSchema
 };
 module.exports.computePayloadHash = computePayloadHash;
 module.exports.billingEventLogSchema = billingEventLogSchema;
-

@@ -33,6 +33,5 @@ analyticsLayoutSchema.index({
 const modelName = "AnalyticsLayout";
 module.exports = {
   modelName,
-  schema: analyticsTabSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, analyticsTabSchema)
+  schema: analyticsTabSchema
 };

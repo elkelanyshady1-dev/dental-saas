@@ -39,6 +39,5 @@ branchCounterSchema.index({
 const modelName = "BranchCounter";
 module.exports = {
   modelName,
-  schema: branchCounterSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, branchCounterSchema)
+  schema: branchCounterSchema
 };

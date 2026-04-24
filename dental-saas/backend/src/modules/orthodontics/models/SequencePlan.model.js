@@ -15,63 +15,80 @@
 const mongoose = require("mongoose");
 
 // ─── Step Action Sub-Schema (V2 hooks — data only, no execution in V1) ────────
-const SequenceActionSchema = new mongoose.Schema(
-  {
-    type: {
-      type: String,
-      enum: ["BONDING", "WIRE", "EXTRACTION", "TAD", "ELASTICS", "OTHER"],
-      required: true,
-    },
-    /** Free-form payload for future AI/auto-detection use */
-    payload: { type: mongoose.Schema.Types.Mixed, default: null },
+const SequenceActionSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["BONDING", "WIRE", "EXTRACTION", "TAD", "ELASTICS", "OTHER"],
+    required: true
   },
-  { _id: false }
-);
+  /** Free-form payload for future AI/auto-detection use */
+  payload: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  }
+}, {
+  _id: false
+});
 
 // ─── Step Sub-Schema ──────────────────────────────────────────────────────────
-const SequenceStepSchema = new mongoose.Schema(
-  {
-    order: { type: Number, required: true, min: 0 },
-    title: { type: String, required: true, maxlength: 200 },
-    description: { type: String, default: null, maxlength: 1000 },
-    /** Clinical actions this step involves (V2 hooks — guidance display only) */
-    actions: { type: [SequenceActionSchema], default: [] },
+const SequenceStepSchema = new mongoose.Schema({
+  order: {
+    type: Number,
+    required: true,
+    min: 0
   },
-  { _id: false }
-);
+  title: {
+    type: String,
+    required: true,
+    maxlength: 200
+  },
+  description: {
+    type: String,
+    default: null,
+    maxlength: 1000
+  },
+  /** Clinical actions this step involves (V2 hooks — guidance display only) */
+  actions: {
+    type: [SequenceActionSchema],
+    default: []
+  }
+}, {
+  _id: false
+});
 
 // ─── Main Schema ──────────────────────────────────────────────────────────────
-const SequencePlanSchema = new mongoose.Schema(
-  {
-    caseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "OrthodonticCase",
-      required: true,
-    },
-    name: {
-      type: String,
-      default: "Treatment Sequence",
-      maxlength: 200,
-    },
-    steps: { type: [SequenceStepSchema], default: [] },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+const SequencePlanSchema = new mongoose.Schema({
+  caseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "OrthodonticCase",
+    required: true
   },
-  { timestamps: true }
-);
+  name: {
+    type: String,
+    default: "Treatment Sequence",
+    maxlength: 200
+  },
+  steps: {
+    type: [SequenceStepSchema],
+    default: []
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  }
+}, {
+  timestamps: true
+});
 
 // One plan per case per org — upsert-safe
-SequencePlanSchema.index({ caseId: 1 }, { unique: true });
-
+SequencePlanSchema.index({
+  caseId: 1
+}, {
+  unique: true
+});
 const modelName = "SequencePlan";
-
 module.exports = {
   modelName,
-  schema: SequencePlanSchema,
-  default:
-    mongoose.models[modelName] ||
-    mongoose.model(modelName, SequencePlanSchema),
+  schema: SequencePlanSchema
 };

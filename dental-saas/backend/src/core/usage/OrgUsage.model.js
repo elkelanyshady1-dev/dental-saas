@@ -21,60 +21,49 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const orgUsageSchema = new mongoose.Schema(
-    {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            unique: true,
-            index: true,
-        },
-
-        // ── Seat counters ────────────────────────────────────────────────────
-        usersCount: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-
-        branchesCount: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-
-        patientsCount: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-
-        // ── Storage snapshot ─────────────────────────────────────────────────
-        // Denormalized from OrganizationStorageUsage for fast reads.
-        // Updated alongside storageUsage.increment/decrement calls.
-        storageUsedMB: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-    },
-    {
-        timestamps: true,
-        collection: "orgusages",
-    }
-);
+const orgUsageSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+    unique: true,
+    index: true
+  },
+  // ── Seat counters ────────────────────────────────────────────────────
+  usersCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  branchesCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  patientsCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  // ── Storage snapshot ─────────────────────────────────────────────────
+  // Denormalized from OrganizationStorageUsage for fast reads.
+  // Updated alongside storageUsage.increment/decrement calls.
+  storageUsedMB: {
+    type: Number,
+    default: 0,
+    min: 0
+  }
+}, {
+  timestamps: true,
+  collection: "orgusages"
+});
 
 // ─── Virtuals ────────────────────────────────────────────────────────────────
 orgUsageSchema.virtual("storageUsedGB").get(function () {
-    return Math.round((this.storageUsedMB / 1024) * 100) / 100;
+  return Math.round(this.storageUsedMB / 1024 * 100) / 100;
 });
-
 const modelName = "OrgUsage";
-
 module.exports = {
-    modelName,
-    schema: orgUsageSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, orgUsageSchema),
+  modelName,
+  schema: orgUsageSchema
 };

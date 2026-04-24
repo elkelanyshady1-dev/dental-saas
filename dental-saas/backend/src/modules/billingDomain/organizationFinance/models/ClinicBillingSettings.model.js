@@ -253,7 +253,6 @@ const modelName = "ClinicBillingSettings";
 module.exports = {
   modelName,
   schema: billingSettingsSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, billingSettingsSchema),
   SUPPORTED_CURRENCIES,
   PAYMENT_METHODS,
   NUMBERING_RESET_CADENCES

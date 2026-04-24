@@ -22,55 +22,56 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const idempotencyKeySchema = new mongoose.Schema(
-    {
-        key: {
-            type: String,
-            required: true,
-            unique: true,
-            index: true,
-            maxlength: 128,
-        },
-        scope: {
-            type: String,
-            required: true,
-            maxlength: 128,
-        },
-        organizationId: {
-            type: String,
-            required: true,
-            index: true,
-            maxlength: 64,
-        },
-        userId: {
-            type: String,
-            default: null,
-            maxlength: 64,
-        },
-        status: {
-            type: String,
-            enum: ["in-flight", "completed", "failed"],
-            default: "in-flight",
-            required: true,
-        },
-        response: {
-            statusCode: { type: Number, default: null },
-            body:       { type: mongoose.Schema.Types.Mixed, default: null },
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-            expires: 86400,
-        },
+const idempotencyKeySchema = new mongoose.Schema({
+  key: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    maxlength: 128
+  },
+  scope: {
+    type: String,
+    required: true,
+    maxlength: 128
+  },
+  organizationId: {
+    type: String,
+    required: true,
+    index: true,
+    maxlength: 64
+  },
+  userId: {
+    type: String,
+    default: null,
+    maxlength: 64
+  },
+  status: {
+    type: String,
+    enum: ["in-flight", "completed", "failed"],
+    default: "in-flight",
+    required: true
+  },
+  response: {
+    statusCode: {
+      type: Number,
+      default: null
     },
-    { minimize: false }
-);
-
+    body: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    expires: 86400
+  }
+}, {
+  minimize: false
+});
 const modelName = "IdempotencyKey";
-
 module.exports = {
-    modelName,
-    schema: idempotencyKeySchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, idempotencyKeySchema),
+  modelName,
+  schema: idempotencyKeySchema
 };

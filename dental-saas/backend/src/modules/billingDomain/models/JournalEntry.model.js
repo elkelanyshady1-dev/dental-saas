@@ -213,6 +213,5 @@ journalEntrySchema.index({
 const modelName = "JournalEntry";
 module.exports = {
   modelName,
-  schema: journalLineSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, journalLineSchema)
+  schema: journalLineSchema
 };

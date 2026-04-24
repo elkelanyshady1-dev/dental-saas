@@ -47,6 +47,5 @@ familyMemberSchema.index({
 const modelName = "FamilyMember";
 module.exports = {
   modelName,
-  schema: familyMemberSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, familyMemberSchema)
+  schema: familyMemberSchema
 };

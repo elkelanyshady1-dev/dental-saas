@@ -50,6 +50,5 @@ bookingRequestSchema.index({
 const modelName = "BookingRequest";
 module.exports = {
   modelName,
-  schema: bookingRequestSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, bookingRequestSchema)
+  schema: bookingRequestSchema
 };

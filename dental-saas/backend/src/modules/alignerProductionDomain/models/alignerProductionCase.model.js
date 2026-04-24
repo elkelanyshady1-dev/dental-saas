@@ -59,6 +59,5 @@ alignerProductionCaseSchema.index({});
 const modelName = "AlignerProductionCase";
 module.exports = {
   modelName,
-  schema: alignerProductionCaseSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, alignerProductionCaseSchema)
+  schema: alignerProductionCaseSchema
 };

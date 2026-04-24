@@ -9,31 +9,27 @@
  */
 
 const mongoose = require("mongoose");
-
-const PlatformCapabilitySchema = new mongoose.Schema(
-    {
-        key: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-        description: {
-            type: String,
-            required: true,
-        },
-        plane: {
-            type: String,
-            default: "platform",
-            enum: ["platform"],
-        },
-    },
-    { collection: "platformcapabilities", timestamps: true }
-);
-
+const PlatformCapabilitySchema = new mongoose.Schema({
+  key: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  plane: {
+    type: String,
+    default: "platform",
+    enum: ["platform"]
+  }
+}, {
+  collection: "platformcapabilities",
+  timestamps: true
+});
 const modelName = "PlatformCapability";
-
 module.exports = {
-    modelName,
-    schema: PlatformCapabilitySchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, PlatformCapabilitySchema),
+  modelName,
+  schema: PlatformCapabilitySchema
 };

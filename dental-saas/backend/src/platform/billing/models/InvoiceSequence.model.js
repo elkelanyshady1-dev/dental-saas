@@ -34,44 +34,40 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const invoiceSequenceSchema = new mongoose.Schema(
-    {
-        // ── Partition key: one document per billing month ─────────────────────
-        // Format: "YYYYMM" (e.g. "202503" for March 2025)
-        yearMonth: {
-            type: String,
-            required: true,
-            match: /^\d{6}$/   // Validation: exactly 6 digits
-            // Unique constraint is declared via invoiceSequenceSchema.index() below —
-            // declaring it here too would create a Mongoose duplicate index warning.
-        },
-
-        // ── Monotonic counter ─────────────────────────────────────────────────
-        // Atomically incremented via $inc. Starts at 0 (first invoice = 1).
-        seq: {
-            type: Number,
-            default: 0,
-            min: 0
-        }
-    },
-    {
-        timestamps: true,
-        collection: "invoicesequences"
-    }
-);
+const invoiceSequenceSchema = new mongoose.Schema({
+  // ── Partition key: one document per billing month ─────────────────────
+  // Format: "YYYYMM" (e.g. "202503" for March 2025)
+  yearMonth: {
+    type: String,
+    required: true,
+    match: /^\d{6}$/ // Validation: exactly 6 digits
+    // Unique constraint is declared via invoiceSequenceSchema.index() below —
+    // declaring it here too would create a Mongoose duplicate index warning.
+  },
+  // ── Monotonic counter ─────────────────────────────────────────────────
+  // Atomically incremented via $inc. Starts at 0 (first invoice = 1).
+  seq: {
+    type: Number,
+    default: 0,
+    min: 0
+  }
+}, {
+  timestamps: true,
+  collection: "invoicesequences"
+});
 
 // ─── Index: unique constraint on yearMonth ────────────────────────────────────
 // Explicit index declaration ensures the collection+index is registered in
 // mongoose.connection.collections for transaction bootstrap (bootstrapCollections.js).
 // unique:true on the field definition above creates the same index — Mongoose
 // is smart enough not to create duplicates when unique:true is present on the field.
-invoiceSequenceSchema.index({ yearMonth: 1 }, { unique: true });
-
+invoiceSequenceSchema.index({
+  yearMonth: 1
+}, {
+  unique: true
+});
 const modelName = "InvoiceSequence";
-
 module.exports = {
-    modelName,
-    schema: invoiceSequenceSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, invoiceSequenceSchema),
+  modelName,
+  schema: invoiceSequenceSchema
 };

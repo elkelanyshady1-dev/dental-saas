@@ -143,6 +143,5 @@ if (financialSnapshotSchema.path("organizationId")) {
 const modelName = "FinancialSnapshot";
 module.exports = {
   modelName,
-  schema: financialSnapshotSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, financialSnapshotSchema)
+  schema: financialSnapshotSchema
 };

@@ -132,6 +132,5 @@ treatmentSchema.index({
 const modelName = "Treatment";
 module.exports = {
   modelName,
-  schema: treatmentSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, treatmentSchema)
+  schema: treatmentSchema
 };

@@ -23,85 +23,117 @@ const mongoose = require("mongoose");
 // ─── Breakdown Sub-Schema ────────────────────────────────────────────────────
 // Tracks bytes per file category for granular reporting.
 const breakdownSchema = new mongoose.Schema({
-    photos: { type: Number, default: 0, min: 0 },
-    stl:    { type: Number, default: 0, min: 0 },
-    audio:  { type: Number, default: 0, min: 0 },
-    documents: { type: Number, default: 0, min: 0 },
-    other:  { type: Number, default: 0, min: 0 },
-}, { _id: false });
+  photos: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  stl: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  audio: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  documents: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  other: {
+    type: Number,
+    default: 0,
+    min: 0
+  }
+}, {
+  _id: false
+});
 
 // ─── File Count Sub-Schema ───────────────────────────────────────────────────
 // Tracks count of files per category.
 const fileCountSchema = new mongoose.Schema({
-    photos: { type: Number, default: 0, min: 0 },
-    stl:    { type: Number, default: 0, min: 0 },
-    audio:  { type: Number, default: 0, min: 0 },
-    documents: { type: Number, default: 0, min: 0 },
-    other:  { type: Number, default: 0, min: 0 },
-}, { _id: false });
+  photos: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  stl: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  audio: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  documents: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  other: {
+    type: Number,
+    default: 0,
+    min: 0
+  }
+}, {
+  _id: false
+});
 
 // ─── Main Schema ─────────────────────────────────────────────────────────────
-const organizationStorageUsageSchema = new mongoose.Schema(
-    {
-        organizationId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organization",
-            required: true,
-            unique: true,
-            index: true,
-        },
-
-        // Total storage in bytes across all categories
-        totalBytes: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-
-        // Total number of files across all categories
-        totalFiles: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
-
-        // Per-category byte breakdown
-        breakdown: {
-            type: breakdownSchema,
-            default: () => ({}),
-        },
-
-        // Per-category file count
-        fileCount: {
-            type: fileCountSchema,
-            default: () => ({}),
-        },
-
-        // Last update timestamp (separate from updatedAt for monitoring)
-        lastUploadAt: {
-            type: Date,
-            default: null,
-        },
-    },
-    {
-        timestamps: true,
-        collection: "organizationstorageusages",
-    }
-);
+const organizationStorageUsageSchema = new mongoose.Schema({
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+    unique: true,
+    index: true
+  },
+  // Total storage in bytes across all categories
+  totalBytes: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  // Total number of files across all categories
+  totalFiles: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  // Per-category byte breakdown
+  breakdown: {
+    type: breakdownSchema,
+    default: () => ({})
+  },
+  // Per-category file count
+  fileCount: {
+    type: fileCountSchema,
+    default: () => ({})
+  },
+  // Last update timestamp (separate from updatedAt for monitoring)
+  lastUploadAt: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true,
+  collection: "organizationstorageusages"
+});
 
 // ─── Virtual: human-readable total ───────────────────────────────────────────
 organizationStorageUsageSchema.virtual("totalMB").get(function () {
-    return Math.round((this.totalBytes / (1024 * 1024)) * 100) / 100;
+  return Math.round(this.totalBytes / (1024 * 1024) * 100) / 100;
 });
-
 organizationStorageUsageSchema.virtual("totalGB").get(function () {
-    return Math.round((this.totalBytes / (1024 * 1024 * 1024)) * 100) / 100;
+  return Math.round(this.totalBytes / (1024 * 1024 * 1024) * 100) / 100;
 });
-
 const modelName = "OrganizationStorageUsage";
-
 module.exports = {
-    modelName,
-    schema: organizationStorageUsageSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, organizationStorageUsageSchema),
+  modelName,
+  schema: organizationStorageUsageSchema
 };

@@ -83,6 +83,5 @@ notificationSchema.index({});
 const modelName = "Notification";
 module.exports = {
   modelName,
-  schema: notificationSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, notificationSchema)
+  schema: notificationSchema
 };

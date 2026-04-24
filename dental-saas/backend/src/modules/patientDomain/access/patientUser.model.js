@@ -61,6 +61,5 @@ patientUserSchema.index({
 const modelName = "PatientUser";
 module.exports = {
   modelName,
-  schema: patientUserSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, patientUserSchema)
+  schema: patientUserSchema
 };

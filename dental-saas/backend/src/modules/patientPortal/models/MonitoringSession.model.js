@@ -132,6 +132,5 @@ monitoringSessionSchema.index({
 const modelName = "MonitoringSession";
 module.exports = {
   modelName,
-  schema: monitoringSessionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, monitoringSessionSchema)
+  schema: monitoringSessionSchema
 };

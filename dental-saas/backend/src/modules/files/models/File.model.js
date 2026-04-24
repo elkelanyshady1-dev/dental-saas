@@ -117,6 +117,5 @@ const modelName = "File";
 module.exports = {
   modelName,
   schema: fileSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, fileSchema),
   FILE_CATEGORIES
 };

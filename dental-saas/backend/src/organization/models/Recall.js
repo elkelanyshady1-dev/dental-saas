@@ -41,6 +41,5 @@ recallSchema.index({
 const modelName = "Recall";
 module.exports = {
   modelName,
-  schema: recallSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, recallSchema)
+  schema: recallSchema
 };

@@ -66,6 +66,5 @@ treatmentCategorySchema.index({
 const modelName = "TreatmentCategory";
 module.exports = {
   modelName,
-  schema: treatmentCategorySchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, treatmentCategorySchema)
+  schema: treatmentCategorySchema
 };

@@ -229,7 +229,6 @@ const modelName = "PatientQuotation";
 module.exports = {
   modelName,
   schema: patientQuotationSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, patientQuotationSchema),
   QUOTATION_STATUSES,
   TERMINAL_STATUSES,
   ACCEPTANCE_TYPES

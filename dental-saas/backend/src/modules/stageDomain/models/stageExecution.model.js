@@ -48,6 +48,5 @@ stageExecutionSchema.index({
 const modelName = "StageExecution";
 module.exports = {
   modelName,
-  schema: stageExecutionSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, stageExecutionSchema)
+  schema: stageExecutionSchema
 };

@@ -54,6 +54,5 @@ communicationUsageSchema.index({
 const modelName = "CommunicationUsage";
 module.exports = {
   modelName,
-  schema: communicationUsageSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, communicationUsageSchema)
+  schema: communicationUsageSchema
 };

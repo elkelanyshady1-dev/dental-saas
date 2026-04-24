@@ -105,8 +105,7 @@ securityAlertSchema.index({
 const modelName = "SecurityAlert";
 module.exports = {
   modelName,
-  schema: securityAlertSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, securityAlertSchema)
+  schema: securityAlertSchema
 };
 module.exports.ALERT_TYPES = ALERT_TYPES;
 module.exports.ALERT_SEVERITIES = ALERT_SEVERITIES;

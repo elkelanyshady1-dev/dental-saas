@@ -31,87 +31,92 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const exchangeRateSchema = new mongoose.Schema(
-    {
-        // ── Currency Pair ──────────────────────────────────────────────────────
-        fromCurrency: {
-            type: String,
-            required: true,
-            uppercase: true,
-            trim: true,
-            validate: {
-                validator: (v) => /^[A-Z]{3}$/.test(v),
-                message: "fromCurrency must be a valid 3-letter ISO 4217 code"
-            }
-        },
-        toCurrency: {
-            type: String,
-            required: true,
-            uppercase: true,
-            trim: true,
-            validate: {
-                validator: (v) => /^[A-Z]{3}$/.test(v),
-                message: "toCurrency must be a valid 3-letter ISO 4217 code"
-            }
-        },
-
-        // ── Rate ──────────────────────────────────────────────────────────────
-        // e.g. 1 EGP = 0.032 USD → { fromCurrency: "EGP", toCurrency: "USD", rate: 0.032 }
-        rate: {
-            type: Number,
-            required: true,
-            min: [0.000001, "Exchange rate must be positive"]
-        },
-
-        // ── Validity ──────────────────────────────────────────────────────────
-        // The date this rate was effective from. Used for historical locking.
-        effectiveDate: {
-            type: Date,
-            required: true
-        },
-
-        // Source: "auto" = inserted by fxSync.job.js, "manual" = admin override
-        source: {
-            type: String,
-            enum: ["auto", "manual"],
-            default: "auto"
-        },
-
-        // isOverride: true for manual entries — takes priority over auto rates
-        // in fxResolver.service.js resolution logic
-        isOverride: {
-            type: Boolean,
-            default: false
-        },
-
-        // Who created this rate (PlatformUser._id or "system" for auto)
-        createdBy: {
-            type: String,
-            default: "system"
-        }
-    },
-    {
-        timestamps: { createdAt: true, updatedAt: false }, // Immutable — append-only
-        collection: "exchangerates"
+const exchangeRateSchema = new mongoose.Schema({
+  // ── Currency Pair ──────────────────────────────────────────────────────
+  fromCurrency: {
+    type: String,
+    required: true,
+    uppercase: true,
+    trim: true,
+    validate: {
+      validator: v => /^[A-Z]{3}$/.test(v),
+      message: "fromCurrency must be a valid 3-letter ISO 4217 code"
     }
-);
+  },
+  toCurrency: {
+    type: String,
+    required: true,
+    uppercase: true,
+    trim: true,
+    validate: {
+      validator: v => /^[A-Z]{3}$/.test(v),
+      message: "toCurrency must be a valid 3-letter ISO 4217 code"
+    }
+  },
+  // ── Rate ──────────────────────────────────────────────────────────────
+  // e.g. 1 EGP = 0.032 USD → { fromCurrency: "EGP", toCurrency: "USD", rate: 0.032 }
+  rate: {
+    type: Number,
+    required: true,
+    min: [0.000001, "Exchange rate must be positive"]
+  },
+  // ── Validity ──────────────────────────────────────────────────────────
+  // The date this rate was effective from. Used for historical locking.
+  effectiveDate: {
+    type: Date,
+    required: true
+  },
+  // Source: "auto" = inserted by fxSync.job.js, "manual" = admin override
+  source: {
+    type: String,
+    enum: ["auto", "manual"],
+    default: "auto"
+  },
+  // isOverride: true for manual entries — takes priority over auto rates
+  // in fxResolver.service.js resolution logic
+  isOverride: {
+    type: Boolean,
+    default: false
+  },
+  // Who created this rate (PlatformUser._id or "system" for auto)
+  createdBy: {
+    type: String,
+    default: "system"
+  }
+}, {
+  timestamps: {
+    createdAt: true,
+    updatedAt: false
+  },
+  // Immutable — append-only
+  collection: "exchangerates"
+});
 
 // ─── Indexes ───────────────────────────────────────────────────────────────────
 // Primary resolution: most recent rate for a pair (scans by date desc)
-exchangeRateSchema.index({ fromCurrency: 1, toCurrency: 1, effectiveDate: -1 });
+exchangeRateSchema.index({
+  fromCurrency: 1,
+  toCurrency: 1,
+  effectiveDate: -1
+});
 // Override-priority filter: manual-first queries add { isOverride: true } to filter
-exchangeRateSchema.index({ fromCurrency: 1, toCurrency: 1, isOverride: 1, effectiveDate: -1 });
+exchangeRateSchema.index({
+  fromCurrency: 1,
+  toCurrency: 1,
+  isOverride: 1,
+  effectiveDate: -1
+});
 // Uniqueness: one auto rate AND one manual rate per pair per date (isOverride distinguishes them)
-exchangeRateSchema.index(
-    { fromCurrency: 1, toCurrency: 1, effectiveDate: 1, isOverride: 1 },
-    { unique: true }
-);
-
+exchangeRateSchema.index({
+  fromCurrency: 1,
+  toCurrency: 1,
+  effectiveDate: 1,
+  isOverride: 1
+}, {
+  unique: true
+});
 const modelName = "ExchangeRate";
-
 module.exports = {
-    modelName,
-    schema: exchangeRateSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, exchangeRateSchema),
+  modelName,
+  schema: exchangeRateSchema
 };

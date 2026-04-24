@@ -18,28 +18,27 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
-const CaseSequenceSchema = new mongoose.Schema(
-  {
-    caseId: {
-      type:     mongoose.Schema.Types.ObjectId,
-      required: true,
-    },
-    currentSequence: {
-      type:    Number,
-      default: 0,
-    },
+const CaseSequenceSchema = new mongoose.Schema({
+  caseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
   },
-  { timestamps: true }
-);
+  currentSequence: {
+    type: Number,
+    default: 0
+  }
+}, {
+  timestamps: true
+});
 
 // Uniqueness enforced at the compound level — one counter per org+case
-CaseSequenceSchema.index({ caseId: 1 }, { unique: true });
-
+CaseSequenceSchema.index({
+  caseId: 1
+}, {
+  unique: true
+});
 const modelName = "CaseSequence";
-
 module.exports = {
   modelName,
-  schema: CaseSequenceSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, CaseSequenceSchema),
+  schema: CaseSequenceSchema
 };

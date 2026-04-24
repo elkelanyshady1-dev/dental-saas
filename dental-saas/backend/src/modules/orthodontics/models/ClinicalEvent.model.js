@@ -14,122 +14,82 @@
 "use strict";
 
 const mongoose = require("mongoose");
-
 const ClinicalEventSchema = new mongoose.Schema({
   // organizationId removed (Step 5c of 3-Layer refactor):
   // per-org DB IS the tenant boundary — the field was redundant.
   caseId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true,
+    index: true
   },
-
   // ── Phase 2: Visit linkage — REQUIRED for all new events ──────────────
   // Every clinical mutation MUST belong to an active visit session.
   // Events created outside a visit session are REJECTED.
   visitId: {
-    type:     mongoose.Schema.Types.ObjectId,
-    ref:      "VisitRecord",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "VisitRecord",
     required: true,
-    index:    true,
+    index: true
   },
-
   // ── Phase 6: Doctor identity ─────────────────────────────────────────────
   // The userId who triggered this event (from req.context.userId at write time).
   // Required as of Phase 6 to satisfy full audit contract.
   doctorId: {
-    type:     mongoose.Schema.Types.ObjectId,
-    ref:      "User",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
-    index:    true,
+    index: true
   },
-
   type: {
     type: String,
     enum: [
-      // ── Bonding Events ─────────────────────────────────────────────────
-      "BONDING_APPLIED",
-      "BONDING_REMOVED",
-      "BRACKET_REPOSITIONED",
-      "BONDING_REBONDED",
-
-      // ── TAD Events ─────────────────────────────────────────────────────
-      "TAD_INSERTED",
-      "TAD_FAILED",
-      "TAD_REMOVED",
-      "TAD_REINSERTED",
-      "TAD_MARKED_FOR_REMOVAL",
-
-      // ── Sequence Events ────────────────────────────────────────────────
-      "SEQUENCE_STEP_COMPLETED",
-      "SEQUENCE_PLAN_CREATED",
-      "SEQUENCE_PLAN_UPDATED",
-
-      // ── Phase 2: Granular Per-Tooth Events ────────────────────────────
-      // These drive applyEvent() in the replay engine for tooth-level mutations.
-      "SET_TOOTH_STATUS",
-      "SET_TOOTH_BONDING",
-      "SET_TOOTH_DIAGNOSIS",
-      "SET_TOOTH_ALIGNMENT",
-      "SET_TOOTH_CONDITION",
-      "TOGGLE_TOOTH_ALERT",
-      "CLEAR_TOOTH",
-
-      // ── Phase 3: Appliance Events ──────────────────────────────────────
-      "ARCHWIRE_PLACED",
-      "ARCHWIRE_REMOVED",
-      "ELASTIC_APPLIED",
-      "ELASTIC_REMOVED",
-      "POWERCHAIN_APPLIED",
-      "POWERCHAIN_REMOVED",
-      "ACCESSORY_ADDED",
-      "ACCESSORY_REMOVED",
-      "LIGATURE_ADDED",
-      "LIGATURE_REMOVED",
-      "IPR_ADDED",
-      "IPR_REMOVED",
-      "SPACE_MARKER_ADDED",
-      "SPACE_MARKER_REMOVED",
-
-      // ── Legacy (read-only in replay — no chart mutation) ───────────────
-      "WIRE_PLACED",
-      "ELASTICS_APPLIED",
-      "EXTRACTION_DONE",
-      "NOTE_ADDED",
-    ],
-    required: true,
+    // ── Bonding Events ─────────────────────────────────────────────────
+    "BONDING_APPLIED", "BONDING_REMOVED", "BRACKET_REPOSITIONED", "BONDING_REBONDED",
+    // ── TAD Events ─────────────────────────────────────────────────────
+    "TAD_INSERTED", "TAD_FAILED", "TAD_REMOVED", "TAD_REINSERTED", "TAD_MARKED_FOR_REMOVAL",
+    // ── Sequence Events ────────────────────────────────────────────────
+    "SEQUENCE_STEP_COMPLETED", "SEQUENCE_PLAN_CREATED", "SEQUENCE_PLAN_UPDATED",
+    // ── Phase 2: Granular Per-Tooth Events ────────────────────────────
+    // These drive applyEvent() in the replay engine for tooth-level mutations.
+    "SET_TOOTH_STATUS", "SET_TOOTH_BONDING", "SET_TOOTH_DIAGNOSIS", "SET_TOOTH_ALIGNMENT", "SET_TOOTH_CONDITION", "TOGGLE_TOOTH_ALERT", "CLEAR_TOOTH",
+    // ── Phase 3: Appliance Events ──────────────────────────────────────
+    "ARCHWIRE_PLACED", "ARCHWIRE_REMOVED", "ELASTIC_APPLIED", "ELASTIC_REMOVED", "POWERCHAIN_APPLIED", "POWERCHAIN_REMOVED", "ACCESSORY_ADDED", "ACCESSORY_REMOVED", "LIGATURE_ADDED", "LIGATURE_REMOVED", "IPR_ADDED", "IPR_REMOVED", "SPACE_MARKER_ADDED", "SPACE_MARKER_REMOVED",
+    // ── Legacy (read-only in replay — no chart mutation) ───────────────
+    "WIRE_PLACED", "ELASTICS_APPLIED", "EXTRACTION_DONE", "NOTE_ADDED"],
+    required: true
   },
-
   severity: {
     type: String,
     enum: ["info", "warning", "critical"],
-    default: "info",
+    default: "info"
   },
-
   payload: {
     type: mongoose.Schema.Types.Mixed,
-    required: true,
+    required: true
   },
-
   metadata: {
-    toothId: { type: Number, default: null },
-    relatedEntityId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    toothId: {
+      type: Number,
+      default: null
+    },
+    relatedEntityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null
+    },
     relatedEntityType: {
       type: String,
       enum: ["Bonding", "Tad", "SequencePlan", "WorkflowSnapshot", "ClinicalAction", null],
-      default: null,
-    },
+      default: null
+    }
   },
-
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    required: true
   },
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
-
   // ── Phase 5.1 Hardening Fields ───────────────────────────────────────────────
 
   /**
@@ -138,11 +98,10 @@ const ClinicalEventSchema = new mongoose.Schema({
    * Current version: 1 (base granular events, Phase 2–5).
    */
   version: {
-    type:     Number,
+    type: Number,
     required: true,
-    default:  1,
+    default: 1
   },
-
   /**
    * eventId — globally unique UUID for idempotency.
    * Generated at creation time via crypto.randomUUID().
@@ -150,12 +109,11 @@ const ClinicalEventSchema = new mongoose.Schema({
    * Unique index prevents duplicate writes at DB level.
    */
   eventId: {
-    type:     String,
+    type: String,
     required: true,
-    unique:   true,
-    index:    true,
+    unique: true,
+    index: true
   },
-
   /**
    * sequence — monotonically increasing per-case counter.
    * Provides deterministic event ordering independent of createdAt clock skew.
@@ -167,30 +125,53 @@ const ClinicalEventSchema = new mongoose.Schema({
    * Pre-Phase 5.1 events (sequence: null) sort before all sequenced events in ASC order.
    */
   sequence: {
-    type:     Number,
-    default:  null,    // null for pre-Phase 5.1 events (sort first in ASC)
-    index:    true,
-  },
+    type: Number,
+    default: null,
+    // null for pre-Phase 5.1 events (sort first in ASC)
+    index: true
+  }
 });
 
 // Indexes simplified (Step 5c): organizationId prefix dropped now that
 // per-org DB isolation makes it redundant.
-ClinicalEventSchema.index({ caseId: 1, createdAt: -1 });
+ClinicalEventSchema.index({
+  caseId: 1,
+  createdAt: -1
+});
 // ASC createdAt index retained for: timeline queries, snapshot scoping, time-travel filters
-ClinicalEventSchema.index({ caseId: 1, createdAt:  1 }, { name: 'replay_asc' });
+ClinicalEventSchema.index({
+  caseId: 1,
+  createdAt: 1
+}, {
+  name: 'replay_asc'
+});
 // Phase 5.2: sequence-only index — sole authoritative replay sort (no createdAt tie-break needed)
-ClinicalEventSchema.index({ caseId: 1, sequence:   1 }, { name: 'replay_sequence' });
-ClinicalEventSchema.index({ caseId: 1, type: 1 });
-ClinicalEventSchema.index({ snapshotId: 1 });
+ClinicalEventSchema.index({
+  caseId: 1,
+  sequence: 1
+}, {
+  name: 'replay_sequence'
+});
+ClinicalEventSchema.index({
+  caseId: 1,
+  type: 1
+});
+ClinicalEventSchema.index({
+  snapshotId: 1
+});
 // Phase 2: per-visit event queries
-ClinicalEventSchema.index({ visitId: 1, createdAt: -1 });
-ClinicalEventSchema.index({ severity: 1, createdAt: -1 });
+ClinicalEventSchema.index({
+  visitId: 1,
+  createdAt: -1
+});
+ClinicalEventSchema.index({
+  severity: 1,
+  createdAt: -1
+});
 // eventId uniqueness is enforced by the field-level `unique: true` above
 
 const modelName = "ClinicalEvent";
-
 module.exports = {
   modelName,
-  schema: ClinicalEventSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, ClinicalEventSchema),
+  schema: ClinicalEventSchema
 };

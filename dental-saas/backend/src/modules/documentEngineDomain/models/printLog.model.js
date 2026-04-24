@@ -51,6 +51,5 @@ printLogSchema.index({});
 const modelName = "PrintLog";
 module.exports = {
   modelName,
-  schema: printLogSchema,
-  default: mongoose.models[modelName] || mongoose.model(modelName, printLogSchema)
+  schema: printLogSchema
 };
