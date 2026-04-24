@@ -1,31 +1,38 @@
 const mongoose = require("mongoose");
-
 const analyticsTabSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    widgets: [{ type: String }] // IDs from AnalyticsWidgetRegistry
-}, { _id: false });
-
+  name: {
+    type: String,
+    required: true
+  },
+  widgets: [{
+    type: String
+  }] // IDs from AnalyticsWidgetRegistry
+}, {
+  _id: false
+});
 const analyticsLayoutSchema = new mongoose.Schema({
-    // Per-org DB: kept for reference but NOT required.
-    organizationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Organization",
-    },
-    role: {
-        type: String,
-        required: true
-    },
-    tabs: [analyticsTabSchema],
-    isDefault: { type: Boolean, default: false }
-}, { timestamps: true });
+  role: {
+    type: String,
+    required: true
+  },
+  tabs: [analyticsTabSchema],
+  isDefault: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  timestamps: true
+});
 
 // Per-org DB: unique per role per database
-analyticsLayoutSchema.index({ role: 1 }, { unique: true });
-
+analyticsLayoutSchema.index({
+  role: 1
+}, {
+  unique: true
+});
 const modelName = "AnalyticsLayout";
-
 module.exports = {
-    modelName,
-    schema: analyticsTabSchema,
-    default: mongoose.models[modelName] || mongoose.model(modelName, analyticsTabSchema),
+  modelName,
+  schema: analyticsTabSchema,
+  default: mongoose.models[modelName] || mongoose.model(modelName, analyticsTabSchema)
 };

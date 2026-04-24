@@ -22,18 +22,14 @@ const dbManager = require("../../../core/db/dbManager");
  * Returns a plain object to prevent model leakage.
  */
 async function getUsageForCycle(organizationId, startDate) {
-    const conn = await dbManager.getConnection(organizationId);
-    const CommunicationUsage = getModel(conn, CommunicationUsageDef);
-
-    const usage = await CommunicationUsage.findOne({
-        organizationId,
-        billingCycleStart: startDate
-    });
-
-    if (!usage) return null;
-    return usage.toObject();
+  const conn = await dbManager.getConnection(organizationId);
+  const CommunicationUsage = getModel(conn, CommunicationUsageDef);
+  const usage = await CommunicationUsage.findOne({
+    billingCycleStart: startDate
+  });
+  if (!usage) return null;
+  return usage.toObject();
 }
-
 module.exports = {
-    getUsageForCycle
+  getUsageForCycle
 };

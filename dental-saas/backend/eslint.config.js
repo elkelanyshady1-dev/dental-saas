@@ -215,38 +215,74 @@ module.exports = [
     },
   },
 
-  // ── 3-Layer DB Architecture Guards (WARN — Step 5a rollout) ─────────────
-  // New violations are flagged as warnings while the ~179 existing call sites
-  // are migrated. Flipped to "error" at the end of Step 5 once the sweep
-  // is complete. The rules catch fresh drift even while legacy code is still
-  // being cleaned up.
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 3-Layer DB Architecture — STRICT enforcement (Step 5e-A)
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // ERROR-level guards on runtime application code. Exemptions below (ops
+  // scripts, migrations, tests, `*.model.js` legacy-compat exports) are
+  // temporary — Step 5b / 5e-B will migrate those call sites and then
+  // the exemptions lift.
+  //
+  // Rule 1: mongoose.model(X, schema) is banned
+  //   → use getModel(connection, def) / getPlatformModel(def) / getSharedModel(def)
+  //
+  // Rule 2: organizationId as a schema field in tenant-plane models is banned
+  //   → per-org DB IS the tenant boundary; the field is redundant/leaky
+  //
+  // Rule 3: import { mongoose } in services/controllers is banned
+  //   → runtime code must go through the connection resolver, not the global
+  //     mongoose namespace
+
+  // ── Rule 1: mongoose.model() — banned in runtime code ──────────────────
   {
     files: ["src/**/*.js"],
     ignores: [
-      // getModel.js legitimately calls `connection.model(...)` — not mongoose.model
-      // (the rule below only flags `mongoose.model(...)`, so getModel is safe).
-      // Listed here as a reviewable anchor, not because it triggers.
+      // Connection factories legitimately bind schemas to connections.
       "src/core/db/getModel.js",
+      "src/core/db/platformConnection.js",
+      "src/core/db/sharedConnection.js",
+      "src/core/db/clusterConnections.js",
+      // EXEMPT (Step 5e-A temporary): files that still use the legacy
+      // `mongoose.models[X] || mongoose.model(X, schema)` fallback
+      // for backward-compat with callers that do `require(...).default`.
+      // Step 5b migrates these to pure `{ modelName, schema }` exports.
+      // Exemptions lift in Phase 5e-B after that migration.
+      "src/**/*.model.js",        // singular
+      "src/**/*.models.js",       // plural variants (e.g., ortho.models.js)
+      "src/**/models/**/*.js",
+      "src/**/*.dlq.js",          // DLQ files follow the same pattern
+      "src/**/*.projection.js",   // projection files often declare their read model globally
+      // Specific infra utilities that manage shared-singleton models.
+      "src/utils/DistributedLock.js",
+      "src/modules/billingDomain/integrity/driftAlert.service.js",
+      // Ops scripts / migrations / tests self-manage their own mongoose connection.
+      "src/**/scripts/**",
+      "src/**/migrations/**",
+      "src/**/__tests__/**",
+      "src/**/tests/**",
+      // seedModuleFeatures is a CLI seed; manages its own connection lifecycle.
+      "src/orgRuntime/seedModuleFeatures.js",
     ],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector:
             "CallExpression[callee.object.name='mongoose'][callee.property.name='model']",
           message:
             "[3-Layer DB] mongoose.model(...) compiles on the global root connection and breaks per-org isolation. " +
-            "Export { modelName, schema } and compile via getModel(req.dbConnection, Def) / getPlatformModel(Def) / getSharedModel(Def) instead. " +
+            "Use getModel(connection, def) / getPlatformModel(def) / getSharedModel(def) instead. " +
             "See CLAUDE.md §2.1 and DB_3_LAYER_ARCHITECTURE_PLAN.md.",
         },
       ],
     },
   },
 
-  // ── organizationId-in-tenant-schema guard (WARN) ────────────────────────
-  // Tenant DB is per-org — organizationId on a tenant document is a redundant
-  // filter at best and a cross-tenant leak vector at worst. Applied narrowly
-  // to model files under the two tenant-plane folders.
+  // ── Rule 2: organizationId in tenant schemas — banned ─────────────────
+  // Applies narrowly to model files under the two tenant-plane folders.
+  // Platform + shared-infra models may still reference organizationId as a
+  // legitimate cross-org ref (they're not covered by this rule).
   {
     files: [
       "src/modules/**/models/**/*.js",
@@ -256,15 +292,34 @@ module.exports = [
     ],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector:
             "Property[key.name='organizationId'][value.type='ObjectExpression']",
           message:
             "[3-Layer DB] organizationId must not appear in tenant schemas — each org has its own DB, so the field is redundant. " +
-            "Phase 4 of the refactor will remove existing occurrences after a per-file keep/remove approval pass.",
+            "Step 5c removed all pre-existing occurrences; this rule blocks regressions.",
         },
       ],
     },
   },
+
+  // ── Rule 3: mongoose import in runtime code — banned ───────────────────
+  // The global mongoose namespace has no stable singleton now that
+  // mongoose.connect() is gone. Code that needs mongoose types
+  // (ObjectId, Schema.Types, isValidObjectId, etc.) should import
+  // surgically — those APIs are still fine.
+  //
+  // For Step 5e-A we DON'T ban the import itself (that would flood every
+  // file that uses mongoose.Types). Instead the rule lives informationally
+  // in CLAUDE.md §2.1; Step 5e-B can tighten this once patterns stabilize.
+  // (Intentionally empty rule block; reserved for Phase 5e-B.)
+
+  // NOTE: No blanket `no-restricted-syntax: off` for legacy paths.
+  //
+  // The Rule 1 config already `ignores:` the legacy set, so mongoose.model()
+  // violations in those files don't fire. Rule 2 (organizationId in tenant
+  // schemas) intentionally targets model files and does NOT exempt them —
+  // regressions on that rule must surface even when they land inside a
+  // file that's otherwise exempt from Rule 1.
 ];

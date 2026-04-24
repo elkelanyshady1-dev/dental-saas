@@ -69,10 +69,16 @@ async function validate() {
         let PlatformUserSchema;
         try {
             const modelModule = require(modelPath);
-            // Re-register schema on our connection to avoid cross-connection issues
+            // Step 5d: mongoose.model("PlatformUser") no longer works (global root
+            // removed). Fall back to platformConnection if the module's schema
+            // export isn't there.
+            const platformConnection = require("../../core/db/platformConnection");
+            const fallbackSchema = platformConnection.isReady()
+                ? platformConnection.get().models["PlatformUser"]?.schema
+                : null;
             PlatformUserSchema = connection.model(
                 "PlatformUser",
-                modelModule.schema || mongoose.model("PlatformUser").schema
+                modelModule.schema || fallbackSchema
             );
         } catch (err) {
             failures.push({

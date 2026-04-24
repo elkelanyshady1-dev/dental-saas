@@ -407,12 +407,9 @@ function _resolvePlatformUser(req) {
         // Preferred: dedicated shared User model
         return require("@shared/models/User");
     } catch (e1) {
-        try {
-            const mongoose = require("mongoose");
-            return mongoose.model("User");
-        } catch (e2) {
-            return null;
-        }
+        // Step 5d: `mongoose.model("User")` no longer works (global root
+        // removed). Return null — callers handle the missing-model case.
+        return null;
     }
 }
 
