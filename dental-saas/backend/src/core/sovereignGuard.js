@@ -106,16 +106,22 @@ function enforceGlobalPrecedence(app) {
   }
 
   // 5. Verify Audit Chain Schema Support (v3.1)
+  // Read schema straight from the def — setImmediate() fires before
+  // platformConnection.init() resolves, so a full model bind would throw.
+  // Schema introspection doesn't need a bound model anyway.
   const AuditLogDef = require("../shared/models/AuditLog");
-  const AuditLog = getPlatformModel(AuditLogDef);
-  const auditFields = Object.keys(AuditLog.schema.paths);
+  const auditSchema = AuditLogDef.schema || AuditLogDef.__def?.schema;
+  if (!auditSchema) {
+    throw new Error("Sovereign Guard Violation: AuditLog def missing schema — cannot verify audit chain support.");
+  }
+  const auditFields = Object.keys(auditSchema.paths);
   if (!auditFields.includes("currentHash") || !auditFields.includes("previousHash")) {
     throw new Error("Sovereign Guard Violation: AuditLog schema missing cryptographic hash fields.");
   }
   if (!auditFields.includes("branchId")) {
     throw new Error("Sovereign Guard Violation: AuditLog schema missing mandatory branchId field (v4.1).");
   }
-  const branchIdOptions = AuditLog.schema.paths.branchId.options;
+  const branchIdOptions = auditSchema.paths.branchId.options;
   if (!branchIdOptions.required) {
     throw new Error("Sovereign Guard Violation: AuditLog branchId must be required.");
   }
