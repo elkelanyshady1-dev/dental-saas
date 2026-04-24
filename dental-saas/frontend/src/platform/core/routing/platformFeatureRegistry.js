@@ -17,7 +17,8 @@ import {
     BarChart3,
     Inbox,
     Zap,
-    Layers
+    Layers,
+    ArrowRightLeft
 } from 'lucide-react';
 
 // Lazy Loaded Components
@@ -51,6 +52,8 @@ const PlatformRequestsPage = lazy(() => import('../../pages/PlatformRequestsPage
 const CommunicationCenterPage = lazy(() => import('../../communication/CommunicationCenterPage'));
 // Phase 12.1 — Feature Registry
 const FeatureRegistryPage = lazy(() => import('../../modules/featureRegistry/pages/FeatureRegistryPage'));
+// Phase 8 — Org Cluster Migration
+const MigrationDashboardPage = lazy(() => import('../../modules/migration/MigrationDashboardPage'));
 
 // Placeholder for unimplemented features
 const ComingSoon = lazy(() => import('../components/ComingSoon'));
@@ -241,6 +244,18 @@ export const PLATFORM_FEATURES = [
         breadcrumb: 'Communication Center',
         component: CommunicationCenterPage,
         icon: Zap,
+        showInSidebar: true,
+        section: 'Infrastructure'
+    },
+    // Phase 8 — Org Cluster Migration
+    {
+        key: 'MIGRATION',
+        label: 'Org Migration',
+        path: 'migration',
+        capability: 'MANAGE_ORGANIZATIONS',
+        breadcrumb: 'Org Cluster Migration',
+        component: MigrationDashboardPage,
+        icon: ArrowRightLeft,
         showInSidebar: true,
         section: 'Infrastructure'
     },

@@ -23,6 +23,7 @@ const auditRoutes = require("./audit.routes");         // v21.0 — Audit Trail 
 const communicationRoutes = require("./communication.routes"); // v3.1 — Communication Center
 const monitoringRoutes = require("./monitoring.routes");    // v4.0 — Monitoring Dashboard
 const featureRegistryRoutes = require("../../platform/domain/routes/featureRegistry.routes"); // Phase 12.1 — Feature Registry
+const migrationRoutes = require("./migration.routes");      // Phase 8 — Org Cluster Migration
 
 // Mount all sub-routers (no prefix — paths are absolute within /api/platform)
 router.use(authRoutes);
@@ -38,6 +39,7 @@ router.use(auditRoutes);              // v21.0 — Audit Trail Explorer
 router.use("/communication", communicationRoutes); // v3.1 — Communication Center
 router.use("/monitoring", monitoringRoutes);    // v4.0 — Monitoring Dashboard
 router.use(featureRegistryRoutes);    // Phase 12.1 — Feature Registry Admin
+router.use("/migration", migrationRoutes);   // Phase 8 — Org Cluster Migration Admin
 
 // ─── Enterprise chain verification ───────────────────────────────────────────
 const { isEnterprise } = require("../../config/platformMode");
