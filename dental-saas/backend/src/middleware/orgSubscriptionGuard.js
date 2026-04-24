@@ -25,11 +25,17 @@
 
 "use strict";
 
-const Organization = require("@shared/models/Organization").default;
-const OrgContract = require("@billing/models/OrgContract.model").default;
-const PlanVersion = require("@billing/models/PlanVersion.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
+const OrgContractDef = require("@billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
+const PlanVersionDef = require("@billing/models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
 const logger = require("@utils/logger");
-const { resolveOrganizationEntitlements } = require("@billing/services/entitlementResolver.service");
+const {
+  resolveOrganizationEntitlements
+} = require("@billing/services/entitlementResolver.service");
 
 // Grace window: if subscription expired within this window, allow degraded access
 const DEFAULT_GRACE_PERIOD_DAYS = 7;
@@ -49,65 +55,105 @@ const DEFAULT_GRACE_PERIOD_DAYS = 7;
  * @returns {{ state: string, reason: string, graceUntil: Date|null }}
  */
 function classifySubscriptionState(org, contract) {
-    const now = new Date();
-    const sub = org.subscription || {};
+  const now = new Date();
+  const sub = org.subscription || {};
 
-    // ── 1. Active contract path ────────────────────────────────────────────────
-    if (contract && contract.contractStatus === "active") {
-        // Check if the contract's billing period has passed
-        if (contract.effectiveTo && now > new Date(contract.effectiveTo)) {
-            // Contract expired — check grace period
-            const graceDays = contract.gracePeriodDays ?? DEFAULT_GRACE_PERIOD_DAYS;
-            const graceUntil = new Date(contract.effectiveTo);
-            graceUntil.setDate(graceUntil.getDate() + graceDays);
+  // ── 1. Active contract path ────────────────────────────────────────────────
+  if (contract && contract.contractStatus === "active") {
+    // Check if the contract's billing period has passed
+    if (contract.effectiveTo && now > new Date(contract.effectiveTo)) {
+      // Contract expired — check grace period
+      const graceDays = contract.gracePeriodDays ?? DEFAULT_GRACE_PERIOD_DAYS;
+      const graceUntil = new Date(contract.effectiveTo);
+      graceUntil.setDate(graceUntil.getDate() + graceDays);
+      if (now <= graceUntil) {
+        return {
+          state: "grace",
+          reason: "contract_expired_in_grace",
+          graceUntil
+        };
+      }
+      return {
+        state: "expired",
+        reason: "contract_expired",
+        graceUntil: null
+      };
+    }
+    return {
+      state: "active",
+      reason: "active_contract",
+      graceUntil: null
+    };
+  }
 
-            if (now <= graceUntil) {
-                return { state: "grace", reason: "contract_expired_in_grace", graceUntil };
-            }
-            return { state: "expired", reason: "contract_expired", graceUntil: null };
-        }
-        return { state: "active", reason: "active_contract", graceUntil: null };
+  // ── 2. Trial — prefer new trialEndDate field, fallback to legacy ───────────
+  const trialEnd = org.trialEndDate || sub.trialEndsAt;
+  if (sub.status === "trial" && trialEnd && now <= new Date(trialEnd)) {
+    return {
+      state: "trial",
+      reason: "in_trial",
+      graceUntil: null
+    };
+  }
+
+  // ── 3. Trial ended but grace ───────────────────────────────────────────────
+  if (sub.status === "trial" && trialEnd && now > new Date(trialEnd)) {
+    const graceDays = sub.gracePeriodDays ?? DEFAULT_GRACE_PERIOD_DAYS;
+    const graceUntil = new Date(trialEnd);
+    graceUntil.setDate(graceUntil.getDate() + graceDays);
+    if (now <= graceUntil) {
+      return {
+        state: "grace",
+        reason: "trial_expired_in_grace",
+        graceUntil
+      };
+    }
+    return {
+      state: "expired",
+      reason: "trial_expired",
+      graceUntil: null
+    };
+  }
+
+  // ── 4. Legacy active subscription (no contract yet) ────────────────────────
+  if (sub.status === "active") {
+    const periodEnd = sub.currentPeriodEnd;
+    if (!periodEnd || now <= new Date(periodEnd)) {
+      return {
+        state: "active",
+        reason: "legacy_active",
+        graceUntil: null
+      };
     }
 
-    // ── 2. Trial — prefer new trialEndDate field, fallback to legacy ───────────
-    const trialEnd = org.trialEndDate || sub.trialEndsAt;
-    if (sub.status === "trial" && trialEnd && now <= new Date(trialEnd)) {
-        return { state: "trial", reason: "in_trial", graceUntil: null };
+    // Grace via legacy gracePeriodEnd
+    if (sub.gracePeriodEnd && now <= new Date(sub.gracePeriodEnd)) {
+      return {
+        state: "grace",
+        reason: "legacy_grace",
+        graceUntil: new Date(sub.gracePeriodEnd)
+      };
     }
+    return {
+      state: "expired",
+      reason: "period_ended",
+      graceUntil: null
+    };
+  }
 
-    // ── 3. Trial ended but grace ───────────────────────────────────────────────
-    if (sub.status === "trial" && trialEnd && now > new Date(trialEnd)) {
-        const graceDays = sub.gracePeriodDays ?? DEFAULT_GRACE_PERIOD_DAYS;
-        const graceUntil = new Date(trialEnd);
-        graceUntil.setDate(graceUntil.getDate() + graceDays);
-
-        if (now <= graceUntil) {
-            return { state: "grace", reason: "trial_expired_in_grace", graceUntil };
-        }
-        return { state: "expired", reason: "trial_expired", graceUntil: null };
-    }
-
-    // ── 4. Legacy active subscription (no contract yet) ────────────────────────
-    if (sub.status === "active") {
-        const periodEnd = sub.currentPeriodEnd;
-        if (!periodEnd || now <= new Date(periodEnd)) {
-            return { state: "active", reason: "legacy_active", graceUntil: null };
-        }
-
-        // Grace via legacy gracePeriodEnd
-        if (sub.gracePeriodEnd && now <= new Date(sub.gracePeriodEnd)) {
-            return { state: "grace", reason: "legacy_grace", graceUntil: new Date(sub.gracePeriodEnd) };
-        }
-
-        return { state: "expired", reason: "period_ended", graceUntil: null };
-    }
-
-    // ── 5. Explicit suspended / canceled / expired ─────────────────────────────
-    if (["suspended", "canceled", "expired", "past_due"].includes(sub.status)) {
-        return { state: "expired", reason: sub.status, graceUntil: null };
-    }
-
-    return { state: "unknown", reason: "undetermined", graceUntil: null };
+  // ── 5. Explicit suspended / canceled / expired ─────────────────────────────
+  if (["suspended", "canceled", "expired", "past_due"].includes(sub.status)) {
+    return {
+      state: "expired",
+      reason: sub.status,
+      graceUntil: null
+    };
+  }
+  return {
+    state: "unknown",
+    reason: "undetermined",
+    graceUntil: null
+  };
 }
 
 /**
@@ -123,99 +169,103 @@ function classifySubscriptionState(org, contract) {
  * Blocks: expired, unknown → 402
  */
 async function orgSubscriptionGuard(req, res, next) {
-    try {
-        // Phase 8: req.organization is deprecated. Load org directly from DB.
-        const orgId = req.context?.organizationId || req.user?.organizationId;
-        if (!orgId) {
-            return res.status(401).json({
-                success: false,
-                error: "Organization context missing"
-            });
-        }
-
-        const org = await Organization.findById(orgId).lean();
-        if (!org) {
-            return res.status(404).json({ success: false, error: "Organization not found" });
-        }
-
-        // Load active OrgContract (null if no contract yet — legacy orgs)
-        let activeContract = null;
-        if (org.currentContractId) {
-            activeContract = await OrgContract.findOne({
-                _id: org.currentContractId,
-                organizationId: org._id,
-                contractStatus: "active"
-            }).lean();
-        }
-
-        const { state, reason, graceUntil } = classifySubscriptionState(org, activeContract);
-
-        req.subscriptionState = state;
-        req.activeContract = activeContract;
-
-        if (state === "active" || state === "trial") {
-            // ── Sprint 2: Resolve merged entitlements (plan defaults + org overrides) ──
-            // Load the PlanVersion for the active contract so the resolver has
-            // the baseline module/limit values to merge against.
-            try {
-                let planVersion = null;
-                if (activeContract?.planVersionId) {
-                    planVersion = await PlanVersion.findById(activeContract.planVersionId).lean();
-                }
-
-                // PHASE 9 — ACCESS-002 fix: Fallback for trial users without a contract.
-                // Trial orgs created before contract-first provisioning (Phase 6) have
-                // no activeContract. Load the trial-tier PlanVersion directly so
-                // req.planCapabilities is defined for feature gating.
-                if (!planVersion && state === "trial") {
-                    planVersion = await PlanVersion.findOne({
-                        templateCode: "trial-tier",
-                        status: "active"
-                    }).lean();
-                }
-
-                if (planVersion) {
-                    req.planCapabilities = await resolveOrganizationEntitlements(org._id, planVersion);
-                }
-            } catch (entitlementErr) {
-                // Never block access on entitlement resolution failure
-                logger.warn(
-                    { err: entitlementErr, orgId: org._id },
-                    "[orgSubscriptionGuard] Entitlement resolution failed — planCapabilities not set"
-                );
-            }
-            return next();
-        }
-
-        if (state === "grace") {
-            // Log warning — grace-period requests are degraded
-            logger.warn(
-                { orgId: org._id, reason, graceUntil },
-                "[orgSubscriptionGuard] Access in grace period"
-            );
-            req.inGracePeriod = true;
-            req.graceUntil = graceUntil;
-            return next();
-        }
-
-        // state === "expired" | "unknown"
-        logger.info(
-            { orgId: org._id, reason, state },
-            "[orgSubscriptionGuard] Access denied — subscription not active"
-        );
-
-        return res.status(402).json({
-            success: false,
-            error: "Subscription required",
-            reason,
-            ...(graceUntil ? { graceUntil } : {})
-        });
-
-    } catch (err) {
-        logger.error({ err }, "[orgSubscriptionGuard] Unexpected error");
-        return next(err);
+  try {
+    // Phase 8: req.organization is deprecated. Load org directly from DB.
+    const orgId = req.context?.organizationId || req.user?.organizationId;
+    if (!orgId) {
+      return res.status(401).json({
+        success: false,
+        error: "Organization context missing"
+      });
     }
-}
+    const org = await Organization.findById(orgId).lean();
+    if (!org) {
+      return res.status(404).json({
+        success: false,
+        error: "Organization not found"
+      });
+    }
 
+    // Load active OrgContract (null if no contract yet — legacy orgs)
+    let activeContract = null;
+    if (org.currentContractId) {
+      activeContract = await OrgContract.findOne({
+        _id: org.currentContractId,
+        organizationId: org._id,
+        contractStatus: "active"
+      }).lean();
+    }
+    const {
+      state,
+      reason,
+      graceUntil
+    } = classifySubscriptionState(org, activeContract);
+    req.subscriptionState = state;
+    req.activeContract = activeContract;
+    if (state === "active" || state === "trial") {
+      // ── Sprint 2: Resolve merged entitlements (plan defaults + org overrides) ──
+      // Load the PlanVersion for the active contract so the resolver has
+      // the baseline module/limit values to merge against.
+      try {
+        let planVersion = null;
+        if (activeContract?.planVersionId) {
+          planVersion = await PlanVersion.findById(activeContract.planVersionId).lean();
+        }
+
+        // PHASE 9 — ACCESS-002 fix: Fallback for trial users without a contract.
+        // Trial orgs created before contract-first provisioning (Phase 6) have
+        // no activeContract. Load the trial-tier PlanVersion directly so
+        // req.planCapabilities is defined for feature gating.
+        if (!planVersion && state === "trial") {
+          planVersion = await PlanVersion.findOne({
+            templateCode: "trial-tier",
+            status: "active"
+          }).lean();
+        }
+        if (planVersion) {
+          req.planCapabilities = await resolveOrganizationEntitlements(org._id, planVersion);
+        }
+      } catch (entitlementErr) {
+        // Never block access on entitlement resolution failure
+        logger.warn({
+          err: entitlementErr,
+          orgId: org._id
+        }, "[orgSubscriptionGuard] Entitlement resolution failed — planCapabilities not set");
+      }
+      return next();
+    }
+    if (state === "grace") {
+      // Log warning — grace-period requests are degraded
+      logger.warn({
+        orgId: org._id,
+        reason,
+        graceUntil
+      }, "[orgSubscriptionGuard] Access in grace period");
+      req.inGracePeriod = true;
+      req.graceUntil = graceUntil;
+      return next();
+    }
+
+    // state === "expired" | "unknown"
+    logger.info({
+      orgId: org._id,
+      reason,
+      state
+    }, "[orgSubscriptionGuard] Access denied — subscription not active");
+    return res.status(402).json({
+      success: false,
+      error: "Subscription required",
+      reason,
+      ...(graceUntil ? {
+        graceUntil
+      } : {})
+    });
+  } catch (err) {
+    logger.error({
+      err
+    }, "[orgSubscriptionGuard] Unexpected error");
+    return next(err);
+  }
+}
 module.exports = orgSubscriptionGuard;
 module.exports.classifySubscriptionState = classifySubscriptionState; // exported for testing

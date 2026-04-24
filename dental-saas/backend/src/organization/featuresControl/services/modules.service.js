@@ -16,6 +16,7 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const logger = require("@utils/logger");
 
 // Per-org DB resolution for AuditLog queries
@@ -272,7 +273,8 @@ async function toggleModule({
       code: 400
     };
   }
-  const Organization = require("@shared/models/Organization").default;
+  const OrganizationDef = require("@shared/models/Organization");
+  const Organization = getPlatformModel(OrganizationDef);
   const org = await Organization.findById(orgId);
   if (!org) {
     return {

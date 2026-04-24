@@ -1,55 +1,75 @@
+const getPlatformModel = require("@core/db/getPlatformModel");
 const express = require("express");
 const router = express.Router();
 
+// ─── Module auth routes (magic link, Google OAuth) ────────────────────────────
+const magicRoutes = require("../modules/auth/magic.routes");
+const googleRoutes = require("../modules/auth/google.routes");
+const passport = require("passport");
 const {
-    register,
-    loginUser,
-    changePassword,
-    forgotPassword,
-    resetPassword,
-    refresh,
-    logout,
-    getSessions,
-    revokeSession,
-    revokeAllSessions,
-    verifyEmailOtp,
-    resendEmailOtp,
-    // Phase 11 — Smart Multi-Org Login
-    smartLogin,
-    selectOrg,
-} = require("../organization/controllers/authController");
+  initGoogleStrategy
+} = require("../modules/auth/google.strategy");
 
+// Initialize Google OAuth strategy (conditionally — only if env vars are set)
+const googleEnabled = initGoogleStrategy();
+
+// Mount module routes
+router.use("/", magicRoutes);
+if (googleEnabled) {
+  router.use("/", passport.initialize(), googleRoutes);
+}
+const {
+  register,
+  loginUser,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  refresh,
+  logout,
+  getSessions,
+  revokeSession,
+  revokeAllSessions,
+  verifyEmailOtp,
+  resendEmailOtp,
+  // Phase 11 — Smart Multi-Org Login
+  smartLogin,
+  selectOrg
+} = require("../organization/controllers/authController");
 const orgProtect = require("../middleware/orgProtect");
-const Organization = require("../shared/models/Organization").default;
-const { createLimiter } = require("../middleware/rateLimiter");
+const OrganizationDef = require("../shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
+const {
+  createLimiter
+} = require("../middleware/rateLimiter");
 
 // Phase 12 — Entitlement Engine: Resolve normalized modules for frontend
-const { resolvePlan } = require("../core/subscription/planResolver");
-const { buildPlanCapabilities } = require("../core/subscription/planCapabilityBuilder");
+const {
+  resolvePlan
+} = require("../core/subscription/planResolver");
+const {
+  buildPlanCapabilities
+} = require("../core/subscription/planCapabilityBuilder");
 const logger = require("../utils/logger");
-
 const isProd = process.env.NODE_ENV === "production";
 
 // v30.0 — Route-level rate limiters (IPv6-safe via centralized factory)
 const refreshLimiter = createLimiter({
-    windowMs: 1 * 60 * 1000,
-    max: isProd ? 30 : 100,
-    keyType: "ip",
-    message: "Too many token refresh attempts",
+  windowMs: 1 * 60 * 1000,
+  max: isProd ? 30 : 100,
+  keyType: "ip",
+  message: "Too many token refresh attempts"
 });
-
 const forgotPasswordLimiter = createLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: isProd ? 3 : 10,
-    keyType: "ip",
-    message: "Too many password reset requests",
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 3 : 10,
+  keyType: "ip",
+  message: "Too many password reset requests"
 });
-
 const registerLimiter = createLimiter({
-    windowMs: 60 * 60 * 1000,
-    max: isProd ? 5 : 50,
-    keyType: "ip",
-    message: "Too many registration attempts",
+  windowMs: 60 * 60 * 1000,
+  max: isProd ? 5 : 50,
+  keyType: "ip",
+  message: "Too many registration attempts"
 });
 
 /**
@@ -343,107 +363,110 @@ router.post("/sessions/:id/revoke", orgProtect, revokeSession);
  *         description: User profile returned
  */
 router.get("/profile", orgProtect, async (req, res) => {
+  try {
+    const org = await Organization.findById(req.user.organizationId).select("features slug country subscription.status");
+
+    // Phase 12 — Resolve modules from plan pipeline (NOT raw org.modules)
+    // This ensures normalized keys (orthodonticsAdv → orthodontics).
+    let resolvedModules = {};
+    let resolvedFeatures = {};
     try {
-        const org = await Organization.findById(req.user.organizationId)
-            .select("features slug country subscription.status");
+      const plan = await resolvePlan(req.user.organizationId);
+      if (plan) {
+        const caps = buildPlanCapabilities(plan);
+        resolvedModules = caps.modules || {};
+        resolvedFeatures = caps.features || {};
+      }
+    } catch (planErr) {
+      // Fail-safe: never block profile fetch if plan resolution fails.
+      // Fall back to CORE_MODULES so the sidebar shows at minimum:
+      //   patients, appointments, families, recalls, settings, clinical, etc.
+      // Non-core modules (orthodontics, analytics, lab) will correctly be hidden.
+      logger.warn({
+        err: planErr,
+        orgId: req.user.organizationId
+      }, "[AuthProfile] Plan resolution failed — falling back to core modules");
 
-        // Phase 12 — Resolve modules from plan pipeline (NOT raw org.modules)
-        // This ensures normalized keys (orthodonticsAdv → orthodontics).
-        let resolvedModules = {};
-        let resolvedFeatures = {};
-        try {
-            const plan = await resolvePlan(req.user.organizationId);
-            if (plan) {
-                const caps = buildPlanCapabilities(plan);
-                resolvedModules = caps.modules || {};
-                resolvedFeatures = caps.features || {};
-            }
-        } catch (planErr) {
-            // Fail-safe: never block profile fetch if plan resolution fails.
-            // Fall back to CORE_MODULES so the sidebar shows at minimum:
-            //   patients, appointments, families, recalls, settings, clinical, etc.
-            // Non-core modules (orthodontics, analytics, lab) will correctly be hidden.
-            logger.warn(
-                { err: planErr, orgId: req.user.organizationId },
-                "[AuthProfile] Plan resolution failed — falling back to core modules"
-            );
-
-            // Build core-module fallback from featureRegistry
-            const { CORE_MODULES, MODULE_KEYS } = require("../platform/featureRegistry");
-            for (const key of MODULE_KEYS) {
-                resolvedModules[key] = CORE_MODULES.has(key);
-            }
-        }
-
-        // ── Reconstruct populated roleId shape from JWT permissions ─────────
-        // Phase 6 intentionally removed .populate("roleId") from authMiddleware
-        // for performance (no DB lookup on every request). But the frontend
-        // CapabilityContext reads user.roleId.permissions to build RBAC gates.
-        //
-        // At login: authService.validateLogin() DOES populate("roleId") → works.
-        // At profile refresh: roleId is a raw ObjectId string → breaks.
-        //
-        // Fix: Reconstruct the nested { module: { action: true } } shape from
-        // req.context.permissions (the JWT-authoritative Set). This gives the
-        // frontend the exact shape it expects without a DB populate call.
-        const jwtPermissions = req.context?.permissions || new Set();
-        const nestedPermissions = {};
-        for (const perm of jwtPermissions) {
-            const dotIdx = perm.indexOf(".");
-            if (dotIdx === -1) continue;
-            const mod = perm.substring(0, dotIdx);
-            const action = perm.substring(dotIdx + 1);
-            if (!nestedPermissions[mod]) nestedPermissions[mod] = {};
-            nestedPermissions[mod][action] = true;
-        }
-
-        // Build roleId as a populated-like object matching login response shape
-        const roleIdResponse = {
-            _id: req.user.roleId,
-            name: req.context?.roleName || null,
-            permissions: nestedPermissions,
-        };
-
-        res.json({
-            id: req.user._id,
-            name: req.user.name,
-            firstName: req.user.firstName || null,
-            lastName: req.user.lastName || null,
-            email: req.user.email,
-            phone: req.user.phone || null,
-            jobTitle: req.user.jobTitle || null,
-            profileImage: req.user.profileImage || null,
-            speciality: req.user.speciality || null,
-            roleId: roleIdResponse,
-            platformRole: req.user.platformRole,
-            platformDesignation: req.user.platformDesignation || null,
-            organizationId: req.user.organizationId,
-            branchAccess: req.user.branchAccess || [],
-            hasFullBranchAccess: req.user.hasFullBranchAccess || false,
-            isEmailVerified: req.user.isEmailVerified || false,
-            accountStatus: (req.user.isEmailVerified === false) ? "email_unverified" : "active",
-            // Phase 4: Profile completion gate
-            profile: {
-                isComplete: req.user.profile?.isComplete ?? true, // default true for legacy users
-                completedAt: req.user.profile?.completedAt || null,
-            },
-            organization: org
-                ? {
-                    features: org.features,
-                    slug: org.slug,
-                    country: org.country,
-                    modules: resolvedModules,
-                    capabilities: {
-                        modules: resolvedModules,
-                        features: resolvedFeatures,
-                    },
-                    subscription: { status: org.subscription?.status || "trial" },
-                  }
-                : null
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+      // Build core-module fallback from featureRegistry
+      const {
+        CORE_MODULES,
+        MODULE_KEYS
+      } = require("../platform/featureRegistry");
+      for (const key of MODULE_KEYS) {
+        resolvedModules[key] = CORE_MODULES.has(key);
+      }
     }
-});
 
+    // ── Reconstruct populated roleId shape from JWT permissions ─────────
+    // Phase 6 intentionally removed .populate("roleId") from authMiddleware
+    // for performance (no DB lookup on every request). But the frontend
+    // CapabilityContext reads user.roleId.permissions to build RBAC gates.
+    //
+    // At login: authService.validateLogin() DOES populate("roleId") → works.
+    // At profile refresh: roleId is a raw ObjectId string → breaks.
+    //
+    // Fix: Reconstruct the nested { module: { action: true } } shape from
+    // req.context.permissions (the JWT-authoritative Set). This gives the
+    // frontend the exact shape it expects without a DB populate call.
+    const jwtPermissions = req.context?.permissions || new Set();
+    const nestedPermissions = {};
+    for (const perm of jwtPermissions) {
+      const dotIdx = perm.indexOf(".");
+      if (dotIdx === -1) continue;
+      const mod = perm.substring(0, dotIdx);
+      const action = perm.substring(dotIdx + 1);
+      if (!nestedPermissions[mod]) nestedPermissions[mod] = {};
+      nestedPermissions[mod][action] = true;
+    }
+
+    // Build roleId as a populated-like object matching login response shape
+    const roleIdResponse = {
+      _id: req.user.roleId,
+      name: req.context?.roleName || null,
+      permissions: nestedPermissions
+    };
+    res.json({
+      id: req.user._id,
+      name: req.user.name,
+      firstName: req.user.firstName || null,
+      lastName: req.user.lastName || null,
+      email: req.user.email,
+      phone: req.user.phone || null,
+      jobTitle: req.user.jobTitle || null,
+      profileImage: req.user.profileImage || null,
+      speciality: req.user.speciality || null,
+      roleId: roleIdResponse,
+      platformRole: req.user.platformRole,
+      platformDesignation: req.user.platformDesignation || null,
+      organizationId: req.user.organizationId,
+      branchAccess: req.user.branchAccess || [],
+      hasFullBranchAccess: req.user.hasFullBranchAccess || false,
+      isEmailVerified: req.user.isEmailVerified || false,
+      accountStatus: req.user.isEmailVerified === false ? "email_unverified" : "active",
+      // Phase 4: Profile completion gate
+      profile: {
+        isComplete: req.user.profile?.isComplete ?? true,
+        // default true for legacy users
+        completedAt: req.user.profile?.completedAt || null
+      },
+      organization: org ? {
+        features: org.features,
+        slug: org.slug,
+        country: org.country,
+        modules: resolvedModules,
+        capabilities: {
+          modules: resolvedModules,
+          features: resolvedFeatures
+        },
+        subscription: {
+          status: org.subscription?.status || "trial"
+        }
+      } : null
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message
+    });
+  }
+});
 module.exports = router;

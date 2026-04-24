@@ -1,3 +1,7 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - UserGlobal (@shared/models/User) — tenant + req present but no _getModels(req) helper
+const getSharedModel = require("@core/db/getSharedModel");
+const getPlatformModel = require("@core/db/getPlatformModel");
 const asyncHandler = require("@utils/asyncHandler");
 const authService = require("@services/authService");
 const crypto = require("crypto");
@@ -31,7 +35,8 @@ exports.register = asyncHandler(async (req, res) => {
     }
   });
 });
-const Organization = require("@shared/models/Organization").default;
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
 const {
   isPhoneVerificationRequired
 } = require("@utils/featureFlags");
@@ -295,7 +300,8 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
   // v2.0: Use Verification Engine for password reset
   const verificationEngine = require("@core/auth/verificationEngine.service");
-  const Organization = require("@shared/models/Organization").default;
+  const OrganizationDef = require("@shared/models/Organization");
+  const Organization = getPlatformModel(OrganizationDef);
   if (!email || !clinicCode) {
     return res.json({
       success: true,
@@ -597,7 +603,8 @@ exports.verifyEmailOtp = asyncHandler(async (req, res) => {
 
   // Emit metric
   try {
-    const CommunicationMetrics = require("@platform/models/CommunicationMetrics.model").default;
+    const CommunicationMetricsDef = require("@platform/models/CommunicationMetrics.model");
+    const CommunicationMetrics = getSharedModel(CommunicationMetricsDef);
     await CommunicationMetrics.increment("email", "VERIFY_EMAIL_OTP", "sent");
   } catch {/* metrics are non-blocking */}
   res.json({

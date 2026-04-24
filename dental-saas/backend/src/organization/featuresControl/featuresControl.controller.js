@@ -16,6 +16,7 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const {
   P,
   ORG_ROLE_PERMISSIONS,
@@ -901,7 +902,8 @@ async function toggleModule(req, res) {
         message: "enabled must be a boolean"
       });
     }
-    const Organization = require("../../shared/models/Organization").default; // platform model
+    const OrganizationDef = require("../../shared/models/Organization");
+    const Organization = getPlatformModel(OrganizationDef); // platform model
     const org = await Organization.findById(req.organizationId);
     if (!org) {
       return res.status(404).json({

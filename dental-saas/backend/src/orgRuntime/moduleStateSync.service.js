@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - OrganizationModuleState (./models/OrganizationModuleState.model) — tenant + no req access (worker/utility)
 /**
  * moduleStateSync.service.js — Module State Synchronization
  * Phase B.2 — Runtime Maturity & Architecture Optimization
@@ -46,66 +48,68 @@ const MAX_CACHE_SIZE = 10000;
  * @returns {Promise<void>}
  */
 async function syncModuleState(organizationId, modules) {
-    if (!organizationId || !modules || typeof modules !== "object") return;
+  if (!organizationId || !modules || typeof modules !== "object") return;
+  const orgIdStr = String(organizationId);
+  const now = Date.now();
 
-    const orgIdStr = String(organizationId);
-    const now = Date.now();
+  // TTL gate — skip if synced recently
+  const lastSync = _syncCache.get(orgIdStr);
+  if (lastSync && now - lastSync < SYNC_TTL_MS) {
+    return; // Already synced within TTL window
+  }
+  try {
+    const ops = [];
+    for (const [moduleKey, enabled] of Object.entries(modules)) {
+      const update = {
+        enabled: !!enabled,
+        lastSyncedAt: new Date()
+      };
 
-    // TTL gate — skip if synced recently
-    const lastSync = _syncCache.get(orgIdStr);
-    if (lastSync && (now - lastSync) < SYNC_TTL_MS) {
-        return; // Already synced within TTL window
+      // Set enabledAt/disabledAt timestamps based on state
+      if (enabled) {
+        update.enabledAt = new Date();
+      } else {
+        update.disabledAt = new Date();
+      }
+      ops.push({
+        updateOne: {
+          filter: {
+            organizationId,
+            moduleKey
+          },
+          update: {
+            $set: update
+          },
+          upsert: true
+        }
+      });
+    }
+    if (ops.length > 0) {
+      await OrganizationModuleState.bulkWrite(ops, {
+        ordered: false
+      });
     }
 
-    try {
-        const ops = [];
+    // Update TTL cache
+    _syncCache.set(orgIdStr, now);
 
-        for (const [moduleKey, enabled] of Object.entries(modules)) {
-            const update = {
-                enabled: !!enabled,
-                lastSyncedAt: new Date(),
-            };
-
-            // Set enabledAt/disabledAt timestamps based on state
-            if (enabled) {
-                update.enabledAt = new Date();
-            } else {
-                update.disabledAt = new Date();
-            }
-
-            ops.push({
-                updateOne: {
-                    filter: { organizationId, moduleKey },
-                    update: { $set: update },
-                    upsert: true,
-                },
-            });
-        }
-
-        if (ops.length > 0) {
-            await OrganizationModuleState.bulkWrite(ops, { ordered: false });
-        }
-
-        // Update TTL cache
-        _syncCache.set(orgIdStr, now);
-
-        // Evict oldest entries if cache grows too large
-        if (_syncCache.size > MAX_CACHE_SIZE) {
-            const entries = [..._syncCache.entries()];
-            entries.sort((a, b) => a[1] - b[1]); // Sort by timestamp ascending
-            const toDelete = entries.slice(0, Math.floor(MAX_CACHE_SIZE / 4));
-            for (const [key] of toDelete) {
-                _syncCache.delete(key);
-            }
-        }
-
-    } catch (err) {
-        // Never block request — sync is best-effort observability
-        logger.warn(
-            { err: err.message, organizationId, service: "moduleStateSync" },
-            "[moduleStateSync] Failed to sync module state — non-blocking"
-        );
+    // Evict oldest entries if cache grows too large
+    if (_syncCache.size > MAX_CACHE_SIZE) {
+      const entries = [..._syncCache.entries()];
+      entries.sort((a, b) => a[1] - b[1]); // Sort by timestamp ascending
+      const toDelete = entries.slice(0, Math.floor(MAX_CACHE_SIZE / 4));
+      for (const [key] of toDelete) {
+        _syncCache.delete(key);
+      }
     }
+  } catch (err) {
+    // Never block request — sync is best-effort observability
+    logger.warn({
+      err: err.message,
+      organizationId,
+      service: "moduleStateSync"
+    }, "[moduleStateSync] Failed to sync module state — non-blocking");
+  }
 }
 
 /**
@@ -117,9 +121,11 @@ async function syncModuleState(organizationId, modules) {
  * @returns {Promise<Object[]>}
  */
 async function getModuleStateHistory(organizationId) {
-    return OrganizationModuleState.find({ organizationId })
-        .sort({ moduleKey: 1 })
-        .lean();
+  return OrganizationModuleState.find({
+    organizationId
+  }).sort({
+    moduleKey: 1
+  }).lean();
 }
 
 /**
@@ -131,11 +137,22 @@ async function getModuleStateHistory(organizationId) {
  * @returns {Promise<Object[]>} — [{ _id: moduleKey, count: N }]
  */
 async function getActiveModulesCount() {
-    return OrganizationModuleState.aggregate([
-        { $match: { enabled: true } },
-        { $group: { _id: "$moduleKey", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-    ]);
+  return OrganizationModuleState.aggregate([{
+    $match: {
+      enabled: true
+    }
+  }, {
+    $group: {
+      _id: "$moduleKey",
+      count: {
+        $sum: 1
+      }
+    }
+  }, {
+    $sort: {
+      count: -1
+    }
+  }]);
 }
 
 /**
@@ -143,16 +160,15 @@ async function getActiveModulesCount() {
  * @returns {{ size: number, maxSize: number, ttlMs: number }}
  */
 function getSyncCacheStats() {
-    return {
-        size: _syncCache.size,
-        maxSize: MAX_CACHE_SIZE,
-        ttlMs: SYNC_TTL_MS,
-    };
+  return {
+    size: _syncCache.size,
+    maxSize: MAX_CACHE_SIZE,
+    ttlMs: SYNC_TTL_MS
+  };
 }
-
 module.exports = {
-    syncModuleState,
-    getModuleStateHistory,
-    getActiveModulesCount,
-    getSyncCacheStats,
+  syncModuleState,
+  getModuleStateHistory,
+  getActiveModulesCount,
+  getSyncCacheStats
 };

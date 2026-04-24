@@ -1,3 +1,4 @@
+const getPlatformModel = require("@core/db/getPlatformModel");
 /**
  * orgBrandingController.js
  *
@@ -120,7 +121,8 @@ exports.getOrgProfile = async (req, res) => {
     // Phase X.2: organizationContext middleware was removed from the /org chain.
     // req.organization is no longer pre-loaded. Query directly using req.organizationId
     // (set by authMiddleware from the verified JWT).
-    const Organization = require("../../shared/models/Organization").default;
+    const OrganizationDef = require("../../shared/models/Organization");
+    const Organization = getPlatformModel(OrganizationDef);
     const orgId = req.context?.organizationId || req.organizationId;
     if (!orgId) {
       return res.status(400).json({
@@ -206,7 +208,8 @@ exports.uploadOrgLogo = async (req, res) => {
     }
 
     // Phase X.2: organizationContext middleware removed — query directly.
-    const Organization = require("../../shared/models/Organization").default;
+    const OrganizationDef = require("../../shared/models/Organization");
+    const Organization = getPlatformModel(OrganizationDef);
     const orgId = req.context?.organizationId || req.organizationId;
     const org = await Organization.findById(orgId);
     if (!org) {

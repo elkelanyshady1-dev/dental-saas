@@ -1,8 +1,14 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - SignupIdempotency (../models/SignupIdempotency.model) — tenant + req present but no _getModels(req) helper
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const Organization = require("@shared/models/Organization").default;
-const SiteContent = require("../models/SiteContent").default;
-const Lead = require("../models/Lead").default;
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
+const SiteContentDef = require("../models/SiteContent");
+const SiteContent = getPlatformModel(SiteContentDef);
+const LeadDef = require("../models/Lead");
+const Lead = getPlatformModel(LeadDef);
 const initializeRolesForOrganization = require("@utils/roleInitializer");
 const logger = require("@utils/logger");
 const {
@@ -27,19 +33,20 @@ const BranchDef = require("@shared/models/Branch");
 const UserDef = require("@shared/models/User");
 
 // v6.0 Geo Pricing Integration using PlanTemplate + PlanVersion engine
-const PlanVersion = require("@billing/models/PlanVersion.model").default;
-const PlanTemplate = require("@billing/models/PlanTemplate.model").default;
-// Plan Projection Layer — SSOT for all derived display/routing fields.
+const PlanVersionDef = require("@billing/models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
+const PlanTemplateDef = require("@billing/models/PlanTemplate.model");
+const PlanTemplate = getPlatformModel(PlanTemplateDef); // Plan Projection Layer — SSOT for all derived display/routing fields.
 // getPublicPlans uses showInMarketing from the projection — not inline derivations.
 const {
   projectPlanVersionList
 } = require("@billing/services/planProjection.service");
 
 // PHASE 6 Contract-first trial provisioning
-const OrgContract = require("@billing/models/OrgContract.model").default;
-const PlatformInvoice = require("@billing/models/PlatformInvoice.model").default;
-
-// PHASE 6 Trial contract billing timeline event
+const OrgContractDef = require("@billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
+const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef); // PHASE 6 Trial contract billing timeline event
 const {
   emitBillingTimelineEvent
 } = require("@billing/services/billingTimeline.service");

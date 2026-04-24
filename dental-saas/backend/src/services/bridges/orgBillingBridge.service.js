@@ -26,12 +26,25 @@
 
 "use strict";
 
-const OrgContract = require("@platform/billing/models/OrgContract.model").default;
-const PlatformInvoice = require("@platform/billing/models/PlatformInvoice.model").default;
-const { resolveOrganizationEntitlements } = require("@platform/billing/services/entitlementResolver.service");
-const { extractOrgId } = require("@core/security/assertOrgContext");
-const { enforceDTO } = require("./utils/enforceDTO");
-const { mapSubscription, mapInvoice, mapUsageQuota } = require("./utils/transformers");
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrgContractDef = require("@platform/billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
+const PlatformInvoiceDef = require("@platform/billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+const {
+  resolveOrganizationEntitlements
+} = require("@platform/billing/services/entitlementResolver.service");
+const {
+  extractOrgId
+} = require("@core/security/assertOrgContext");
+const {
+  enforceDTO
+} = require("./utils/enforceDTO");
+const {
+  mapSubscription,
+  mapInvoice,
+  mapUsageQuota
+} = require("./utils/transformers");
 const logger = require("@utils/logger");
 
 /**
@@ -41,21 +54,19 @@ const logger = require("@utils/logger");
  * @returns {Promise<Object|null>} Sanitized subscription DTO
  */
 async function getActiveSubscription(req) {
-    const orgId = extractOrgId(req);
-
-    const contract = await OrgContract
-        .findOne({ organizationId: orgId, contractStatus: "active" })
-        .populate("planVersionId", "name tier modules limits")
-        .lean();
-
-    if (!contract) {
-        logger.info({ orgId, event: "BRIDGE_BILLING_NO_CONTRACT" },
-            "[orgBillingBridge] No active contract found"
-        );
-        return null;
-    }
-
-    return enforceDTO((c) => mapSubscription(c, contract.planVersionId), contract);
+  const orgId = extractOrgId(req);
+  const contract = await OrgContract.findOne({
+    organizationId: orgId,
+    contractStatus: "active"
+  }).populate("planVersionId", "name tier modules limits").lean();
+  if (!contract) {
+    logger.info({
+      orgId,
+      event: "BRIDGE_BILLING_NO_CONTRACT"
+    }, "[orgBillingBridge] No active contract found");
+    return null;
+  }
+  return enforceDTO(c => mapSubscription(c, contract.planVersionId), contract);
 }
 
 /**
@@ -68,18 +79,15 @@ async function getActiveSubscription(req) {
  * @returns {Promise<Object[]>} Array of sanitized invoice DTOs
  */
 async function getInvoiceHistory(req, options = {}) {
-    const orgId = extractOrgId(req);
-    const limit = Math.min(options.limit || 20, 50); // Hard cap at 50
-    const skip = Math.max(options.skip || 0, 0);
-
-    const invoices = await PlatformInvoice
-        .find({ organizationId: orgId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-
-    return invoices.map(inv => enforceDTO(mapInvoice, inv));
+  const orgId = extractOrgId(req);
+  const limit = Math.min(options.limit || 20, 50); // Hard cap at 50
+  const skip = Math.max(options.skip || 0, 0);
+  const invoices = await PlatformInvoice.find({
+    organizationId: orgId
+  }).sort({
+    createdAt: -1
+  }).skip(skip).limit(limit).lean();
+  return invoices.map(inv => enforceDTO(mapInvoice, inv));
 }
 
 /**
@@ -90,59 +98,55 @@ async function getInvoiceHistory(req, options = {}) {
  * @returns {Promise<Object[]>} Array of sanitized quota DTOs
  */
 async function getUsageQuotas(req) {
-    const orgId = extractOrgId(req);
+  const orgId = extractOrgId(req);
 
-    // Resolve the active contract to get plan version
-    const contract = await OrgContract
-        .findOne({ organizationId: orgId, contractStatus: "active" })
-        .populate("planVersionId")
-        .lean();
+  // Resolve the active contract to get plan version
+  const contract = await OrgContract.findOne({
+    organizationId: orgId,
+    contractStatus: "active"
+  }).populate("planVersionId").lean();
+  if (!contract || !contract.planVersionId) {
+    return [];
+  }
+  const entitlements = await resolveOrganizationEntitlements(orgId, contract.planVersionId);
 
-    if (!contract || !contract.planVersionId) {
-        return [];
-    }
-
-    const entitlements = await resolveOrganizationEntitlements(orgId, contract.planVersionId);
-
-    // Transform limits into quota DTOs
-    const quotas = [];
-    const limits = entitlements.limits || {};
-
-    if (limits.maxUsers != null) {
-        quotas.push(enforceDTO(mapUsageQuota, {
-            feature: "users",
-            displayName: "Users",
-            used: 0, // TODO: wire user count
-            limit: limits.maxUsers,
-            unit: "users",
-        }));
-    }
-
-    if (limits.maxBranches != null) {
-        quotas.push(enforceDTO(mapUsageQuota, {
-            feature: "branches",
-            displayName: "Branches",
-            used: 0, // TODO: wire branch count
-            limit: limits.maxBranches,
-            unit: "branches",
-        }));
-    }
-
-    if (limits.maxStorageMB != null) {
-        quotas.push(enforceDTO(mapUsageQuota, {
-            feature: "storage",
-            displayName: "Storage",
-            used: 0, // TODO: wire storage usage
-            limit: limits.maxStorageMB,
-            unit: "MB",
-        }));
-    }
-
-    return quotas;
+  // Transform limits into quota DTOs
+  const quotas = [];
+  const limits = entitlements.limits || {};
+  if (limits.maxUsers != null) {
+    quotas.push(enforceDTO(mapUsageQuota, {
+      feature: "users",
+      displayName: "Users",
+      used: 0,
+      // TODO: wire user count
+      limit: limits.maxUsers,
+      unit: "users"
+    }));
+  }
+  if (limits.maxBranches != null) {
+    quotas.push(enforceDTO(mapUsageQuota, {
+      feature: "branches",
+      displayName: "Branches",
+      used: 0,
+      // TODO: wire branch count
+      limit: limits.maxBranches,
+      unit: "branches"
+    }));
+  }
+  if (limits.maxStorageMB != null) {
+    quotas.push(enforceDTO(mapUsageQuota, {
+      feature: "storage",
+      displayName: "Storage",
+      used: 0,
+      // TODO: wire storage usage
+      limit: limits.maxStorageMB,
+      unit: "MB"
+    }));
+  }
+  return quotas;
 }
-
 module.exports = {
-    getActiveSubscription,
-    getInvoiceHistory,
-    getUsageQuotas,
+  getActiveSubscription,
+  getInvoiceHistory,
+  getUsageQuotas
 };

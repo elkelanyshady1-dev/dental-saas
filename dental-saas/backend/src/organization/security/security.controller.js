@@ -22,6 +22,7 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const {
   P,
   ORG_ROLE_PERMISSIONS,
@@ -1045,7 +1046,8 @@ async function getAuthAnalytics(req, res) {
  */
 async function getAuthTraces(req, res) {
   try {
-    const AuthTrace = require("../../shared/models/AuthTrace").default;
+    const AuthTraceDef = require("../../shared/models/AuthTrace");
+    const AuthTrace = getPlatformModel(AuthTraceDef);
     const {
       page = 1,
       limit = 25,
@@ -1123,7 +1125,8 @@ async function getAuthTraces(req, res) {
  */
 async function getAuthTraceByRequestId(req, res) {
   try {
-    const AuthTrace = require("../../shared/models/AuthTrace").default;
+    const AuthTraceDef = require("../../shared/models/AuthTrace");
+    const AuthTrace = getPlatformModel(AuthTraceDef);
     const {
       requestId
     } = req.params;

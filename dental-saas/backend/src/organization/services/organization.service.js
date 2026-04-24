@@ -1,5 +1,7 @@
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
-const Organization = require("@shared/models/Organization").default;
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
 const featureService = require("@services/featureService");
 const initializeRolesForOrganization = require("@utils/roleInitializer");
 const bcrypt = require("bcryptjs");
@@ -26,12 +28,13 @@ const {
 const {
   activateContract
 } = require("@billing/services/contractActivation.service");
-const PlanVersion = require("@billing/models/PlanVersion.model").default;
-const PlatformInvoice = require("@billing/models/PlatformInvoice.model").default;
-
-// ─── Hybrid Onboarding Billing (Sprint 8) ────────────────────────────────────
+const PlanVersionDef = require("@billing/models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
+const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef); // ─── Hybrid Onboarding Billing (Sprint 8) ────────────────────────────────────
 // Post-trial pending contract scheduling + billing timeline events.
-const OrgContract = require("@billing/models/OrgContract.model").default;
+const OrgContractDef = require("@billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
 const {
   computePrice
 } = require("@billing/pricing/pricingEngine.service");

@@ -1,31 +1,31 @@
-﻿/**
- * Platform Billing Routes
- * Auto-split from platformRoutes.js
- */
+const getPlatformModel = require("@core/db/getPlatformModel");
+/**
+* Platform Billing Routes
+* Auto-split from platformRoutes.js
+*/
 const express = require("express");
 const router = express.Router();
 const platformProtect = require("../../middleware/platformProtect");
 const superAdminOnly = require("../../middleware/superAdminOnly");
 const authorizePlatformPermission = require("../../middleware/authorizePlatformPermission");
-const { PLATFORM_CAPABILITIES } = require('@contracts/platformContract.cjs.js');
+const {
+  PLATFORM_CAPABILITIES
+} = require('@contracts/platformContract.cjs.js');
 const CAP = PLATFORM_CAPABILITIES;
-
 const {
-    extendSubscription,
-    suspendOrganization,
-    reactivateOrganization,
-    cancelSubscription,
-    adjustCredits,
-    getSubscriptionHistory
+  extendSubscription,
+  suspendOrganization,
+  reactivateOrganization,
+  cancelSubscription,
+  adjustCredits,
+  getSubscriptionHistory
 } = require("../../platform/controllers/platformSubscriptionController");
-
 const {
-    getOrganizationInvoices,
-    getInvoiceDetails,
-    updateInvoiceStatus,
-    getEmailLogs,
+  getOrganizationInvoices,
+  getInvoiceDetails,
+  updateInvoiceStatus,
+  getEmailLogs
 } = require("../../platform/controllers/platformBillingController");
-
 const platformBillingController = require("../../modules/billingDomain/controllers/platformBilling.controller");
 const couponController = require("../../platform/domain/controllers/platformCoupon.controller");
 const campaignController = require("../../platform/domain/controllers/platformCampaign.controller");
@@ -43,14 +43,18 @@ const exchangeRateController = require("../../platform/finance/controllers/excha
 // Sprint 5: Billing Integrity Admin Endpoint
 const billingIntegrityController = require("../../platform/billing/controllers/billingIntegrity.controller");
 // ── Feature: Plan Version Diff + Billing Event Replay ─────────────────────
-const { comparePlanVersions } = require("../../platform/billing/services/planVersionDiff.service");
-const { replayBillingEvent, listReplayableEvents } = require("../../platform/billing/services/billingReplay.service");
+const {
+  comparePlanVersions
+} = require("../../platform/billing/services/planVersionDiff.service");
+const {
+  replayBillingEvent,
+  listReplayableEvents
+} = require("../../platform/billing/services/billingReplay.service");
 const mongoose = require("mongoose");
 const loggerBillingRoutes = require("../../utils/logger");
 // asyncHandler: wraps async controllers so any unhandled rejection calls next(err)
 // This is the definitive fix for "next is not a function" in async route handlers.
 const asyncHandler = require("../../utils/asyncHandler");
-
 const pSub = [platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS)];
 // Phase 5 fix: billing read routes must use VIEW_* capability per Sentinel Rule #3
 const pBillingRead = [platformProtect, authorizePlatformPermission(CAP.VIEW_ORGANIZATIONS)];
@@ -60,7 +64,6 @@ const pAnalytics = [platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFO
 const pAuditRead = [platformProtect, authorizePlatformPermission(CAP.VIEW_AUDIT_LOGS)];
 const pSettings = [platformProtect, authorizePlatformPermission(CAP.MANAGE_PLATFORM_SETTINGS)];
 const pRefundManage = [platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS)];
-
 const refundController = require("../../platform/billing/controllers/refund.controller");
 // Sprint 8: BillingTimeline debugging API
 const billingTimelineController = require("../../platform/billing/controllers/billingTimeline.controller");
@@ -83,13 +86,7 @@ const billingControlController = require("../../platform/billing/controllers/bil
  *     tags: [Platform Billing Kill Switch]
  *     security: [{ platformToken: [] }]
  */
-router.post(
-    "/billing/kill-switch/activate",
-    platformProtect,
-    superAdminOnly,
-    authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS),
-    billingControlController.activateKillSwitch
-);
+router.post("/billing/kill-switch/activate", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), billingControlController.activateKillSwitch);
 
 /**
  * @swagger
@@ -99,13 +96,7 @@ router.post(
  *     tags: [Platform Billing Kill Switch]
  *     security: [{ platformToken: [] }]
  */
-router.post(
-    "/billing/kill-switch/deactivate",
-    platformProtect,
-    superAdminOnly,
-    authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS),
-    billingControlController.deactivateKillSwitch
-);
+router.post("/billing/kill-switch/deactivate", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), billingControlController.deactivateKillSwitch);
 
 /**
  * @swagger
@@ -115,13 +106,7 @@ router.post(
  *     tags: [Platform Billing Kill Switch]
  *     security: [{ platformToken: [] }]
  */
-router.get(
-    "/billing/kill-switch/status",
-    platformProtect,
-    superAdminOnly,
-    authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
-    billingControlController.getKillSwitchStatus
-);
+router.get("/billing/kill-switch/status", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), billingControlController.getKillSwitchStatus);
 
 /**
  * @swagger
@@ -132,12 +117,7 @@ router.get(
  *     tags: [Platform Billing Kill Switch]
  *     security: [{ platformToken: [] }]
  */
-router.get(
-    "/billing/status",
-    platformProtect,
-    billingControlController.getBillingStatus
-);
-
+router.get("/billing/status", platformProtect, billingControlController.getBillingStatus);
 
 // ─── Billing Timeline — Debugging Endpoints ──────────────────────────────────
 // Returns the BillingTimeline projection (last 100 events) for a contract or org.
@@ -147,22 +127,12 @@ router.get(
 /**
  * GET /api/platform/contracts/:contractId/timeline
  */
-router.get(
-    "/contracts/:contractId/timeline",
-    ...pTimelineRead,
-    asyncHandler(billingTimelineController.getContractTimeline)
-);
+router.get("/contracts/:contractId/timeline", ...pTimelineRead, asyncHandler(billingTimelineController.getContractTimeline));
 
 /**
  * GET /api/platform/billing/timeline/:orgId
  */
-router.get(
-    "/billing/timeline/:orgId",
-    ...pTimelineRead,
-    asyncHandler(billingTimelineController.getOrgTimeline)
-);
-
-
+router.get("/billing/timeline/:orgId", ...pTimelineRead, asyncHandler(billingTimelineController.getOrgTimeline));
 
 /**
  * @swagger
@@ -312,12 +282,7 @@ router.get("/billing/dashboard", ...pAnalytics, billingDashboardController.getDa
  * Sentinel: GET → VIEW_* — uses VIEW_PLATFORM_ANALYTICS (VIEW_BILLING not in contract).
  * Optional query: ?organizationId=&currency=&from=&to=
  */
-router.get(
-    "/billing/integrity-check",
-    platformProtect,
-    authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
-    asyncHandler(billingIntegrityController.getBillingIntegrityStatus)
-);
+router.get("/billing/integrity-check", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), asyncHandler(billingIntegrityController.getBillingIntegrityStatus));
 
 /**
  * @swagger
@@ -397,9 +362,6 @@ router.get(
  */
 router.get("/billing/audit-logs/:orgId", ...pAuditRead, billingDashboardController.getOrgAuditLogs);
 
-
-
-
 // ─── Subscription Lifecycle ───────────────────────────────────────────────
 /**
  * @swagger
@@ -431,7 +393,6 @@ router.get("/billing/audit-logs/:orgId", ...pAuditRead, billingDashboardControll
  */
 router.patch("/organizations/:id/extend", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), extendSubscription);
 
-
 /**
  * @swagger
  * /api/platform/organizations/{id}/suspend:
@@ -459,7 +420,6 @@ router.patch("/organizations/:id/extend", platformProtect, superAdminOnly, autho
  *                   type: object
  */
 router.patch("/organizations/:id/suspend", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), suspendOrganization);
-
 
 /**
  * @swagger
@@ -489,7 +449,6 @@ router.patch("/organizations/:id/suspend", platformProtect, superAdminOnly, auth
  */
 router.patch("/organizations/:id/reactivate", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), reactivateOrganization);
 
-
 /**
  * @swagger
  * /api/platform/organizations/{id}/cancel:
@@ -517,7 +476,6 @@ router.patch("/organizations/:id/reactivate", platformProtect, superAdminOnly, a
  *                   type: string
  */
 router.post("/organizations/:id/cancel", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), cancelSubscription);
-
 
 /**
  * @swagger
@@ -558,7 +516,6 @@ router.post("/organizations/:id/cancel", platformProtect, superAdminOnly, author
  */
 router.post("/organizations/:id/adjust-credits", platformProtect, superAdminOnly, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), adjustCredits);
 
-
 // ─── Subscription Overview (v8.0) ───────────────────────────────────────────
 /**
  * @swagger
@@ -589,7 +546,6 @@ router.post("/organizations/:id/adjust-credits", platformProtect, superAdminOnly
  *                   type: object
  */
 router.get("/org/:orgId/subscription", ...pOrgRead, subscriptionOverviewController.getSubscriptionOverview);
-
 
 // ─── Sprint 8: Org Contracts List ────────────────────────────────────────────
 /**
@@ -626,26 +582,29 @@ router.get("/org/:orgId/subscription", ...pOrgRead, subscriptionOverviewControll
  *                   items:
  *                     type: object
  */
-router.get(
-    "/org/:orgId/contracts",
-    ...pOrgRead,
-    asyncHandler(async (req, res) => {
-        const OrgContract = require("../../platform/billing/models/OrgContract.model").default;
-        const mongoose = require("mongoose");
-        const { orgId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(orgId)) {
-            return res.status(400).json({ success: false, message: "Invalid orgId" });
-        }
-
-        const contracts = await OrgContract.find({ organizationId: orgId })
-            .sort({ effectiveFrom: -1 })
-            .lean();
-
-        return res.json({ success: true, contracts });
-    })
-);
-
+router.get("/org/:orgId/contracts", ...pOrgRead, asyncHandler(async (req, res) => {
+  const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
+  const OrgContract = getPlatformModel(OrgContractDef);
+  const mongoose = require("mongoose");
+  const {
+    orgId
+  } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid orgId"
+    });
+  }
+  const contracts = await OrgContract.find({
+    organizationId: orgId
+  }).sort({
+    effectiveFrom: -1
+  }).lean();
+  return res.json({
+    success: true,
+    contracts
+  });
+}));
 
 /**
  * @swagger
@@ -677,11 +636,9 @@ router.get(
  */
 router.get("/org/:orgId/usage", ...pOrgRead, usageController.getOrganizationUsage);
 
-
 // ─── Platform Catalog APIs [REMOVED — legacy Plan model eliminated] ──────────
 // planCatalog.projection.js referenced Plan.model (legacy). Removed with migration.
 // Public pricing data is now served from GET /api/platform/plan-versions?status=active&visibility=public
-
 
 /**
  * @swagger
@@ -709,7 +666,6 @@ router.get("/org/:orgId/usage", ...pOrgRead, usageController.getOrganizationUsag
  */
 // Wave3 — Guarded: VIEW_PLATFORM_ANALYTICS
 router.get("/addons", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), superAdminOnly, addonCatalogController.getAddOnCatalog);
-
 
 // ─── Subscription Mutation APIs (v11.0) ─────────────────────────────────────
 /**
@@ -760,17 +716,14 @@ router.get("/addons", platformProtect, authorizePlatformPermission(CAP.VIEW_PLAT
 // This endpoint used the legacy Plan model (planId field — removed in Sprint 4).
 // REPLACED BY: POST /api/platform/contracts/upgrade  (atomic, uses planVersionId)
 // Returns 410 GONE to prevent accidental use.
-router.post("/org/:orgId/change-plan", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly,
-    (req, res) => res.status(410).json({
-        success: false,
-        error: {
-            code: "ENDPOINT_DEPRECATED",
-            message: "POST /org/:orgId/change-plan is deprecated. Use POST /api/platform/contracts/upgrade instead.",
-            replacement: "/api/platform/contracts/upgrade"
-        }
-    })
-);
-
+router.post("/org/:orgId/change-plan", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, (req, res) => res.status(410).json({
+  success: false,
+  error: {
+    code: "ENDPOINT_DEPRECATED",
+    message: "POST /org/:orgId/change-plan is deprecated. Use POST /api/platform/contracts/upgrade instead.",
+    replacement: "/api/platform/contracts/upgrade"
+  }
+}));
 
 /**
  * @swagger
@@ -803,7 +756,6 @@ router.post("/org/:orgId/change-plan", platformProtect, authorizePlatformPermiss
 // Wave3 — Guarded: MANAGE_SUBSCRIPTIONS
 router.post("/org/:orgId/add-addon", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, subscriptionMutationController.addAddon);
 
-
 /**
  * @swagger
  * /api/platform/org/{orgId}/remove-addon:
@@ -835,7 +787,6 @@ router.post("/org/:orgId/add-addon", platformProtect, authorizePlatformPermissio
 // Wave3 — Guarded: MANAGE_SUBSCRIPTIONS
 router.delete("/org/:orgId/remove-addon", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, subscriptionMutationController.removeAddon);
 
-
 /**
  * @swagger
  * /api/platform/invoices/{invoiceId}:
@@ -861,10 +812,9 @@ router.delete("/org/:orgId/remove-addon", platformProtect, authorizePlatformPerm
  */
 // DEPRECATED v21.0 — Canonical route: GET /billing/invoices/:invoiceId (platformFinance.routes.js)
 router.get("/invoices/:invoiceId", ...pBillingRead, (req, res) => {
-    res.set("X-Deprecated-Endpoint", "/billing/invoices/:invoiceId");
-    return res.redirect(301, req.originalUrl.replace("/invoices/", "/billing/invoices/"));
+  res.set("X-Deprecated-Endpoint", "/billing/invoices/:invoiceId");
+  return res.redirect(301, req.originalUrl.replace("/invoices/", "/billing/invoices/"));
 });
-
 
 /**
  * @swagger
@@ -902,9 +852,6 @@ router.get("/invoices/:invoiceId", ...pBillingRead, (req, res) => {
  *                   type: object
  */
 router.patch("/invoices/:invoiceId/status", ...pBillingUpdate, updateInvoiceStatus);
-
-
-
 
 // ─── Plan Version API (Contract-First Product Engine) ─────────────────────────
 // Migration complete: legacy /plans routes removed.
@@ -952,7 +899,6 @@ router.patch("/invoices/:invoiceId/status", ...pBillingUpdate, updateInvoiceStat
  */
 // Sentinel: GET → VIEW_*
 router.get("/plan-versions", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), planVersionController.listPlanVersions);
-
 
 // ─── Plan Version Impact Preview (must be before /:id to avoid route collision) ──
 
@@ -1011,12 +957,7 @@ router.get("/plan-versions/:versionId/impact", platformProtect, authorizePlatfor
 // Sentinel: GET → VIEW_* (VIEW_PLATFORM_ANALYTICS — the capability used by all plan-version GETs)
 // Note: VIEW_BILLING was requested but does NOT exist in PLATFORM_CAPABILITIES contract.
 //       Using VIEW_PLATFORM_ANALYTICS per Sentinel Rule #1 (no raw capability strings).
-router.get(
-    "/plan-versions/:id/revenue-impact",
-    platformProtect,
-    authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
-    planVersionController.getPlanRevenueImpactController
-);
+router.get("/plan-versions/:id/revenue-impact", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), planVersionController.getPlanRevenueImpactController);
 
 // ─── Feature 1: Plan Version Diff ────────────────────────────────────────────
 // GET /api/platform/plan-versions/diff?versionAId=...&versionBId=...
@@ -1054,34 +995,49 @@ router.get(
  *       404:
  *         description: One or both PlanVersions not found
  */
-router.get(
-    "/plan-versions/diff",
-    platformProtect,
-    authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
-    async (req, res) => {
-        try {
-            const { versionAId, versionBId } = req.query;
-            if (!versionAId || !versionBId) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Both versionAId and versionBId query parameters are required."
-                });
-            }
-            if (!mongoose.Types.ObjectId.isValid(versionAId) || !mongoose.Types.ObjectId.isValid(versionBId)) {
-                return res.status(400).json({ success: false, message: "Invalid ObjectId in versionAId or versionBId." });
-            }
-            if (versionAId === versionBId) {
-                return res.status(400).json({ success: false, message: "versionAId and versionBId must be different versions." });
-            }
-            const diff = await comparePlanVersions(versionAId, versionBId);
-            return res.json({ success: true, data: diff });
-        } catch (err) {
-            loggerBillingRoutes.error({ err }, "[BillingRoutes] plan-versions diff failed");
-            if (err.message.includes("not found")) return res.status(404).json({ success: false, message: err.message });
-            return res.status(500).json({ success: false, message: err.message });
-        }
+router.get("/plan-versions/diff", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), async (req, res) => {
+  try {
+    const {
+      versionAId,
+      versionBId
+    } = req.query;
+    if (!versionAId || !versionBId) {
+      return res.status(400).json({
+        success: false,
+        message: "Both versionAId and versionBId query parameters are required."
+      });
     }
-);
+    if (!mongoose.Types.ObjectId.isValid(versionAId) || !mongoose.Types.ObjectId.isValid(versionBId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ObjectId in versionAId or versionBId."
+      });
+    }
+    if (versionAId === versionBId) {
+      return res.status(400).json({
+        success: false,
+        message: "versionAId and versionBId must be different versions."
+      });
+    }
+    const diff = await comparePlanVersions(versionAId, versionBId);
+    return res.json({
+      success: true,
+      data: diff
+    });
+  } catch (err) {
+    loggerBillingRoutes.error({
+      err
+    }, "[BillingRoutes] plan-versions diff failed");
+    if (err.message.includes("not found")) return res.status(404).json({
+      success: false,
+      message: err.message
+    });
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
 
 // ─── Feature 3: Billing Event Ledger + Replay ─────────────────────────────────
 // GET  /api/platform/billing/events    — list replayable ledger entries
@@ -1127,26 +1083,34 @@ router.get(
  *       200:
  *         description: Paginated list of replayable events
  */
-router.get(
-    "/billing/events",
-    platformProtect,
-    authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS),
-    async (req, res) => {
-        try {
-            const { page = 1, limit = 50, provider, eventType } = req.query;
-            const result = await listReplayableEvents({
-                page: Number(page),
-                limit: Number(limit),
-                provider: provider || undefined,
-                eventType: eventType || undefined
-            });
-            return res.json({ success: true, data: result });
-        } catch (err) {
-            loggerBillingRoutes.error({ err }, "[BillingRoutes] billing/events list failed");
-            return res.status(500).json({ success: false, message: err.message });
-        }
-    }
-);
+router.get("/billing/events", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 50,
+      provider,
+      eventType
+    } = req.query;
+    const result = await listReplayableEvents({
+      page: Number(page),
+      limit: Number(limit),
+      provider: provider || undefined,
+      eventType: eventType || undefined
+    });
+    return res.json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    loggerBillingRoutes.error({
+      err
+    }, "[BillingRoutes] billing/events list failed");
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -1175,31 +1139,43 @@ router.get(
  *       404:
  *         description: Ledger entry not found
  */
-router.post(
-    "/billing/events/:id/replay",
-    platformProtect,
-    authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS),
-    superAdminOnly,
-    async (req, res) => {
-        try {
-            const { id } = req.params;
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ success: false, message: "Invalid ledger entry ID." });
-            }
-            const result = await replayBillingEvent(id, {
-                replayedBy: req.platformUser?._id
-            });
-            return res.json({ success: true, data: result });
-        } catch (err) {
-            loggerBillingRoutes.error({ err, ledgerEntryId: req.params.id }, "[BillingRoutes] billing event replay failed");
-            if (err.message.includes("not found")) return res.status(404).json({ success: false, message: err.message });
-            if (err.message.includes("not replayable")) return res.status(400).json({ success: false, message: err.message });
-            return res.status(500).json({ success: false, message: err.message });
-        }
+router.post("/billing/events/:id/replay", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, async (req, res) => {
+  try {
+    const {
+      id
+    } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ledger entry ID."
+      });
     }
-);
-
-
+    const result = await replayBillingEvent(id, {
+      replayedBy: req.platformUser?._id
+    });
+    return res.json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    loggerBillingRoutes.error({
+      err,
+      ledgerEntryId: req.params.id
+    }, "[BillingRoutes] billing event replay failed");
+    if (err.message.includes("not found")) return res.status(404).json({
+      success: false,
+      message: err.message
+    });
+    if (err.message.includes("not replayable")) return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -1221,7 +1197,6 @@ router.post(
  */
 // Sentinel: GET → VIEW_*
 router.get("/plan-versions/:id", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), planVersionController.getPlanVersionById);
-
 
 /**
  * @swagger
@@ -1259,7 +1234,6 @@ router.get("/plan-versions/:id", platformProtect, authorizePlatformPermission(CA
 // Sentinel: POST → MANAGE_*
 router.post("/plan-versions", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, planVersionController.createPlanVersion);
 
-
 /**
  * @swagger
  * /api/platform/plan-versions/{id}:
@@ -1283,7 +1257,6 @@ router.post("/plan-versions", platformProtect, authorizePlatformPermission(CAP.M
  */
 // Sentinel: PATCH → MANAGE_*
 router.patch("/plan-versions/:id", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, planVersionController.updatePlanVersion);
-
 
 /**
  * @swagger
@@ -1309,7 +1282,6 @@ router.patch("/plan-versions/:id", platformProtect, authorizePlatformPermission(
 // Sentinel: POST → MANAGE_*
 router.post("/plan-versions/:id/publish", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, planVersionController.publishPlanVersion);
 
-
 /**
  * @swagger
  * /api/platform/plan-versions/{id}/deprecate:
@@ -1331,7 +1303,6 @@ router.post("/plan-versions/:id/publish", platformProtect, authorizePlatformPerm
  */
 // Sentinel: PATCH → MANAGE_*
 router.patch("/plan-versions/:id/deprecate", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, planVersionController.deprecatePlanVersion);
-
 
 /**
  * @swagger
@@ -1382,9 +1353,6 @@ router.patch("/plan-versions/:id/deprecate", platformProtect, authorizePlatformP
 // Sentinel: POST → MANAGE_*
 router.post("/plan-versions/:id/duplicate", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, asyncHandler(planVersionController.duplicatePlanVersion));
 
-
-
-
 /**
  * @swagger
  * /api/platform/plan-templates:
@@ -1407,7 +1375,6 @@ router.post("/plan-versions/:id/duplicate", platformProtect, authorizePlatformPe
 // Sentinel: GET → VIEW_*
 router.get("/plan-templates", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), asyncHandler(planTemplateController.listPlanTemplates));
 
-
 /**
  * @swagger
  * /api/platform/plan-templates/{id}:
@@ -1428,7 +1395,6 @@ router.get("/plan-templates", platformProtect, authorizePlatformPermission(CAP.V
  */
 // Sentinel: GET → VIEW_*
 router.get("/plan-templates/:id", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), asyncHandler(planTemplateController.getPlanTemplateById));
-
 
 /**
  * @swagger
@@ -1460,7 +1426,6 @@ router.get("/plan-templates/:id", platformProtect, authorizePlatformPermission(C
 // Sentinel: POST → MANAGE_*
 router.post("/plan-templates", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, asyncHandler(planTemplateController.createPlanTemplate));
 
-
 /**
  * @swagger
  * /api/platform/plan-templates/{id}:
@@ -1484,7 +1449,6 @@ router.post("/plan-templates", platformProtect, authorizePlatformPermission(CAP.
  */
 // Sentinel: PATCH → MANAGE_*
 router.patch("/plan-templates/:id", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, asyncHandler(planTemplateController.updatePlanTemplate));
-
 
 // ─── Phase v5.6 — Billing Governance ──────────────────────────────────────
 /**
@@ -1530,7 +1494,6 @@ router.patch("/plan-templates/:id", platformProtect, authorizePlatformPermission
 // Wave3 — Guarded: VIEW_PLATFORM_ANALYTICS
 router.get("/orgs/:orgId/billing", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), superAdminOnly, platformBillingController.getOrgBillingOverview);
 
-
 /**
  * @swagger
  * /api/platform/orgs/{orgId}/invoices/generate:
@@ -1560,7 +1523,6 @@ router.get("/orgs/:orgId/billing", platformProtect, authorizePlatformPermission(
 // Wave3 — Guarded: MANAGE_SUBSCRIPTIONS
 router.post("/orgs/:orgId/invoices/generate", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, platformBillingController.manualGenerateInvoice);
 
-
 // ─── Phase v6.1 & v6.2 — Coupon & Campaign Governance ──────────────────────
 /**
  * @swagger
@@ -1584,7 +1546,6 @@ router.post("/orgs/:orgId/invoices/generate", platformProtect, authorizePlatform
  */
 // Wave3 — Guarded: MANAGE_SUBSCRIPTIONS
 router.post("/coupons", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), superAdminOnly, couponController.createCoupon);
-
 
 /**
  * @swagger
@@ -1614,7 +1575,6 @@ router.post("/coupons", platformProtect, authorizePlatformPermission(CAP.MANAGE_
  */
 router.put("/coupons/:id", platformProtect, superAdminOnly, couponController.updateCoupon);
 
-
 /**
  * @swagger
  * /api/platform/campaigns:
@@ -1636,7 +1596,6 @@ router.put("/coupons/:id", platformProtect, superAdminOnly, couponController.upd
  *                   type: object
  */
 router.post("/campaigns", platformProtect, superAdminOnly, campaignController.createCampaign);
-
 
 /**
  * @swagger
@@ -1665,7 +1624,6 @@ router.post("/campaigns", platformProtect, superAdminOnly, campaignController.cr
  *                   type: object
  */
 router.put("/campaigns/:id", platformProtect, superAdminOnly, campaignController.updateCampaign);
-
 
 // ─── Phase v6.3 & v6.4 — Trial Management ──────────────────────────────────
 /**
@@ -1696,7 +1654,6 @@ router.put("/campaigns/:id", platformProtect, superAdminOnly, campaignController
  */
 router.get("/trials", platformProtect, superAdminOnly, trialController.getTrials);
 
-
 /**
  * @swagger
  * /api/platform/organizations/{id}/auto-renew:
@@ -1725,7 +1682,6 @@ router.get("/trials", platformProtect, superAdminOnly, trialController.getTrials
  */
 router.patch("/organizations/:id/auto-renew", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), revenueController.toggleAutoRenew);
 
-
 /**
  * @swagger
  * /api/platform/organizations/{id}/manual-payment:
@@ -1753,7 +1709,6 @@ router.patch("/organizations/:id/auto-renew", platformProtect, authorizePlatform
  *                   type: object
  */
 router.post("/organizations/:id/manual-payment", platformProtect, authorizePlatformPermission(CAP.MANAGE_SUBSCRIPTIONS), revenueController.recordManualPayment);
-
 
 /**
  * @swagger
@@ -2047,7 +2002,6 @@ router.get("/refunds/:id", ...pRefundManage, refundController.getRefund);
  */
 router.get("/invoices/:id/refunds", ...pRefundManage, refundController.listRefundsByInvoice);
 
-
 // ─── Organization Entitlements (Sprint 2 — Entitlement Engine) ───────────────
 const orgEntitlementController = require("../../platform/billing/controllers/orgEntitlement.controller");
 
@@ -2160,12 +2114,8 @@ router.get("/org-entitlements/:orgId", ...pOrgRead, orgEntitlementController.get
  */
 router.post("/org-entitlements/:orgId/override", ...pBillingUpdate, orgEntitlementController.applyEntitlementOverride);
 
-
 // ── Platform Finance Read API (Sprint 9) ──────────────────────────────────────
 // Mounts: /billing/invoices, /billing/ledger, /billing/payments, /billing/revenue
 const platformFinanceRoutes = require("../../platform/billing/routes/platformFinance.routes");
 router.use(platformFinanceRoutes);
-
 module.exports = router;
-
-

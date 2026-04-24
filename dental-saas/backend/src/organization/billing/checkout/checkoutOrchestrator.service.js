@@ -29,12 +29,17 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 // PHASE 8 — PLANE-002 fix: All cross-plane imports use module aliases.
-const PlanVersion = require("@billing/models/PlanVersion.model").default;
-const OrgContract = require("@billing/models/OrgContract.model").default;
-const PlatformInvoice = require("@billing/models/PlatformInvoice.model").default;
-const Organization = require("@shared/models/Organization").default;
+const PlanVersionDef = require("@billing/models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
+const OrgContractDef = require("@billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
+const PlatformInvoiceDef = require("@billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
 const {
   computePrice
 } = require("@billing/pricing/pricingEngine.service");
