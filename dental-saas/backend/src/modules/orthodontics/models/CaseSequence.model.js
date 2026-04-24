@@ -4,7 +4,7 @@
  * ROLE: Per-case monotonic sequence counter for ClinicalEvent ordering.
  *
  * ARCHITECTURE:
- *   - One document per (organizationId, caseId) pair
+ * Tenant isolation is at the DB level (per-org database).
  *   - Incremented atomically via findOneAndUpdate($inc, { upsert: true })
  *   - Zero duplicate sequence numbers under any concurrent write rate
  *   - Transaction-safe: pass MongoDB session to findOneAndUpdate
@@ -12,7 +12,7 @@
  * INVARIANTS:
  *   - currentSequence starts at 0 (first increment yields 1)
  *   - Never decremented — append-only
- *   - organizationId scoped for cross-tenant safety
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

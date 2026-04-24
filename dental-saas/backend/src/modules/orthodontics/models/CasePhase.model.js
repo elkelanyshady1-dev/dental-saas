@@ -13,7 +13,7 @@
  *   The caseId link is permanent.
  *
  * MULTI-TENANCY:
- *   organizationId is required and indexed. All queries MUST scope by it.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

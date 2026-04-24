@@ -4,7 +4,7 @@
  *
  * Stores patient-submitted monitoring photos.
  * Storage path: org/{organizationId}/patients/{patientId}/photos/{fileKey}
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

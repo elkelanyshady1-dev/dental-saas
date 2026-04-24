@@ -6,7 +6,7 @@
  *   - TAD linking: linkedTadIds[] references Tad._id for biomechanics engine
  *   - Source tracking: OPG row click vs manual bonding is preserved
  *   - Upsert pattern: same tooth in same case → rebonding, not duplicate document
- *   - organizationId required for multi-tenant isolation
+ * Tenant isolation is at the DB level (per-org database).
  *
  * Status lifecycle:
  *   ACTIVE ─→ DEBONDED ─→ ACTIVE (rebonded)

@@ -12,6 +12,12 @@ if (!process.env.NODE_ENV) {
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
 
+// v9.4.1 Hardening H1 — Centralised env validation (3-layer DB contract).
+// Fails fast if any required var is missing; must run before any other
+// project import that reads env at require-time.
+const { validateEnv } = require("@config/validateEnv");
+validateEnv();
+
 // ── Pre-Phase-8 final hardening — Section 10: Kashier prod-readiness assert.
 // Refuse to start the process if ENABLE_KASHIER=true and any of the required
 // Kashier integration secrets are missing. Better to fail at boot than to
@@ -96,28 +102,9 @@ if (process.env.NODE_ENV === "production" && process.env.STORAGE_PROVIDER !== "r
     process.exit(1);
 }
 
-// 🛡️ v9.4 Hardening — Startup Config Validation (3-Layer DB Architecture)
-// REDIS_URL removed from required env — the system is Redis-free (Phase 6).
-// Legacy MONGO_URI removed — the 3-layer architecture requires explicit
-// platform / shared / cluster URIs (see DB_3_LAYER_ARCHITECTURE_PLAN.md).
-const requiredEnv = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "JWT_SECRET",
-    "MONGO_URI_PLATFORM",
-    "MONGO_URI_SHARED",
-    "MONGO_URI_MEA_EG_1",
-];
-
-const missingEnv = requiredEnv.filter(key => !process.env[key]);
-if (missingEnv.length > 0) {
-    logger.error({
-        service: "server",
-        action: "startup_abort",
-        missing: missingEnv
-    }, `CRITICAL: Missing required environment variables: ${missingEnv.join(", ")}`);
-    process.exit(1);
-}
+// Env validation — already ran at the top of this file via validateEnv()
+// (H1, v9.4.1). Inline block removed to keep the contract in one place
+// (src/config/validateEnv.js).
 
 if (process.env.NODE_ENV === "production" && process.env.ALLOW_SUPERADMIN_DEV_BYPASS === "true") {
     logger.error({ service: "server", action: "startup_abort" }, "CRITICAL: ALLOW_SUPERADMIN_DEV_BYPASS enabled in production. Aborting startup.");
@@ -252,6 +239,36 @@ let slaTask;
 
 connectDB().then(async () => {
     logger.info({ service: "server", action: "db_connected" }, "Database connected.");
+
+    // ── H2 · Connection Health Guard (v9.4.1) ──────────────────────────────
+    // Assert that the platform + shared sibling connections are actually in
+    // readyState=1 after connectDB(). A connection object exists as soon as
+    // init() is awaited, but if the driver's handshake failed silently we'd
+    // only notice at first query. Fail fast at boot instead.
+    {
+        const platformConnection = require("@core/db/platformConnection");
+        const sharedConnection = require("@core/db/sharedConnection");
+        const platformConn = platformConnection.get();
+        const sharedConn = sharedConnection.get();
+        if (!platformConn || platformConn.readyState !== 1) {
+            throw new Error("Platform DB not connected (readyState=" + (platformConn?.readyState ?? "null") + ")");
+        }
+        if (!sharedConn || sharedConn.readyState !== 1) {
+            throw new Error("Shared DB not connected (readyState=" + (sharedConn?.readyState ?? "null") + ")");
+        }
+        logger.info(
+            { event: "DB_READY", platform: platformConn.readyState, shared: sharedConn.readyState },
+            "[H2 Guard] Platform + Shared connections verified readyState=1"
+        );
+    }
+
+    // ── H6 · Slow Query Monitor (prod: attaches to platform + shared) ──────
+    try {
+        const { installSlowQueryMonitor } = require("@infra/db/slowQueryMonitor");
+        installSlowQueryMonitor();
+    } catch (err) {
+        logger.warn({ err: err.message }, "[SlowQueryMonitor] install failed — continuing");
+    }
 
     // ── Step 5f · Ghost Model Detector (dev-only boot check) ───────────────
     // After Step 5f removed every runtime mongoose.model() call, the global

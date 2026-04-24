@@ -25,7 +25,7 @@
  *   else                    → record.imageUrl  (legacy local path)
  *
  * PLANE: Organization (per-org DB — resolved via getModel)
- * TENANT ISOLATION: organizationId is indexed + enforced via req.dbConnection
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

@@ -11,7 +11,7 @@
  *   - clinicalPhase is a SUGGESTION context, NOT enforced state
  *   - Soft-delete only (isDeleted) — never hard-delete clinical records
  *
- * MULTI-TENANCY: organizationId scopes every query.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

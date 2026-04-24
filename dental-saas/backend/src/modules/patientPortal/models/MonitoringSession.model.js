@@ -4,7 +4,7 @@
  *
  * When a patient submits photos for a stage, a MonitoringSession is created.
  * The doctor then reviews it, optionally with AI assistance.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

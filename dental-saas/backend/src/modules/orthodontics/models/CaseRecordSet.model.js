@@ -5,7 +5,7 @@
  * Now: Standalone collection with versioning, snapshot linkage, and org isolation.
  *
  * RULES:
- *   - organizationId REQUIRED (tenant isolation)
+ * Tenant isolation is at the DB level (per-org database).
  *   - caseId REQUIRED (aggregate linkage)
  *   - snapshotId OPTIONAL (linked to clinical snapshot for audit trail)
  *   - version monotonically increases per case

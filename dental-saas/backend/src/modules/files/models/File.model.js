@@ -13,7 +13,7 @@
  *   Delete → File.isDeleted=true (soft) + optional storageService.delete()
  *
  * PLANE: Organization (per-org DB — uses getModel)
- * TENANT ISOLATION: organizationId indexed + enforced via dbConnection
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

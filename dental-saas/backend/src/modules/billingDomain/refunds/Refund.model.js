@@ -7,7 +7,7 @@
  * contra-revenue journal entry (DR Refunds / CR Cash).
  *
  * INVARIANTS:
- * 1. organizationId is required (multi-tenant)
+ * Tenant isolation is at the DB level (per-org database).
  * 2. Cumulative refunds for a payment MUST NOT exceed payment amount
  * 3. Multiple partial refunds are allowed per payment
  * 4. status is immutable once set to "processed"

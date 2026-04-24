@@ -11,7 +11,7 @@
  * INVARIANTS:
  * 1. Every failed journal write MUST be captured here
  * 2. completed entries are retained for audit (30-day TTL)
- * 3. organizationId is required (multi-tenant isolation)
+ * Tenant isolation is at the DB level (per-org database).
  *
  * PLANE: Org only.
  *

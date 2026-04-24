@@ -151,7 +151,16 @@ function _checkReplicaSet() {
     if (_replicaSetChecked) return _replicaSetSupported;
 
     try {
-        const topology = mongoose.connection?.client?.topology?.description?.type;
+        // Read topology from the platform connection (where DistributedLock
+        // models are bound via getPlatformModel). Previously read from the
+        // global mongoose.connection — that's a dead stub post-Step 5d.
+        let conn;
+        try {
+            conn = require("@core/db/platformConnection").get();
+        } catch (_) {
+            conn = null;
+        }
+        const topology = conn?.client?.topology?.description?.type;
         // Topology types that support change streams:
         //   ReplicaSetWithPrimary, ReplicaSetNoPrimary (streams reconnect
         //   once a primary returns), Sharded (Atlas M0 shared tier).

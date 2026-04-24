@@ -3,7 +3,7 @@
  * Phase 5 — Patient Portal: Patient-Doctor Messaging
  *
  * Two-way messaging between patients and clinical staff.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

@@ -3,7 +3,7 @@
  * Phase 5 — Patient Portal: Aligner Stage Progress Tracking
  *
  * Tracks each patient's progress through their aligner stages.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

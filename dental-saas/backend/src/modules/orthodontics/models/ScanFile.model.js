@@ -3,7 +3,7 @@
  * Phase 4 — Orthodontic Intelligence: Scan File Storage
  *
  * Represents an uploaded 3D scan or image file.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  * Storage: S3/object storage at org/{organizationId}/cases/{caseId}/scans/
  */
 

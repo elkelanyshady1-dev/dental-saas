@@ -4,7 +4,7 @@
  *
  * Represents a single treatment performed on a patient.
  * Links to Procedure catalog and optionally to an Appointment.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  * Status FSM: planned → in_progress → completed | cancelled
  */
 

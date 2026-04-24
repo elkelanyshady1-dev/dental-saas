@@ -13,7 +13,7 @@
  * 2. entries MUST contain at least 2 lines (double-entry minimum)
  * 3. JournalEntries are APPEND-ONLY (update/delete blocked by middleware)
  * 4. All amounts use Money-safe integer minor units
- * 5. organizationId is required (multi-tenant isolation)
+ * Tenant isolation is at the DB level (per-org database).
  *
  * PLANE: Org only.
  *

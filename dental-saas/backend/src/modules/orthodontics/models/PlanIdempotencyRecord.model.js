@@ -5,7 +5,7 @@
  * treatment-plan write API (createDraft / approvePlan / createRevision).
  *
  * ROLE
- *   Store a small record keyed by {organizationId, key} so that retrying a
+ * Tenant isolation is at the DB level (per-org database).
  *   write with the same `Idempotency-Key` header returns the original
  *   response instead of producing a duplicate write. Solves the "network
  *   flake → client retries → double approve" class of problem without

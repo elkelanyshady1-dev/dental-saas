@@ -3,7 +3,7 @@
  * Phase 3 — Clinical Operations: Procedure Catalog
  *
  * Represents a clinic's catalog of dental procedures.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  * Supports FDI tooth numbering and category-based grouping.
  */
 

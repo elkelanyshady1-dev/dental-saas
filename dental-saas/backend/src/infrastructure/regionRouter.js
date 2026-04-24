@@ -32,7 +32,7 @@ async function getRegionContext(regionCode, actor) {
     if (actor?.type === "platform" || actor?.actorType === "platform_user") {
         throw new Error(
             "[RegionRouter] SOVEREIGNTY VIOLATION: Platform tokens must not use regionRouter. " +
-            "Use Control Plane DB (mongoose.connection) directly."
+            "Use the platform sibling connection directly (see @core/db/platformConnection)."
         );
     }
 

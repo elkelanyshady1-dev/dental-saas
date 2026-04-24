@@ -21,7 +21,7 @@
  *   + startedAt: Date — when the visit session was opened
  *   + endedAt:   Date — when the visit session was closed (null while active)
  *
- * MULTI-TENANCY: organizationId required on every document.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

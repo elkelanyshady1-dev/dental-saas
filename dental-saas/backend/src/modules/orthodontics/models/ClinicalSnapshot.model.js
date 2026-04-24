@@ -22,7 +22,7 @@
  *   NO actions[]   — UI-only session history, never persisted
  *   NO billing     — billing domain owns financials
  *   NO file blobs  — URL references only (S3 / CDN)
- *   organizationId required (strict multi-tenancy)
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

@@ -4,7 +4,7 @@
  * Architecture:
  *   - Event-sourced lifecycle: status derives from the events[] log
  *   - failureCount is a denormalized counter (never manual, always via failTad())
- *   - organizationId is required for multi-tenant DB-per-org isolation
+ * Tenant isolation is at the DB level (per-org database).
  *   - scheduledReinsertAt enables reminder scheduling
  */
 

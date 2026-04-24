@@ -4,7 +4,7 @@
  *
  * Persists the output of the AI segmentation pipeline.
  * Uses FDI tooth numbering (11-18, 21-28, 31-38, 41-48).
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

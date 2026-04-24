@@ -5,7 +5,7 @@
  *
  * Defines clinical groupings (e.g. Orthodontics, Endo, Surgery).
  * ISOLATED: Has NO dependency on procedures (billing) or treatments (records).
- * Multi-tenant: per-org DB — organizationId scopes every query.
+ * Tenant isolation is at the DB level (per-org database).
  * Soft delete: isActive flag. NO hard deletes ever.
  */
 

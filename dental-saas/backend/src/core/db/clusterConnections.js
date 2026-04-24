@@ -274,6 +274,19 @@ function getStats() {
     };
 }
 
+/**
+ * getAllLiveConnections
+ * Returns an array of raw Mongoose Connection objects for every cluster
+ * root currently open. Used by the slow-query monitor (H6) to attach
+ * command listeners to each underlying MongoClient. Does NOT open any
+ * new connections; just enumerates what's live right now.
+ *
+ * @returns {import("mongoose").Connection[]}
+ */
+function getAllLiveConnections() {
+    return Array.from(connections.values()).map((e) => e.conn);
+}
+
 // ─── Sweep Timer ────────────────────────────────────────────────────────────
 // Starts on first require. .unref() so it doesn't hold the process open.
 
@@ -301,6 +314,7 @@ module.exports = {
     closeAll,
     closeIdleConnections,
     getStats,
+    getAllLiveConnections,
     // test-only internals
     _connections: () => connections,
     _health: () => clusterHealth,

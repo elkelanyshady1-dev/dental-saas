@@ -4,7 +4,7 @@
  *
  * Persists cephalometric landmark positions, angular measurements,
  * and linear measurements derived from lateral ceph X-rays or CBCT.
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";

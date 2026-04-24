@@ -311,6 +311,22 @@ module.exports = [
   // in CLAUDE.md §2.1; Step 5e-B can tighten this once patterns stabilize.
   // (Intentionally empty rule block; reserved for Phase 5e-B.)
 
+  // ── Rule 4 (H7 · v9.4.1): Write-guard policy documentation ─────────────
+  // Every tenant-service write path MUST call
+  //   assertWriteAllowed(req.context.organization, req.context.organizationId)
+  // before mutating the DB. ESLint's AST language can't prove the call
+  // happens in the same function scope as each .create / .save / .updateOne,
+  // so enforcement lives in a dedicated CI script instead of a rule that
+  // would flood output with false positives on every mutating call:
+  //
+  //   scripts/check-write-guard.js
+  //
+  // Runtime backstop: src/core/db/assertWriteAllowed.js throws 503 on any
+  // attempt to mutate while org.writeLocked === true. The CI check is a
+  // lint-time helper; the runtime guard is the authority.
+  //
+  // Policy source: DB_3_LAYER_ARCHITECTURE_PLAN.md §Phase 5 · Rule 4.
+
   // NOTE: No blanket `no-restricted-syntax: off` for legacy paths.
   //
   // The Rule 1 config already `ignores:` the legacy set, so mongoose.model()

@@ -4,7 +4,7 @@
  *
  * Clinic-side aligner planning model (distinct from AlignerProductionCase
  * which is the lab/B2B production tracking model).
- * Tenant-isolated by organizationId.
+ * Tenant isolation is at the DB level (per-org database).
  */
 
 "use strict";
