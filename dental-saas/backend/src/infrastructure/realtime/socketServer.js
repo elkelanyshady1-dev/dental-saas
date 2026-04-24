@@ -1,11 +1,14 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - SharedCase (../../modules/orthodontics/models/SharedCase.model) — tenant + no req access (worker/utility)
 const {
   Server
 } = require("socket.io");
 const socketAuth = require("./socketAuth");
 const eventBus = require("../../core/eventBus");
 const logger = require("../../utils/logger");
+const getModel = require("../../core/db/getModel");
+const getPlatformModel = require("../../core/db/getPlatformModel");
+const { resolveOrgConnection } = require("../../core/db/connectionResolver");
+const SharedCaseDef = require("../../modules/orthodontics/models/SharedCase.model");
+const ShareLinkDef = require("../../platform/shareLink/ShareLink.model");
 const {
   APPOINTMENT_REQUESTED,
   APPOINTMENT_CREATED,
@@ -93,12 +96,23 @@ const initSocket = server => {
   // ─── Collab Namespace (Public — Share Token Auth) ──────────────────────────
   // Used by SharedCaseView for real-time comments sync.
   // NO JWT required — validated by share token only.
-  const SharedCase = require("../../modules/orthodontics/models/SharedCase.model").default;
+  //
+  // Two-step resolution (v9.4):
+  //   1. ShareLink (platform) holds { token → caseId, organizationId }
+  //   2. Once orgId is known, SharedCase is fetched from that org's tenant DB
+  const ShareLink = getPlatformModel(ShareLinkDef);
   const collabNs = io.of("/collab");
   collabNs.use(async (socket, next) => {
     const token = socket.handshake.auth?.shareToken;
     if (!token) return next(new Error("Share token required"));
     try {
+      const link = await ShareLink.findOne({ token, isRevoked: false }).lean();
+      if (!link) return next(new Error("Invalid share token"));
+      if (link.expiresAt && new Date() > new Date(link.expiresAt)) {
+        return next(new Error("Share link expired"));
+      }
+      const orgConn = await resolveOrgConnection(String(link.orgId));
+      const SharedCase = getModel(orgConn, SharedCaseDef);
       const shared = await SharedCase.findOne({
         token,
         isRevoked: false
@@ -107,6 +121,7 @@ const initSocket = server => {
       if (new Date() > new Date(shared.expiresAt)) return next(new Error("Share link expired"));
       socket.shareId = shared._id.toString();
       socket.shareToken = token;
+      socket.organizationId = String(link.orgId);
       socket.collaboratorName = socket.handshake.auth?.name || "Anonymous";
       socket.collaboratorRole = socket.handshake.auth?.role || "doctor";
       next();

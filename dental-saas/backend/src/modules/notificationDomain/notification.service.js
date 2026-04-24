@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - Notification (./notification.model) — tenant + no req access (worker/utility)
 /**
  * notification.service.js
  * Thin service layer — validates payload then persists a notification.
@@ -16,7 +14,9 @@
  * aggregate's consistency boundary).
  */
 
-const Notification = require("./notification.model").default;
+const getModel = require("@core/db/getModel");
+const { resolveOrgConnection } = require("@core/db/connectionResolver");
+const NotificationDef = require("./notification.model");
 const logger = require("@utils/logger");
 
 /**
@@ -50,6 +50,8 @@ async function enqueueNotification(payload) {
     return;
   }
   try {
+    const conn = await resolveOrgConnection(payload.organizationId);
+    const Notification = getModel(conn, NotificationDef);
     await Notification.create({
       userId: payload.userId || null,
       type: payload.type,

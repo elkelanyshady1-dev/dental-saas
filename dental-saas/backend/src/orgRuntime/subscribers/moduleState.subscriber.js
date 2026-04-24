@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - OrganizationModuleState (../../orgRuntime/models/OrganizationModuleState.model) — tenant + no req access (worker/utility)
 /**
  * moduleState.subscriber.js — Module Lifecycle Event Subscriber
  * Phase B.2 — Runtime Maturity & Architecture Optimization
@@ -24,7 +22,9 @@
 "use strict";
 
 const eventBus = require("../../core/eventBus");
-const OrganizationModuleState = require("../../orgRuntime/models/OrganizationModuleState.model").default;
+const getModel = require("@core/db/getModel");
+const { resolveOrgConnection } = require("@core/db/connectionResolver");
+const OrganizationModuleStateDef = require("../../orgRuntime/models/OrganizationModuleState.model");
 const logger = require("@utils/logger");
 
 /**
@@ -50,6 +50,8 @@ function initModuleStateSubscriber() {
         }, "[moduleState.subscriber] Missing required fields — skipping");
         return;
       }
+      const conn = await resolveOrgConnection(organizationId);
+      const OrganizationModuleState = getModel(conn, OrganizationModuleStateDef);
       await OrganizationModuleState.findOneAndUpdate({
         organizationId,
         moduleKey
@@ -95,6 +97,8 @@ function initModuleStateSubscriber() {
         }, "[moduleState.subscriber] Missing required fields — skipping");
         return;
       }
+      const conn = await resolveOrgConnection(organizationId);
+      const OrganizationModuleState = getModel(conn, OrganizationModuleStateDef);
       await OrganizationModuleState.findOneAndUpdate({
         organizationId,
         moduleKey

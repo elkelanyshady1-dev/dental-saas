@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - OrganizationModuleState (./models/OrganizationModuleState.model) — tenant + no req access (worker/utility)
 /**
  * moduleStateSync.service.js — Module State Synchronization
  * Phase B.2 — Runtime Maturity & Architecture Optimization
@@ -21,7 +19,9 @@
 
 "use strict";
 
-const OrganizationModuleState = require("./models/OrganizationModuleState.model").default;
+const getModel = require("@core/db/getModel");
+const { resolveOrgConnection } = require("@core/db/connectionResolver");
+const OrganizationModuleStateDef = require("./models/OrganizationModuleState.model");
 const logger = require("@utils/logger");
 
 // ─── TTL Cache ──────────────────────────────────────────────────────────────
@@ -85,6 +85,8 @@ async function syncModuleState(organizationId, modules) {
       });
     }
     if (ops.length > 0) {
+      const conn = await resolveOrgConnection(organizationId);
+      const OrganizationModuleState = getModel(conn, OrganizationModuleStateDef);
       await OrganizationModuleState.bulkWrite(ops, {
         ordered: false
       });

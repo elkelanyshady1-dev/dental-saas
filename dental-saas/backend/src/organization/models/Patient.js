@@ -1,10 +1,12 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - Patient (../patient/models/patient.model) — tenant + no req access (worker/utility)
 /**
  * Patient Model Proxy (v1.7.0)
- * 
+ *
  * The Patient model has been moved to the specialized domain core folder.
  * This file is maintained for backward compatibility with existing imports.
+ *
+ * Exports the model DEFINITION ({ modelName, schema }). Consumers bind via
+ * getModel(req.dbConnection, PatientDef) — Patient is a tenant model.
  */
-const Patient = require("../patient/models/patient.model").default;
-module.exports = Patient;
+"use strict";
+
+module.exports = require("../patient/models/patient.model");

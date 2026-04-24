@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - OrgAddOn (../../../organization/billing/models/orgAddOn.model) — tenant + req present but no _getModels(req) helper
 /**
  * addOnPurchase.controller.js
  * Phase v6-0 — Add-On Monetization Engine
@@ -8,9 +6,11 @@
 "use strict";
 
 const getPlatformModel = require("@core/db/getPlatformModel");
+const getModel = require("@core/db/getModel");
+const { resolveOrgConnection } = require("@core/db/connectionResolver");
 const addOnService = require("../../../shared/services/platformAddOn.service");
 const orgAddOnService = require("../services/orgAddOn.aggregate.service");
-const OrgAddOn = require("../../../organization/billing/models/orgAddOn.model").default;
+const OrgAddOnDef = require("../../../organization/billing/models/orgAddOn.model");
 const {
   getCurrentBillingCycle
 } = require("../../../core/subscription/communicationQuota.service");
@@ -56,6 +56,8 @@ exports.purchaseAddOn = async (req, res) => {
     } = getCurrentBillingCycle();
 
     // v6-0 Rule: Ensure OAV for OrgAddOn
+    const orgConn = await resolveOrgConnection(organizationId);
+    const OrgAddOn = getModel(orgConn, OrgAddOnDef);
     const existing = await OrgAddOn.findOne({
       organizationId,
       addOnId: addOn._id,

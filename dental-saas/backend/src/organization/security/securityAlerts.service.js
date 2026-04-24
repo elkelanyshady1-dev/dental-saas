@@ -22,11 +22,19 @@
 
 "use strict";
 
-const SecurityAlert = require("./models/SecurityAlert").default;
+const getModel = require("@core/db/getModel");
+const { resolveOrgConnection } = require("@core/db/connectionResolver");
+const SecurityAlertDef = require("./models/SecurityAlert");
 const logger = require("@utils/logger");
 
-// ── Secure Model Instance ──────────────────────────────────────────────────
-const Alert = SecurityAlert;
+// ── Per-org model resolver ─────────────────────────────────────────────────
+// Each call path resolves the tenant connection for the given organizationId
+// and binds SecurityAlert against it. Never module-scoped — per the
+// "never module-scope tenant model" invariant (5e-B).
+async function _getAlert(organizationId) {
+  const conn = await resolveOrgConnection(organizationId);
+  return getModel(conn, SecurityAlertDef);
+}
 
 // ─── Sliding Window Storage (per-org) ───────────────────────────────────────
 
@@ -300,7 +308,7 @@ async function getAlerts(organizationId, options = {}, req = null) {
   const safePage = Math.max(Number(page) || 1, 1);
   const skip = (safePage - 1) * safeLimit;
 
-  // Per-org DB: connection-scoped isolation
+  const Alert = await _getAlert(organizationId);
 
   const [alerts, total] = await Promise.all([Alert.find(filter).sort({
     createdAt: -1
@@ -321,7 +329,7 @@ async function getAlerts(organizationId, options = {}, req = null) {
  * @param {string} organizationId
  */
 async function getAlertSummary(organizationId, req = null) {
-  // Per-org DB: connection-scoped isolation
+  const Alert = await _getAlert(organizationId);
 
   const pipeline = [{
     $match: {
@@ -359,7 +367,7 @@ async function getAlertSummary(organizationId, req = null) {
  * @param {string} userId - The user acknowledging the alert
  */
 async function acknowledgeAlert(alertId, userId, organizationId) {
-  // Per-org DB: connection-scoped isolation
+  const Alert = await _getAlert(organizationId);
   const alert = await Alert.findById(alertId);
   if (!alert) return null;
   if (alert.status !== "active") return alert;
@@ -379,6 +387,7 @@ async function acknowledgeAlert(alertId, userId, organizationId) {
  * @param {string} userId - The user resolving the alert
  */
 async function resolveAlert(alertId, userId, organizationId) {
+  const Alert = await _getAlert(organizationId);
   await Alert.findByIdAndUpdate(alertId, {
     status: "resolved",
     resolvedBy: userId,
@@ -401,7 +410,7 @@ async function _createAlertIfNotDuped(organizationId, alertData) {
   // System context: alert creation is triggered by internal denial tracker
 
   try {
-    // Per-org DB: connection-scoped isolation
+    const Alert = await _getAlert(organizationId);
     const existing = await Alert.findOne({
       deduplicationKey: dedupKey
     });

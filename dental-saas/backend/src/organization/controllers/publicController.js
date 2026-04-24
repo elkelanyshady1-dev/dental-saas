@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - SignupIdempotency (../models/SignupIdempotency.model) — tenant + req present but no _getModels(req) helper
 const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -72,8 +70,10 @@ const ISO_TO_CURRENCY = {
 // Applied to new signups only, existing users unaffected.
 const PASSWORD_COMPLEXITY_RE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-// PHASE 3 v24.0 — Signup idempotency protection
-const SignupIdempotency = require("../models/SignupIdempotency.model").default;
+// PHASE 3 v24.0 — Signup idempotency protection.
+// Pre-auth endpoint (no org exists yet) — bind on the platform connection.
+const SignupIdempotencyDef = require("../models/SignupIdempotency.model");
+const SignupIdempotency = getPlatformModel(SignupIdempotencyDef);
 
 // ---------------------------------------------------------------------------
 // Public: Signup for a new organization (trial onboarding)

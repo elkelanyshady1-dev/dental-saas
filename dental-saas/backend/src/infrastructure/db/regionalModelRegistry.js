@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - PatientModel (../../organization/patient/models/patient.model) — tenant + no req access (worker/utility)
 /**
  * regionalModelRegistry.js
  * DDD Migration — Phase 1 Fix
@@ -28,26 +26,31 @@
 
 "use strict";
 
-const getPlatformModel = require("@core/db/getPlatformModel");
 const {
   getRegionContext
 } = require("../regionRouter");
 
-// ── Schema imports (schema only, NOT the compiled models) ────────────────────
-// We import the compiled model just to extract its .schema property.
-const PatientModel = require("../../organization/patient/models/patient.model").default;
-const BranchCounterModel = require("../../modules/patientDomain/core/branchCounter.model");
-const ClinicalRecordModel = require("../../modules/patientDomain/clinical/clinical.model");
-const PatientPolicyModel = require("../../modules/patientDomain/policies/patientPolicy.model");
-const PatientUserModel = require("../../modules/patientDomain/access/patientUser.model");
-const EventOutboxModel = require("../../core/EventOutbox.model");
-const AuditLogModelDef = require("../../shared/models/AuditLog");
-const AuditLogModel = getPlatformModel(AuditLogModelDef);
+// ── Schema defs (each file exports { modelName, schema }) ────────────────────
+// We pull the schema from each def to compile on the regional connection.
+const PatientDef = require("../../organization/patient/models/patient.model");
+const BranchCounterDef = require("../../modules/patientDomain/core/branchCounter.model");
+const ClinicalRecordDef = require("../../modules/patientDomain/clinical/clinical.model");
+const PatientPolicyDef = require("../../modules/patientDomain/policies/patientPolicy.model");
+const PatientUserDef = require("../../modules/patientDomain/access/patientUser.model");
+const EventOutboxDef = require("../../core/EventOutbox.model");
+const AuditLogDef = require("../../shared/models/AuditLog");
 /**
  * Model definitions: [modelName, schemaSource]
- * The schema is extracted from the globally-compiled model.
  */
-const MODEL_DEFINITIONS = [["Patient", PatientModel.schema], ["BranchCounter", BranchCounterModel.schema], ["ClinicalRecord", ClinicalRecordModel.schema], ["PatientPolicy", PatientPolicyModel.schema], ["PatientUser", PatientUserModel.schema], ["EventOutbox", EventOutboxModel.schema], ["AuditLog", AuditLogModel.schema]];
+const MODEL_DEFINITIONS = [
+  ["Patient", PatientDef.schema],
+  ["BranchCounter", BranchCounterDef.schema],
+  ["ClinicalRecord", ClinicalRecordDef.schema],
+  ["PatientPolicy", PatientPolicyDef.schema],
+  ["PatientUser", PatientUserDef.schema],
+  ["EventOutbox", EventOutboxDef.schema],
+  ["AuditLog", AuditLogDef.schema],
+];
 
 // Cache: regionCode → { Patient: Model, BranchCounter: Model, ... }
 const _cache = {};

@@ -1,8 +1,10 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - CommunicationUsage (../../modules/communicationDomain/models/communicationUsage.model) — tenant + no req access (worker/utility)
 /**
  * communicationQuota.service.js
  * Phase v5.4 — Communication Quota Engine
+ *
+ * Data-plane note: CommunicationUsage is persisted on the PLATFORM
+ * connection (billing/usage metrics tracked at platform level), matching
+ * the shared/models/CommunicationUsage.js proxy binding introduced in 5e-B.
  */
 
 "use strict";
@@ -10,7 +12,9 @@
 const {
   buildEffectivePlan
 } = require("./effectivePlanBuilder");
-const CommunicationUsage = require("../../modules/communicationDomain/models/communicationUsage.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const CommunicationUsageDef = require("../../modules/communicationDomain/models/communicationUsage.model");
+const CommunicationUsage = getPlatformModel(CommunicationUsageDef);
 
 /**
  * getCurrentBillingCycle

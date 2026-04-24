@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - TicketMessage (@modules/supportDomain/models/TicketMessage.model) — tenant + req present but no _getModels(req) helper
 /**
  * supportMessage.service.js — Phase 3 E5
  *
@@ -25,10 +23,18 @@
 "use strict";
 
 const getPlatformModel = require("@core/db/getPlatformModel");
+const getModel = require("@core/db/getModel");
 const mongoose = require("mongoose");
-const TicketMessage = require("@modules/supportDomain/models/TicketMessage.model").default;
+const TicketMessageDef = require("@modules/supportDomain/models/TicketMessage.model");
 const TicketDef = require("@shared/models/Ticket");
 const Ticket = getPlatformModel(TicketDef);
+
+function _TicketMessage(req) {
+  if (!req?.dbConnection) {
+    throw new Error("[supportMessage.service] req.dbConnection is REQUIRED");
+  }
+  return getModel(req.dbConnection, TicketMessageDef);
+}
 const {
   metrics
 } = require("@infra/metrics/metrics");
@@ -177,6 +183,7 @@ async function createMessage({
   // cheap (hits the {ticketId, createdAt:-1} index) and catches click-spam
   // that rate limits alone can't. Note: same-user different message is fine.
   const trimmed = message.trim();
+  const TicketMessage = _TicketMessage(req);
   const lastMsg = await TicketMessage.findOne({
     ticketId
   }).sort({
@@ -304,6 +311,7 @@ async function listMessages({
       $gt: cursorDate
     };
   }
+  const TicketMessage = _TicketMessage(req);
   const items = await TicketMessage.find(filter).sort({
     createdAt: 1,
     _id: 1

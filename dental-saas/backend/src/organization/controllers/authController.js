@@ -1,5 +1,3 @@
-// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
-//   - UserGlobal (@shared/models/User) — tenant + req present but no _getModels(req) helper
 const getSharedModel = require("@core/db/getSharedModel");
 const getPlatformModel = require("@core/db/getPlatformModel");
 const asyncHandler = require("@utils/asyncHandler");
@@ -435,9 +433,13 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     const User = getModel(orgConn, UserDef);
     user = await User.findById(userId);
   } else {
-    // Fallback: try global model (legacy tokens without organizationId)
-    const UserGlobal = require("@shared/models/User").default;
-    user = await UserGlobal.findById(userId);
+    // No per-org context — global mongoose root is gone (Step 5d). Users
+    // live in per-org DBs only; callers must provide organizationId in
+    // the reset token or the route body.
+    return res.status(400).json({
+      success: false,
+      message: "Password reset requires organizationId — token is missing tenant context. Please request a new reset link."
+    });
   }
   if (!user) {
     return res.status(400).json({
@@ -517,9 +519,13 @@ exports.verifyEmailOtp = asyncHandler(async (req, res) => {
     VerificationToken = getModel(orgConn, VerificationTokenDef);
     User = getModel(orgConn, UserDef);
   } else {
-    // Fallback: use global model to find the token, then resolve org
-    VerificationToken = VerificationTokenDef.default;
-    User = UserDef.default;
+    // No per-org context — global mongoose root is gone (Step 5d). The
+    // verifyEmailOtp flow must receive organizationId in the request body
+    // or as part of the signup flow that issued the token.
+    return res.status(400).json({
+      success: false,
+      message: "Email verification requires organizationId — please use the link from your signup email."
+    });
   }
 
   // Find the most recent unused, unexpired token
@@ -668,20 +674,14 @@ exports.resendEmailOtp = asyncHandler(async (req, res) => {
     User = getModel(orgConn, UserDef);
     VerificationToken = getModel(orgConn, VerificationTokenDef);
   } else {
-    // Fallback: use global model to find user → resolve their org
-    const UserGlobal = UserDef.default;
-    const tempUser = await UserGlobal.findOne({
-      email: normalizedEmail
+    // No per-org context — global mongoose root is gone (Step 5d). Users
+    // live in per-org DBs, so cross-org email lookup is no longer
+    // possible at this layer. The caller MUST provide orgId (from
+    // pricingToken → Organization lookup at the route edge).
+    return res.status(400).json({
+      success: false,
+      message: "Email resend requires organizationId — please initiate from the signup or login page."
     });
-    if (tempUser && tempUser.organizationId) {
-      orgId = tempUser.organizationId;
-      const orgConn = dbManager.getConnection(String(orgId));
-      User = getModel(orgConn, UserDef);
-      VerificationToken = getModel(orgConn, VerificationTokenDef);
-    } else {
-      User = UserGlobal;
-      VerificationToken = VerificationTokenDef.default;
-    }
   }
 
   // Check if user exists and is not already verified
