@@ -5,24 +5,29 @@
 
 "use strict";
 
-const AddOn = require("../models/addOn.model").default;
-
+const getPlatformModel = require("@core/db/getPlatformModel");
+const AddOnDef = require("../models/addOn.model");
+const AddOn = getPlatformModel(AddOnDef);
 /**
  * getAddOnByCode
  * @param {string} code 
  */
 async function getAddOnByCode(code) {
-    return await AddOn.findOne({ code, isActive: true });
+  return await AddOn.findOne({
+    code,
+    isActive: true
+  });
 }
 
 /**
  * getAllActiveAddOns
  */
 async function getAllActiveAddOns() {
-    return await AddOn.find({ isActive: true });
+  return await AddOn.find({
+    isActive: true
+  });
 }
-
 module.exports = {
-    getAddOnByCode,
-    getAllActiveAddOns
+  getAddOnByCode,
+  getAllActiveAddOns
 };

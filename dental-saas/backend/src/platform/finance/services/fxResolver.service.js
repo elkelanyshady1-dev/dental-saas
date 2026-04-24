@@ -25,7 +25,9 @@
 
 "use strict";
 
-const ExchangeRate = require("../models/ExchangeRate.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const ExchangeRateDef = require("../models/ExchangeRate.model");
+const ExchangeRate = getPlatformModel(ExchangeRateDef);
 const logger = require("@utils/logger");
 
 /**
@@ -38,62 +40,81 @@ const logger = require("@utils/logger");
  * @throws  {Error}             - If no rate found for the pair
  */
 async function resolveExchangeRate(fromCurrency, toCurrency, date = new Date()) {
-    const from = fromCurrency.toUpperCase();
-    const to = toCurrency.toUpperCase();
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
 
-    // ── Identity: same currency → no conversion ────────────────────────────────
-    if (from === to) {
-        return { rate: 1.0, source: "identity", isOverride: false, effectiveDate: date };
-    }
-
-    const baseQuery = {
-        fromCurrency: from,
-        toCurrency: to,
-        effectiveDate: { $lte: date }
+  // ── Identity: same currency → no conversion ────────────────────────────────
+  if (from === to) {
+    return {
+      rate: 1.0,
+      source: "identity",
+      isOverride: false,
+      effectiveDate: date
     };
-
-    // ── Tier 1: Manual override (highest priority) ─────────────────────────────
-    const override = await ExchangeRate.findOne({ ...baseQuery, isOverride: true })
-        .sort({ effectiveDate: -1 })
-        .lean();
-
-    if (override) {
-        logger.debug({
-            from, to, rate: override.rate,
-            effectiveDate: override.effectiveDate,
-            source: "manual_override"
-        }, "[FxResolver] Rate resolved via manual override");
-        return {
-            rate: override.rate,
-            source: "manual",
-            isOverride: true,
-            effectiveDate: override.effectiveDate
-        };
+  }
+  const baseQuery = {
+    fromCurrency: from,
+    toCurrency: to,
+    effectiveDate: {
+      $lte: date
     }
+  };
 
-    // ── Tier 2: Auto rate (fallback) ───────────────────────────────────────────
-    const autoRate = await ExchangeRate.findOne({ ...baseQuery, isOverride: false })
-        .sort({ effectiveDate: -1 })
-        .lean();
+  // ── Tier 1: Manual override (highest priority) ─────────────────────────────
+  const override = await ExchangeRate.findOne({
+    ...baseQuery,
+    isOverride: true
+  }).sort({
+    effectiveDate: -1
+  }).lean();
+  if (override) {
+    logger.debug({
+      from,
+      to,
+      rate: override.rate,
+      effectiveDate: override.effectiveDate,
+      source: "manual_override"
+    }, "[FxResolver] Rate resolved via manual override");
+    return {
+      rate: override.rate,
+      source: "manual",
+      isOverride: true,
+      effectiveDate: override.effectiveDate
+    };
+  }
 
-    if (autoRate) {
-        logger.debug({
-            from, to, rate: autoRate.rate,
-            effectiveDate: autoRate.effectiveDate,
-            source: "auto"
-        }, "[FxResolver] Rate resolved via auto rate");
-        return {
-            rate: autoRate.rate,
-            source: "auto",
-            isOverride: false,
-            effectiveDate: autoRate.effectiveDate
-        };
-    }
+  // ── Tier 2: Auto rate (fallback) ───────────────────────────────────────────
+  const autoRate = await ExchangeRate.findOne({
+    ...baseQuery,
+    isOverride: false
+  }).sort({
+    effectiveDate: -1
+  }).lean();
+  if (autoRate) {
+    logger.debug({
+      from,
+      to,
+      rate: autoRate.rate,
+      effectiveDate: autoRate.effectiveDate,
+      source: "auto"
+    }, "[FxResolver] Rate resolved via auto rate");
+    return {
+      rate: autoRate.rate,
+      source: "auto",
+      isOverride: false,
+      effectiveDate: autoRate.effectiveDate
+    };
+  }
 
-    // ── No rate found ──────────────────────────────────────────────────────────
-    const msg = `[FxResolver] No exchange rate found for ${from} → ${to} on or before ${date.toISOString()}`;
-    logger.warn({ from, to, date }, msg);
-    throw new Error(msg);
+  // ── No rate found ──────────────────────────────────────────────────────────
+  const msg = `[FxResolver] No exchange rate found for ${from} → ${to} on or before ${date.toISOString()}`;
+  logger.warn({
+    from,
+    to,
+    date
+  }, msg);
+  throw new Error(msg);
 }
-
-module.exports = { resolveExchangeRate };
+module.exports = {
+  resolveExchangeRate
+};

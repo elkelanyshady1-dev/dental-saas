@@ -14,8 +14,12 @@
 
 "use strict";
 
-const { collectGuardianMetrics } = require("./guardian.metrics.service");
-const GuardianAuditLog = require("./models/GuardianAuditLog.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const {
+  collectGuardianMetrics
+} = require("./guardian.metrics.service");
+const GuardianAuditLogDef = require("./models/GuardianAuditLog.model");
+const GuardianAuditLog = getPlatformModel(GuardianAuditLogDef);
 const logger = require("@utils/logger");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -30,23 +34,23 @@ const logger = require("@utils/logger");
  * @param {string} scanType      - "manual" | "auto"
  */
 async function persistAuditLog(metrics, actorId, scanType) {
-    try {
-        await GuardianAuditLog.create({
-            summary: metrics.summary,
-            runtime: metrics.runtime,
-            system: metrics.system,
-            alertsSnapshot: metrics.alerts,
-            scanTriggeredBy: actorId || null,
-            scanType,
-            alertHash: metrics.alertHash || null
-        });
-    } catch (err) {
-        // Non-fatal — audit log failure must never affect the response
-        logger.error(
-            { service: "guardian", err: err.message },
-            "[Guardian] Failed to persist audit log (non-fatal)"
-        );
-    }
+  try {
+    await GuardianAuditLog.create({
+      summary: metrics.summary,
+      runtime: metrics.runtime,
+      system: metrics.system,
+      alertsSnapshot: metrics.alerts,
+      scanTriggeredBy: actorId || null,
+      scanType,
+      alertHash: metrics.alertHash || null
+    });
+  } catch (err) {
+    // Non-fatal — audit log failure must never affect the response
+    logger.error({
+      service: "guardian",
+      err: err.message
+    }, "[Guardian] Failed to persist audit log (non-fatal)");
+  }
 }
 
 // ─── Controllers ──────────────────────────────────────────────────────────────
@@ -111,24 +115,31 @@ async function persistAuditLog(metrics, actorId, scanType) {
  *       403: { description: 'Forbidden — superadmin only' }
  */
 exports.getGuardianOverview = async (req, res) => {
-    try {
-        const data = await collectGuardianMetrics();
-
-        logger.info(
-            {
-                service: "guardian",
-                action: "overview",
-                actorId: req.platformUser?._id,
-                totalAlerts: data.summary.totalAlerts
-            },
-            "[Guardian] Overview requested"
-        );
-
-        return res.status(200).json({ success: true, data });
-    } catch (err) {
-        logger.error({ service: "guardian", err: err.message }, "[Guardian] Overview failed");
-        return res.status(500).json({ success: false, error: { code: "GUARDIAN_ERROR", message: err.message } });
-    }
+  try {
+    const data = await collectGuardianMetrics();
+    logger.info({
+      service: "guardian",
+      action: "overview",
+      actorId: req.platformUser?._id,
+      totalAlerts: data.summary.totalAlerts
+    }, "[Guardian] Overview requested");
+    return res.status(200).json({
+      success: true,
+      data
+    });
+  } catch (err) {
+    logger.error({
+      service: "guardian",
+      err: err.message
+    }, "[Guardian] Overview failed");
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "GUARDIAN_ERROR",
+        message: err.message
+      }
+    });
+  }
 };
 
 /**
@@ -157,33 +168,37 @@ exports.getGuardianOverview = async (req, res) => {
  *       403: { description: 'Forbidden' }
  */
 exports.runIntegrityScan = async (req, res) => {
-    try {
-        const data = await collectGuardianMetrics();
-        const actorId = req.platformUser?._id;
+  try {
+    const data = await collectGuardianMetrics();
+    const actorId = req.platformUser?._id;
+    logger.info({
+      service: "guardian",
+      action: "run_scan",
+      actorId,
+      totalAlerts: data.summary.totalAlerts,
+      critical: data.summary.critical
+    }, "[Guardian] Manual integrity scan executed");
 
-        logger.info(
-            {
-                service: "guardian",
-                action: "run_scan",
-                actorId,
-                totalAlerts: data.summary.totalAlerts,
-                critical: data.summary.critical
-            },
-            "[Guardian] Manual integrity scan executed"
-        );
-
-        // Persist to audit history (non-blocking — fire and forget)
-        persistAuditLog(data, actorId, "manual");
-
-        return res.status(200).json({
-            success: true,
-            scannedAt: data.system.collectedAt,
-            data
-        });
-    } catch (err) {
-        logger.error({ service: "guardian", err: err.message }, "[Guardian] Scan failed");
-        return res.status(500).json({ success: false, error: { code: "SCAN_ERROR", message: err.message } });
-    }
+    // Persist to audit history (non-blocking — fire and forget)
+    persistAuditLog(data, actorId, "manual");
+    return res.status(200).json({
+      success: true,
+      scannedAt: data.system.collectedAt,
+      data
+    });
+  } catch (err) {
+    logger.error({
+      service: "guardian",
+      err: err.message
+    }, "[Guardian] Scan failed");
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "SCAN_ERROR",
+        message: err.message
+      }
+    });
+  }
 };
 
 /**
@@ -206,23 +221,31 @@ exports.runIntegrityScan = async (req, res) => {
  *       403: { description: 'Forbidden' }
  */
 exports.exportGuardianReport = async (req, res) => {
-    try {
-        const data = await collectGuardianMetrics();
-        const filename = `guardian-report-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
-
-        logger.info(
-            { service: "guardian", action: "export", actorId: req.platformUser?._id, filename },
-            "[Guardian] Report exported"
-        );
-
-        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-        res.setHeader("Content-Type", "application/json");
-
-        return res.status(200).json(data);
-    } catch (err) {
-        logger.error({ service: "guardian", err: err.message }, "[Guardian] Export failed");
-        return res.status(500).json({ success: false, error: { code: "EXPORT_ERROR", message: err.message } });
-    }
+  try {
+    const data = await collectGuardianMetrics();
+    const filename = `guardian-report-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+    logger.info({
+      service: "guardian",
+      action: "export",
+      actorId: req.platformUser?._id,
+      filename
+    }, "[Guardian] Report exported");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "application/json");
+    return res.status(200).json(data);
+  } catch (err) {
+    logger.error({
+      service: "guardian",
+      err: err.message
+    }, "[Guardian] Export failed");
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "EXPORT_ERROR",
+        message: err.message
+      }
+    });
+  }
 };
 
 /**
@@ -266,27 +289,33 @@ exports.exportGuardianReport = async (req, res) => {
  *       403: { description: 'Forbidden' }
  */
 exports.getGuardianHistory = async (req, res) => {
-    try {
-        const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-
-        const [scans, total] = await Promise.all([
-            GuardianAuditLog
-                .find({})
-                .sort({ createdAt: -1 })
-                .limit(limit)
-                .populate("scanTriggeredBy", "email fullName platformRole")
-                .lean(),
-            GuardianAuditLog.countDocuments({})
-        ]);
-
-        logger.info(
-            { service: "guardian", action: "history", actorId: req.platformUser?._id, count: scans.length },
-            "[Guardian] History requested"
-        );
-
-        return res.status(200).json({ success: true, total, scans });
-    } catch (err) {
-        logger.error({ service: "guardian", err: err.message }, "[Guardian] History fetch failed");
-        return res.status(500).json({ success: false, error: { code: "HISTORY_ERROR", message: err.message } });
-    }
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const [scans, total] = await Promise.all([GuardianAuditLog.find({}).sort({
+      createdAt: -1
+    }).limit(limit).populate("scanTriggeredBy", "email fullName platformRole").lean(), GuardianAuditLog.countDocuments({})]);
+    logger.info({
+      service: "guardian",
+      action: "history",
+      actorId: req.platformUser?._id,
+      count: scans.length
+    }, "[Guardian] History requested");
+    return res.status(200).json({
+      success: true,
+      total,
+      scans
+    });
+  } catch (err) {
+    logger.error({
+      service: "guardian",
+      err: err.message
+    }, "[Guardian] History fetch failed");
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "HISTORY_ERROR",
+        message: err.message
+      }
+    });
+  }
 };

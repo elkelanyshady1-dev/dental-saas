@@ -17,8 +17,11 @@
 
 "use strict";
 
-const ModuleDefinition = require("../models/ModuleDefinition.model").default;
-const FeatureDefinition = require("../models/FeatureDefinition.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const ModuleDefinitionDef = require("../models/ModuleDefinition.model");
+const ModuleDefinition = getPlatformModel(ModuleDefinitionDef);
+const FeatureDefinitionDef = require("../models/FeatureDefinition.model");
+const FeatureDefinition = getPlatformModel(FeatureDefinitionDef);
 const logger = require("@utils/logger");
 
 // ─── MODULE OPERATIONS ──────────────────────────────────────────────────────
@@ -28,9 +31,11 @@ const logger = require("@utils/logger");
  * @returns {Promise<ModuleDefinition[]>}
  */
 async function listModules() {
-    return ModuleDefinition.find()
-        .sort({ category: 1, sortOrder: 1, key: 1 })
-        .lean();
+  return ModuleDefinition.find().sort({
+    category: 1,
+    sortOrder: 1,
+    key: 1
+  }).lean();
 }
 
 /**
@@ -39,7 +44,9 @@ async function listModules() {
  * @returns {Promise<ModuleDefinition|null>}
  */
 async function getModuleByKey(key) {
-    return ModuleDefinition.findOne({ key }).lean();
+  return ModuleDefinition.findOne({
+    key
+  }).lean();
 }
 
 /**
@@ -49,29 +56,40 @@ async function getModuleByKey(key) {
  * @returns {Promise<ModuleDefinition>}
  */
 async function updateModule(id, data) {
-    // Prevent changing the key or schemaKey (would break normalization)
-    const safeData = { ...data };
-    delete safeData.key;
-    delete safeData.schemaKey;
-    delete safeData.isCore;
+  // Prevent changing the key or schemaKey (would break normalization)
+  const safeData = {
+    ...data
+  };
+  delete safeData.key;
+  delete safeData.schemaKey;
+  delete safeData.isCore;
+  const updated = await ModuleDefinition.findByIdAndUpdate(id, safeData, {
+    new: true,
+    runValidators: true
+  }).lean();
+  if (!updated) {
+    throw Object.assign(new Error("Module not found"), {
+      status: 404
+    });
+  }
 
-    const updated = await ModuleDefinition.findByIdAndUpdate(id, safeData, {
-        new: true,
-        runValidators: true,
-    }).lean();
-
-    if (!updated) {
-        throw Object.assign(new Error("Module not found"), { status: 404 });
-    }
-
-    // Update feature count
-    const featureCount = await FeatureDefinition.countDocuments({ module: updated.key });
-    if (updated.featureCount !== featureCount) {
-        await ModuleDefinition.findByIdAndUpdate(id, { featureCount });
-    }
-
-    logger.info({ moduleId: id, key: updated.key }, "[FeatureRegistry] Module updated");
-    return { ...updated, featureCount };
+  // Update feature count
+  const featureCount = await FeatureDefinition.countDocuments({
+    module: updated.key
+  });
+  if (updated.featureCount !== featureCount) {
+    await ModuleDefinition.findByIdAndUpdate(id, {
+      featureCount
+    });
+  }
+  logger.info({
+    moduleId: id,
+    key: updated.key
+  }, "[FeatureRegistry] Module updated");
+  return {
+    ...updated,
+    featureCount
+  };
 }
 
 /**
@@ -81,7 +99,9 @@ async function updateModule(id, data) {
  * @returns {Promise<ModuleDefinition>}
  */
 async function toggleModule(id, enabled) {
-    return updateModule(id, { enabled });
+  return updateModule(id, {
+    enabled
+  });
 }
 
 // ─── FEATURE OPERATIONS ─────────────────────────────────────────────────────
@@ -92,10 +112,13 @@ async function toggleModule(id, enabled) {
  * @returns {Promise<FeatureDefinition[]>}
  */
 async function listFeatures(moduleKey) {
-    const filter = moduleKey ? { module: moduleKey } : {};
-    return FeatureDefinition.find(filter)
-        .sort({ module: 1, key: 1 })
-        .lean();
+  const filter = moduleKey ? {
+    module: moduleKey
+  } : {};
+  return FeatureDefinition.find(filter).sort({
+    module: 1,
+    key: 1
+  }).lean();
 }
 
 /**
@@ -104,7 +127,9 @@ async function listFeatures(moduleKey) {
  * @returns {Promise<FeatureDefinition|null>}
  */
 async function getFeatureByKey(key) {
-    return FeatureDefinition.findOne({ key }).lean();
+  return FeatureDefinition.findOne({
+    key
+  }).lean();
 }
 
 /**
@@ -114,22 +139,26 @@ async function getFeatureByKey(key) {
  * @returns {Promise<FeatureDefinition>}
  */
 async function updateFeature(id, data) {
-    // Prevent changing the key or module (would break feature hierarchy)
-    const safeData = { ...data };
-    delete safeData.key;
-    delete safeData.module;
-
-    const updated = await FeatureDefinition.findByIdAndUpdate(id, safeData, {
-        new: true,
-        runValidators: true,
-    }).lean();
-
-    if (!updated) {
-        throw Object.assign(new Error("Feature not found"), { status: 404 });
-    }
-
-    logger.info({ featureId: id, key: updated.key }, "[FeatureRegistry] Feature updated");
-    return updated;
+  // Prevent changing the key or module (would break feature hierarchy)
+  const safeData = {
+    ...data
+  };
+  delete safeData.key;
+  delete safeData.module;
+  const updated = await FeatureDefinition.findByIdAndUpdate(id, safeData, {
+    new: true,
+    runValidators: true
+  }).lean();
+  if (!updated) {
+    throw Object.assign(new Error("Feature not found"), {
+      status: 404
+    });
+  }
+  logger.info({
+    featureId: id,
+    key: updated.key
+  }, "[FeatureRegistry] Feature updated");
+  return updated;
 }
 
 /**
@@ -139,18 +168,24 @@ async function updateFeature(id, data) {
  * @returns {Promise<FeatureDefinition>}
  */
 async function updateFeaturePlans(featureKey, plans) {
-    const feature = await FeatureDefinition.findOneAndUpdate(
-        { key: featureKey },
-        { plans },
-        { new: true, runValidators: true }
-    ).lean();
-
-    if (!feature) {
-        throw Object.assign(new Error(`Feature "${featureKey}" not found`), { status: 404 });
-    }
-
-    logger.info({ featureKey, plans }, "[FeatureRegistry] Feature plans updated (matrix)");
-    return feature;
+  const feature = await FeatureDefinition.findOneAndUpdate({
+    key: featureKey
+  }, {
+    plans
+  }, {
+    new: true,
+    runValidators: true
+  }).lean();
+  if (!feature) {
+    throw Object.assign(new Error(`Feature "${featureKey}" not found`), {
+      status: 404
+    });
+  }
+  logger.info({
+    featureKey,
+    plans
+  }, "[FeatureRegistry] Feature plans updated (matrix)");
+  return feature;
 }
 
 /**
@@ -160,18 +195,24 @@ async function updateFeaturePlans(featureKey, plans) {
  * @returns {Promise<ModuleDefinition>}
  */
 async function updateModulePlans(moduleKey, plans) {
-    const module = await ModuleDefinition.findOneAndUpdate(
-        { key: moduleKey },
-        { plans },
-        { new: true, runValidators: true }
-    ).lean();
-
-    if (!module) {
-        throw Object.assign(new Error(`Module "${moduleKey}" not found`), { status: 404 });
-    }
-
-    logger.info({ moduleKey, plans }, "[FeatureRegistry] Module plans updated (matrix)");
-    return module;
+  const module = await ModuleDefinition.findOneAndUpdate({
+    key: moduleKey
+  }, {
+    plans
+  }, {
+    new: true,
+    runValidators: true
+  }).lean();
+  if (!module) {
+    throw Object.assign(new Error(`Module "${moduleKey}" not found`), {
+      status: 404
+    });
+  }
+  logger.info({
+    moduleKey,
+    plans
+  }, "[FeatureRegistry] Module plans updated (matrix)");
+  return module;
 }
 
 // ─── FULL REGISTRY QUERY ────────────────────────────────────────────────────
@@ -181,42 +222,37 @@ async function updateModulePlans(moduleKey, plans) {
  * @returns {Promise<{ modules: ModuleDefinition[], features: FeatureDefinition[], stats: Object }>}
  */
 async function getFullRegistry() {
-    const [modules, features] = await Promise.all([
-        listModules(),
-        listFeatures(),
-    ]);
+  const [modules, features] = await Promise.all([listModules(), listFeatures()]);
 
-    // Compute stats
-    const totalModules = modules.length;
-    const enabledModules = modules.filter(m => m.enabled).length;
-    const coreModules = modules.filter(m => m.isCore).length;
-    const totalFeatures = features.length;
-    const enabledFeatures = features.filter(f => f.enabled).length;
-    const premiumFeatures = features.filter(f => f.premium).length;
-
-    return {
-        modules,
-        features,
-        stats: {
-            totalModules,
-            enabledModules,
-            coreModules,
-            totalFeatures,
-            enabledFeatures,
-            premiumFeatures,
-        },
-    };
+  // Compute stats
+  const totalModules = modules.length;
+  const enabledModules = modules.filter(m => m.enabled).length;
+  const coreModules = modules.filter(m => m.isCore).length;
+  const totalFeatures = features.length;
+  const enabledFeatures = features.filter(f => f.enabled).length;
+  const premiumFeatures = features.filter(f => f.premium).length;
+  return {
+    modules,
+    features,
+    stats: {
+      totalModules,
+      enabledModules,
+      coreModules,
+      totalFeatures,
+      enabledFeatures,
+      premiumFeatures
+    }
+  };
 }
-
 module.exports = {
-    listModules,
-    getModuleByKey,
-    updateModule,
-    toggleModule,
-    listFeatures,
-    getFeatureByKey,
-    updateFeature,
-    updateFeaturePlans,
-    updateModulePlans,
-    getFullRegistry,
+  listModules,
+  getModuleByKey,
+  updateModule,
+  toggleModule,
+  listFeatures,
+  getFeatureByKey,
+  updateFeature,
+  updateFeaturePlans,
+  updateModulePlans,
+  getFullRegistry
 };

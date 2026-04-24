@@ -26,9 +26,11 @@
 
 "use strict";
 
-const PlanTemplate = require("../../billing/models/PlanTemplate.model").default;
-const PlanVersion = require("../../billing/models/PlanVersion.model").default;
-
+const getPlatformModel = require("@core/db/getPlatformModel");
+const PlanTemplateDef = require("../../billing/models/PlanTemplate.model");
+const PlanTemplate = getPlatformModel(PlanTemplateDef);
+const PlanVersionDef = require("../../billing/models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
 /**
  * Legacy Plan compatibility shim.
  *
@@ -42,64 +44,46 @@ const PlanVersion = require("../../billing/models/PlanVersion.model").default;
  * REMOVE THIS FILE once all callers are migrated.
  */
 const LegacyPlanShim = {
-
-    /**
-     * find() — delegates to PlanTemplate for backward-compatible catalog reads.
-     * Callers that used Plan.find({ isActive: true }) will get PlanTemplate list.
-     */
-    find(filter = {}) {
-        const templateFilter = {};
-        // Map legacy isActive → templateStatus
-        if (filter.isActive !== undefined) {
-            templateFilter.status = filter.isActive ? "published" : "draft";
-        }
-        const query = PlanTemplate.find(templateFilter);
-        // Fluent chain support (sort, lean, etc.)
-        return query;
-    },
-
-    findById(id) {
-        return PlanTemplate.findById(id);
-    },
-
-    findOne(filter = {}) {
-        return PlanTemplate.findOne(filter);
-    },
-
-    countDocuments(filter = {}) {
-        return PlanTemplate.countDocuments(filter);
-    },
-
-    /**
-     * Mutation methods throw — callers must migrate to PlanTemplate/PlanVersion CRUD.
-     * Throwing here lets the server start but loudly fails the specific legacy operation
-     * so it can be identified and migrated.
-     */
-    create() {
-        throw new Error(
-            "[MIGRATION] plan.model.js: Plan.create() is retired. " +
-            "Use platformPlanTemplate.controller.js → POST /api/platform/plan-templates instead."
-        );
-    },
-
-    findByIdAndUpdate() {
-        throw new Error(
-            "[MIGRATION] plan.model.js: Plan.findByIdAndUpdate() is retired. " +
-            "Use platformPlanVersion.controller.js → PATCH /api/platform/plan-versions/:id instead."
-        );
-    },
-
-    findOneAndUpdate() {
-        throw new Error(
-            "[MIGRATION] plan.model.js: Plan.findOneAndUpdate() is retired. " +
-            "Use the PlanTemplate/PlanVersion CRUD controllers instead."
-        );
-    },
-
-    startSession() {
-        // Delegate to PlanTemplate's connection (same MongoDB connection)
-        return PlanTemplate.startSession();
+  /**
+   * find() — delegates to PlanTemplate for backward-compatible catalog reads.
+   * Callers that used Plan.find({ isActive: true }) will get PlanTemplate list.
+   */
+  find(filter = {}) {
+    const templateFilter = {};
+    // Map legacy isActive → templateStatus
+    if (filter.isActive !== undefined) {
+      templateFilter.status = filter.isActive ? "published" : "draft";
     }
+    const query = PlanTemplate.find(templateFilter);
+    // Fluent chain support (sort, lean, etc.)
+    return query;
+  },
+  findById(id) {
+    return PlanTemplate.findById(id);
+  },
+  findOne(filter = {}) {
+    return PlanTemplate.findOne(filter);
+  },
+  countDocuments(filter = {}) {
+    return PlanTemplate.countDocuments(filter);
+  },
+  /**
+   * Mutation methods throw — callers must migrate to PlanTemplate/PlanVersion CRUD.
+   * Throwing here lets the server start but loudly fails the specific legacy operation
+   * so it can be identified and migrated.
+   */
+  create() {
+    throw new Error("[MIGRATION] plan.model.js: Plan.create() is retired. " + "Use platformPlanTemplate.controller.js → POST /api/platform/plan-templates instead.");
+  },
+  findByIdAndUpdate() {
+    throw new Error("[MIGRATION] plan.model.js: Plan.findByIdAndUpdate() is retired. " + "Use platformPlanVersion.controller.js → PATCH /api/platform/plan-versions/:id instead.");
+  },
+  findOneAndUpdate() {
+    throw new Error("[MIGRATION] plan.model.js: Plan.findOneAndUpdate() is retired. " + "Use the PlanTemplate/PlanVersion CRUD controllers instead.");
+  },
+  startSession() {
+    // Delegate to PlanTemplate's connection (same MongoDB connection)
+    return PlanTemplate.startSession();
+  }
 };
-
 module.exports = LegacyPlanShim;

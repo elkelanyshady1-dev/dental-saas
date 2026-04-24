@@ -21,7 +21,9 @@
 
 "use strict";
 
-const ExchangeRate = require("../finance/models/ExchangeRate.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const ExchangeRateDef = require("../finance/models/ExchangeRate.model");
+const ExchangeRate = getPlatformModel(ExchangeRateDef);
 const logger = require("@utils/logger");
 
 /**
@@ -36,33 +38,39 @@ const logger = require("@utils/logger");
  * @throws  {Error}             - If no rate found for the pair
  */
 async function resolveRate(fromCurrency, toCurrency, onDate = new Date()) {
-    // ── Same currency: no conversion needed ───────────────────────────────────
-    if (fromCurrency.toUpperCase() === toCurrency.toUpperCase()) {
-        return 1.0;
+  // ── Same currency: no conversion needed ───────────────────────────────────
+  if (fromCurrency.toUpperCase() === toCurrency.toUpperCase()) {
+    return 1.0;
+  }
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+
+  // ── Query: most recent rate on or before onDate ───────────────────────────
+  const rate = await ExchangeRate.findOne({
+    fromCurrency: from,
+    toCurrency: to,
+    effectiveDate: {
+      $lte: onDate
     }
-
-    const from = fromCurrency.toUpperCase();
-    const to = toCurrency.toUpperCase();
-
-    // ── Query: most recent rate on or before onDate ───────────────────────────
-    const rate = await ExchangeRate.findOne({
-        fromCurrency: from,
-        toCurrency: to,
-        effectiveDate: { $lte: onDate }
-    })
-        .sort({ effectiveDate: -1 })
-        .lean();
-
-    if (!rate) {
-        const msg = `[ExchangeRate] No rate found for ${from} → ${to} on or before ${onDate.toISOString()}`;
-        logger.warn({ from, to, onDate }, msg);
-        throw new Error(msg);
-    }
-
-    logger.debug({ from, to, rate: rate.rate, effectiveDate: rate.effectiveDate },
-        "[ExchangeRate] Rate resolved");
-
-    return rate.rate;
+  }).sort({
+    effectiveDate: -1
+  }).lean();
+  if (!rate) {
+    const msg = `[ExchangeRate] No rate found for ${from} → ${to} on or before ${onDate.toISOString()}`;
+    logger.warn({
+      from,
+      to,
+      onDate
+    }, msg);
+    throw new Error(msg);
+  }
+  logger.debug({
+    from,
+    to,
+    rate: rate.rate,
+    effectiveDate: rate.effectiveDate
+  }, "[ExchangeRate] Rate resolved");
+  return rate.rate;
 }
 
 /**
@@ -80,27 +88,45 @@ async function resolveRate(fromCurrency, toCurrency, onDate = new Date()) {
  * @returns {Promise<ExchangeRate>}
  */
 async function upsertRate({
-    fromCurrency,
-    toCurrency,
-    rate,
-    effectiveDate,
-    source = "manual",
-    createdBy = "system"
+  fromCurrency,
+  toCurrency,
+  rate,
+  effectiveDate,
+  source = "manual",
+  createdBy = "system"
 }) {
-    const from = fromCurrency.toUpperCase();
-    const to = toCurrency.toUpperCase();
-    const date = new Date(effectiveDate);
-    const isOverride = (source === "manual");
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  const date = new Date(effectiveDate);
+  const isOverride = source === "manual";
 
-    // Upsert — unique index on (from, to, effectiveDate, isOverride) ensures idempotency
-    const doc = await ExchangeRate.findOneAndUpdate(
-        { fromCurrency: from, toCurrency: to, effectiveDate: date, isOverride },
-        { fromCurrency: from, toCurrency: to, rate, effectiveDate: date, source, isOverride, createdBy },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    logger.info({ from, to, rate, effectiveDate: date, isOverride }, "[ExchangeRate] Rate upserted");
-    return doc;
+  // Upsert — unique index on (from, to, effectiveDate, isOverride) ensures idempotency
+  const doc = await ExchangeRate.findOneAndUpdate({
+    fromCurrency: from,
+    toCurrency: to,
+    effectiveDate: date,
+    isOverride
+  }, {
+    fromCurrency: from,
+    toCurrency: to,
+    rate,
+    effectiveDate: date,
+    source,
+    isOverride,
+    createdBy
+  }, {
+    upsert: true,
+    new: true,
+    setDefaultsOnInsert: true
+  });
+  logger.info({
+    from,
+    to,
+    rate,
+    effectiveDate: date,
+    isOverride
+  }, "[ExchangeRate] Rate upserted");
+  return doc;
 }
 
 /**
@@ -113,16 +139,24 @@ async function upsertRate({
  * @param {number} [opts.limit=50]
  * @returns {Promise<ExchangeRate[]>}
  */
-async function listRates({ fromCurrency, toCurrency, limit = 50, isOverride } = {}) {
-    const filter = {};
-    if (fromCurrency) filter.fromCurrency = fromCurrency.toUpperCase();
-    if (toCurrency) filter.toCurrency = toCurrency.toUpperCase();
-    if (isOverride !== undefined) filter.isOverride = isOverride;
-
-    return ExchangeRate.find(filter)
-        .sort({ isOverride: -1, effectiveDate: -1 }) // overrides first within same date bucket
-        .limit(Math.min(limit, 200))
-        .lean();
+async function listRates({
+  fromCurrency,
+  toCurrency,
+  limit = 50,
+  isOverride
+} = {}) {
+  const filter = {};
+  if (fromCurrency) filter.fromCurrency = fromCurrency.toUpperCase();
+  if (toCurrency) filter.toCurrency = toCurrency.toUpperCase();
+  if (isOverride !== undefined) filter.isOverride = isOverride;
+  return ExchangeRate.find(filter).sort({
+    isOverride: -1,
+    effectiveDate: -1
+  }) // overrides first within same date bucket
+  .limit(Math.min(limit, 200)).lean();
 }
-
-module.exports = { resolveRate, upsertRate, listRates };
+module.exports = {
+  resolveRate,
+  upsertRate,
+  listRates
+};

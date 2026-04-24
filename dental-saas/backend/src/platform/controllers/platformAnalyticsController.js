@@ -13,8 +13,11 @@
 
 "use strict";
 
-const Organization = require("@shared/models/Organization").default;
-const PlatformUser = require("../models/PlatformUser").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
+const PlatformUserDef = require("../models/PlatformUser");
+const PlatformUser = getPlatformModel(PlatformUserDef);
 const logger = require("@utils/logger");
 
 // Per-org DB model resolution
@@ -35,29 +38,39 @@ const ORG_AGGREGATION_CONCURRENCY = 15;
  * Returns { branches, users, patients, appointments } or zeros on failure.
  */
 async function _aggregateOrg(orgId) {
+  try {
+    const conn = dbManager.getConnection(String(orgId));
     try {
-        const conn = dbManager.getConnection(String(orgId));
-        try {
-            const BranchModel = getModel(conn, BranchDef);
-            const UserModel = getModel(conn, UserDef);
-            const PatientModel = getModel(conn, PatientDef);
-            const AppointmentModel = getModel(conn, AppointmentDef);
-
-            const [branches, users, patients, appointments] = await Promise.all([
-                BranchModel.countDocuments(),
-                UserModel.countDocuments({ isActive: true }),
-                PatientModel.countDocuments(),
-                AppointmentModel.countDocuments(),
-            ]);
-
-            return { branches, users, patients, appointments };
-        } finally {
-            try { dbManager.releaseConnection(String(orgId)); } catch (_) {}
-        }
-    } catch (err) {
-        logger.warn({ orgId, err: err.message }, "[platformAnalytics] Failed to aggregate org — returning zeros");
-        return { branches: 0, users: 0, patients: 0, appointments: 0 };
+      const BranchModel = getModel(conn, BranchDef);
+      const UserModel = getModel(conn, UserDef);
+      const PatientModel = getModel(conn, PatientDef);
+      const AppointmentModel = getModel(conn, AppointmentDef);
+      const [branches, users, patients, appointments] = await Promise.all([BranchModel.countDocuments(), UserModel.countDocuments({
+        isActive: true
+      }), PatientModel.countDocuments(), AppointmentModel.countDocuments()]);
+      return {
+        branches,
+        users,
+        patients,
+        appointments
+      };
+    } finally {
+      try {
+        dbManager.releaseConnection(String(orgId));
+      } catch (_) {}
     }
+  } catch (err) {
+    logger.warn({
+      orgId,
+      err: err.message
+    }, "[platformAnalytics] Failed to aggregate org — returning zeros");
+    return {
+      branches: 0,
+      users: 0,
+      patients: 0,
+      appointments: 0
+    };
+  }
 }
 
 /**
@@ -66,60 +79,62 @@ async function _aggregateOrg(orgId) {
  * Aggregates across ALL org DBs with bounded concurrency (p-limit).
  */
 exports.getPlatformAnalytics = async (req, res) => {
-    try {
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-        // Platform-level counts (global connection — correct)
-        const [
-            totalOrganizations,
-            activeOrganizations,
-            newOrganizationsToday,
-            allOrgIds
-        ] = await Promise.all([
-            Organization.countDocuments(),
-            Organization.countDocuments({ isActive: true, "subscription.status": "active" }),
-            Organization.countDocuments({ createdAt: { $gte: startOfToday } }),
-            Organization.find().distinct("_id"),
-        ]);
+    // Platform-level counts (global connection — correct)
+    const [totalOrganizations, activeOrganizations, newOrganizationsToday, allOrgIds] = await Promise.all([Organization.countDocuments(), Organization.countDocuments({
+      isActive: true,
+      "subscription.status": "active"
+    }), Organization.countDocuments({
+      createdAt: {
+        $gte: startOfToday
+      }
+    }), Organization.find().distinct("_id")]);
 
-        // Cross-org aggregation — bounded concurrency to prevent pool exhaustion
-        const limit = pLimit(ORG_AGGREGATION_CONCURRENCY);
-        const orgCounts = await Promise.all(allOrgIds.map(orgId => limit(() => _aggregateOrg(orgId))));
+    // Cross-org aggregation — bounded concurrency to prevent pool exhaustion
+    const limit = pLimit(ORG_AGGREGATION_CONCURRENCY);
+    const orgCounts = await Promise.all(allOrgIds.map(orgId => limit(() => _aggregateOrg(orgId))));
 
-        // Reduce to totals
-        const totals = orgCounts.reduce(
-            (acc, c) => ({
-                branches: acc.branches + c.branches,
-                users: acc.users + c.users,
-                patients: acc.patients + c.patients,
-                appointments: acc.appointments + c.appointments,
-            }),
-            { branches: 0, users: 0, patients: 0, appointments: 0 }
-        );
-
-        res.json({
-            totals: {
-                organizations: totalOrganizations,
-                activeOrganizations,
-                branches: totals.branches,
-                users: totals.users,
-                patients: totals.patients,
-                appointments: totals.appointments,
-            },
-            growth: {
-                newOrganizationsToday,
-            },
-            systemHealth: {
-                status: "operational",
-                dbConnected: true,
-                uptime: process.uptime(),
-            },
-        });
-    } catch (error) {
-        logger.error({ err: error.message }, "[platformAnalytics] getPlatformAnalytics failed");
-        res.status(500).json({ message: error.message });
-    }
+    // Reduce to totals
+    const totals = orgCounts.reduce((acc, c) => ({
+      branches: acc.branches + c.branches,
+      users: acc.users + c.users,
+      patients: acc.patients + c.patients,
+      appointments: acc.appointments + c.appointments
+    }), {
+      branches: 0,
+      users: 0,
+      patients: 0,
+      appointments: 0
+    });
+    res.json({
+      totals: {
+        organizations: totalOrganizations,
+        activeOrganizations,
+        branches: totals.branches,
+        users: totals.users,
+        patients: totals.patients,
+        appointments: totals.appointments
+      },
+      growth: {
+        newOrganizationsToday
+      },
+      systemHealth: {
+        status: "operational",
+        dbConnected: true,
+        uptime: process.uptime()
+      }
+    });
+  } catch (error) {
+    logger.error({
+      err: error.message
+    }, "[platformAnalytics] getPlatformAnalytics failed");
+    res.status(500).json({
+      message: error.message
+    });
+  }
 };
 
 // ─── GET /api/platform/analytics/events ──────────────────────────────────────
@@ -134,45 +149,58 @@ exports.getPlatformAnalytics = async (req, res) => {
  * Org user (tenant_user) actors must be resolved from their per-org DB.
  */
 exports.getLatestEvents = async (req, res) => {
-    try {
-        const LIMIT = Math.min(parseInt(req.query.limit) || 15, 15);
+  try {
+    const LIMIT = Math.min(parseInt(req.query.limit) || 15, 15);
 
-        // Platform AuditLog is on the global connection (platform DB)
-        const AuditLog_Platform = require("@shared/models/AuditLog").default;
+    // Platform AuditLog is on the global connection (platform DB)
+    const AuditLog_PlatformDef = require("@shared/models/AuditLog");
+    const AuditLog_Platform = getPlatformModel(AuditLog_PlatformDef); // Step 1: fetch platform-scoped logs  
+    const logs = await AuditLog_Platform.find({
+      regionCode: "GLOBAL"
+    }).sort({
+      createdAt: -1
+    }).limit(LIMIT).populate("organizationId", "name slug").lean();
 
-        // Step 1: fetch platform-scoped logs  
-        const logs = await AuditLog_Platform.find({ regionCode: "GLOBAL" })
-            .sort({ createdAt: -1 })
-            .limit(LIMIT)
-            .populate("organizationId", "name slug")
-            .lean();
-
-        // Step 2: resolve actorId across PlatformUser (platform DB only)
-        // Tenant user names are embedded in audit records at write time (actorFirstName/actorLastName).
-        // We only need to resolve PlatformUser actors here.
-        const actorIds = [...new Set(
-            logs.map(l => l.actorId?.toString()).filter(Boolean)
-        )];
-
-        let actorMap = {};
-        if (actorIds.length > 0) {
-            const platformActors = await PlatformUser.find(
-                { _id: { $in: actorIds } },
-                { name: 1, email: 1, role: 1 }
-            ).lean();
-
-            for (const a of platformActors) {
-                actorMap[a._id.toString()] = { name: a.name, email: a.email, role: a.role };
-            }
+    // Step 2: resolve actorId across PlatformUser (platform DB only)
+    // Tenant user names are embedded in audit records at write time (actorFirstName/actorLastName).
+    // We only need to resolve PlatformUser actors here.
+    const actorIds = [...new Set(logs.map(l => l.actorId?.toString()).filter(Boolean))];
+    let actorMap = {};
+    if (actorIds.length > 0) {
+      const platformActors = await PlatformUser.find({
+        _id: {
+          $in: actorIds
         }
-
-        // Step 3: enrich + sanitize
-        const { enrichEvent } = require("../utils/activityFormatter");
-        const data = logs.map(log => enrichEvent(log, actorMap));
-
-        return res.json({ success: true, data, total: data.length });
-    } catch (error) {
-        logger.error({ err: error.message }, "[platformAnalytics] getLatestEvents failed");
-        return res.status(500).json({ message: error.message });
+      }, {
+        name: 1,
+        email: 1,
+        role: 1
+      }).lean();
+      for (const a of platformActors) {
+        actorMap[a._id.toString()] = {
+          name: a.name,
+          email: a.email,
+          role: a.role
+        };
+      }
     }
+
+    // Step 3: enrich + sanitize
+    const {
+      enrichEvent
+    } = require("../utils/activityFormatter");
+    const data = logs.map(log => enrichEvent(log, actorMap));
+    return res.json({
+      success: true,
+      data,
+      total: data.length
+    });
+  } catch (error) {
+    logger.error({
+      err: error.message
+    }, "[platformAnalytics] getLatestEvents failed");
+    return res.status(500).json({
+      message: error.message
+    });
+  }
 };
