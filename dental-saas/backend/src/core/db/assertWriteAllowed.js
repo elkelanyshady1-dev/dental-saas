@@ -37,6 +37,51 @@ function writeLockedError() {
     return err;
 }
 
+function maintenanceError() {
+    const err = new Error("MAINTENANCE_MODE");
+    err.status = 503;
+    err.code = "MAINTENANCE_MODE";
+    err.retryAfterSeconds = 30;
+    return err;
+}
+
+/**
+ * isOrgInMaintenance
+ * Programmatic check for background jobs / queue workers / async processors
+ * that don't go through the HTTP middleware chain. Returns true iff the org
+ * currently has `maintenanceMode === true` on its platform-side doc.
+ *
+ * Fresh read every call — jobs don't carry a stale req.context snapshot.
+ * Cheap: single {_id, select} read against the platform connection.
+ *
+ * @param {string} orgId
+ * @returns {Promise<boolean>}
+ */
+async function isOrgInMaintenance(orgId) {
+    if (!orgId) return false;
+    const getPlatformModel = require("./getPlatformModel");
+    const OrganizationDef = require("@root/shared/models/Organization");
+    const Organization = getPlatformModel(OrganizationDef);
+    const doc = await Organization
+        .findById(orgId)
+        .select("maintenanceMode")
+        .lean();
+    return !!doc?.maintenanceMode;
+}
+
+/**
+ * assertNotInMaintenance
+ * Throws MAINTENANCE_MODE error when the org is under downtime migration.
+ * Use from workers/jobs before mutating work:
+ *
+ *   await assertNotInMaintenance(orgId);
+ */
+async function assertNotInMaintenance(orgId) {
+    if (await isOrgInMaintenance(orgId)) {
+        throw maintenanceError();
+    }
+}
+
 /**
  * assertWriteAllowed
  * @param {Object} org      — org snapshot from req.context.organization
@@ -51,14 +96,17 @@ async function assertWriteAllowed(org, orgId) {
         throw new Error("[assertWriteAllowed] org snapshot is required (req.context.organization)");
     }
 
-    // Fast path — normal operation.
+    // Fast paths — normal operation.
+    if (org.maintenanceMode === true) {
+        throw maintenanceError();
+    }
     if (org.writeLocked === true) {
         throw writeLockedError();
     }
 
     // Slow path — migration window. Re-verify against platform DB.
-    // Zero overhead in steady state (migrationState is null).
-    if (org.migrationState) {
+    // Zero overhead in steady state (migrationState + maintenanceMode both null/false).
+    if (org.migrationState || org.maintenanceMode) {
         if (!orgId) {
             // We need the id to re-fetch. Fail closed rather than continue
             // with a possibly-stale snapshot during a migration.
@@ -74,12 +122,11 @@ async function assertWriteAllowed(org, orgId) {
 
         const fresh = await Organization
             .findById(orgId)
-            .select("writeLocked routingEpoch cluster migrationState")
+            .select("writeLocked maintenanceMode routingEpoch cluster migrationState")
             .lean();
 
-        if (fresh && fresh.writeLocked === true) {
-            throw writeLockedError();
-        }
+        if (fresh?.maintenanceMode === true) throw maintenanceError();
+        if (fresh?.writeLocked === true)     throw writeLockedError();
         // If fresh === null (org deleted mid-request), fall through — the
         // write will fail on the tenant DB for other reasons and the caller
         // will see a 4xx with better context than a synthetic 503.
@@ -87,3 +134,5 @@ async function assertWriteAllowed(org, orgId) {
 }
 
 module.exports = assertWriteAllowed;
+module.exports.isOrgInMaintenance = isOrgInMaintenance;
+module.exports.assertNotInMaintenance = assertNotInMaintenance;

@@ -224,6 +224,14 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
 
     const submit = () => (downtime ? startDowntime() : startZeroDowntime());
 
+    // True from the moment a downtime migration starts through to the
+    // success frame's close. Covers the submitting gap AND the 1.2s
+    // "DONE" display window — prevents the operator from flipping the
+    // toggle or changing the target cluster during the migration.
+    const inDowntimeLifecycle =
+        downtime && (submitting || downtimeStage === "DONE" || (downtimeStage && downtimeStage !== null));
+    const lockControls = submitting || inDowntimeLifecycle;
+
     if (!org) return null;
 
     return (
@@ -235,8 +243,8 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                 </h3>
                 <p className="text-sm text-slate-500 mb-4">{org.name}</p>
 
-                {/* ─── Running state (downtime) ──────────────────────── */}
-                {submitting && downtime && (
+                {/* ─── Running state (downtime lifecycle) ─────────────── */}
+                {inDowntimeLifecycle && (
                     <div className="space-y-4">
                         <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                             <DowntimeProgress stage={downtimeStage} error={error} />
@@ -251,7 +259,7 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                 )}
 
                 {/* ─── Idle / form state ────────────────────────────── */}
-                {!(submitting && downtime) && (
+                {!inDowntimeLifecycle && (
                     <div className="space-y-4">
                         <div>
                             <label className="text-xs font-medium text-slate-600 block mb-1">Source cluster</label>
@@ -266,7 +274,7 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                                 value={target}
                                 onChange={(e) => setTarget(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                disabled={submitting}
+                                disabled={lockControls}
                             >
                                 <option value="">Select a target cluster…</option>
                                 {choices.map((k) => (
@@ -283,14 +291,14 @@ function MigrationModal({ org, clusters, onClose, onStarted }) {
                                 onChange={(e) => setReason(e.target.value)}
                                 placeholder="e.g. capacity rebalance"
                                 className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                disabled={submitting}
+                                disabled={lockControls}
                             />
                         </div>
 
                         <Toggle
                             checked={downtime}
                             onChange={setDowntime}
-                            disabled={submitting}
+                            disabled={lockControls}
                             label="Downtime Migration Mode"
                         />
 

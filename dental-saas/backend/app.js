@@ -214,6 +214,8 @@ const orgWriteLock = require("./src/middleware/orgWriteLock.middleware");
 // Downtime migration guard — returns 503 MAINTENANCE_MODE while an org is
 // being migrated in downtime mode. Platform admins bypass.
 const maintenanceGuard = require("./src/middleware/maintenance.middleware");
+// Per-org in-flight request counter — feeds the downtime migration drain phase.
+const orgRequestCounter = require("./src/middleware/orgRequestCounter");
 // Phase F.10: secureFlowMiddleware removed — per-org DB isolation is the sole tenant boundary
 // No query-level drift detection needed when each org has its own database.
 const secureFlowMiddleware = () => (req, res, next) => next();
@@ -356,6 +358,7 @@ v1Router.use("/org", protect, featureFlagMiddleware,
     branchContextMiddleware,
     unifiedCapabilityMiddleware,
     maintenanceGuard,
+    orgRequestCounter,
     orgWriteLock,
     rlsContext, secureFlowMiddleware(), orgV1Routes);
 // Phase S2: /org/addons moved inside orgV1Routes — no separate mount needed

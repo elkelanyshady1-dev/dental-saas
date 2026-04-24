@@ -583,10 +583,77 @@ async function listOrgs({ limit = 200 } = {}) {
  *   - sourceCluster !== targetCluster
  *   - targetCluster is in the cluster registry + ACTIVE
  */
-const MAINTENANCE_DRAIN_MS = parseInt(process.env.DOWNTIME_MAINT_DRAIN_MS || "3000", 10);
+const MAINTENANCE_DRAIN_MS   = parseInt(process.env.DOWNTIME_MAINT_DRAIN_MS   || "10000", 10);
+const DOWNTIME_MAX_TOTAL_MS  = parseInt(process.env.DOWNTIME_MAX_TOTAL_MS     || String(5 * 60 * 1000), 10);
+const VERIFY_SAMPLE_PER_COLL = parseInt(process.env.DOWNTIME_VERIFY_SAMPLE    || "5", 10);
+const VERIFY_COUNT_TOLERANCE = parseFloat(process.env.DOWNTIME_VERIFY_TOL     || "0"); // 0 = exact match required
 
 function _sleepMs(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Post-dump consistency check. For every user-facing collection:
+ *   1. Exact document count parity (with tolerance if configured)
+ *   2. Spot-check N random documents by _id on source, verify presence
+ *      on target (no deep equality — just "does the row exist").
+ *
+ * Throws on mismatch. Caller's try/catch → rollback.
+ */
+async function _verifyParity({ sourceDb, targetDb, skipCollections }) {
+    const collections = await sourceDb.listCollections({}, { nameOnly: true }).toArray();
+    const eligible = collections.filter(c =>
+        !skipCollections.has(c.name) && !c.name.startsWith("system.")
+    );
+
+    const report = { checks: [], mismatches: [] };
+
+    for (const c of eligible) {
+        const src = sourceDb.collection(c.name);
+        const dst = targetDb.collection(c.name);
+
+        const [srcCount, dstCount] = await Promise.all([
+            src.countDocuments({}),
+            dst.countDocuments({}),
+        ]);
+
+        const delta = srcCount - dstCount;
+        const relDelta = srcCount === 0 ? 0 : Math.abs(delta) / srcCount;
+        const countOk = VERIFY_COUNT_TOLERANCE === 0
+            ? delta === 0
+            : relDelta <= VERIFY_COUNT_TOLERANCE;
+
+        const check = { collection: c.name, srcCount, dstCount, delta, countOk };
+
+        if (countOk && srcCount > 0 && VERIFY_SAMPLE_PER_COLL > 0) {
+            const sample = await src.aggregate([
+                { $sample: { size: Math.min(VERIFY_SAMPLE_PER_COLL, srcCount) } },
+                { $project: { _id: 1 } },
+            ]).toArray();
+            const ids = sample.map(d => d._id);
+            const hits = await dst.countDocuments({ _id: { $in: ids } });
+            check.sampleSize = ids.length;
+            check.sampleHits = hits;
+            check.sampleOk = hits === ids.length;
+            if (!check.sampleOk) report.mismatches.push(check);
+        } else if (!countOk) {
+            report.mismatches.push(check);
+        }
+
+        report.checks.push(check);
+    }
+
+    if (report.mismatches.length > 0) {
+        const msg = report.mismatches
+            .map(m => `${m.collection}: src=${m.srcCount} dst=${m.dstCount}` +
+                     (m.sampleOk === false ? ` sample-miss=${m.sampleSize - m.sampleHits}` : ""))
+            .join("; ");
+        const err = new Error(`[Migration] Parity check failed — ${msg}`);
+        err.parityReport = report;
+        throw err;
+    }
+
+    return report;
 }
 
 async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor, reason }) {
@@ -595,6 +662,7 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
     const syncEngine = require("./syncEngine.service");
     const dbManager = require("@core/db/dbManager");
     const clusterConnections = require("@core/db/clusterConnections");
+    const orgRequestCounter = require("../../middleware/orgRequestCounter");
 
     if (!mongoose.isValidObjectId(orgId)) {
         throw new MigrationError("Invalid orgId", "INVALID_ORG_ID", 400);
@@ -634,6 +702,7 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
 
     const startedAt = new Date();
     const migrationId = crypto.randomUUID();
+    const walletBy = startedAt.getTime() + DOWNTIME_MAX_TOTAL_MS;
     const report = {
         orgId: String(orgId),
         migrationId,
@@ -642,6 +711,15 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
         mode: "DOWNTIME",
         startedAt,
         success: false,
+    };
+
+    // Helper: enforce the hard wall-timeout at each phase boundary.
+    const assertBudget = (stage) => {
+        if (Date.now() > walletBy) {
+            throw new Error(
+                `[Migration] Wall timeout DOWNTIME_MAX_TOTAL_MS=${DOWNTIME_MAX_TOTAL_MS}ms exceeded at stage "${stage}"`
+            );
+        }
     };
 
     // ── Step 1: enable maintenance ──────────────────────────────────────
@@ -670,9 +748,22 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
     });
 
     try {
-        // ── Step 2: drain window ────────────────────────────────────────
-        await _sleepMs(MAINTENANCE_DRAIN_MS);
-        report.drainMs = MAINTENANCE_DRAIN_MS;
+        // ── Step 2: deterministic drain ─────────────────────────────────
+        // Wait for in-flight org-plane requests to finish. Falls back to
+        // timeout after MAINTENANCE_DRAIN_MS so a wedged long-runner
+        // can't block the migration indefinitely.
+        const drain = await orgRequestCounter.waitForDrain(orgId, {
+            timeoutMs: MAINTENANCE_DRAIN_MS,
+        });
+        report.drain = drain;
+        if (!drain.drained) {
+            logger.warn(
+                { event: "DOWNTIME_DRAIN_TIMEOUT", orgId: String(orgId),
+                  remaining: drain.remaining, waitedMs: drain.waitedMs },
+                `[Migration] Drain timed out with ${drain.remaining} in-flight request(s) — proceeding (maintenanceMode blocks new work)`
+            );
+        }
+        assertBudget("post-drain");
 
         // ── Step 3: dump source → target ────────────────────────────────
         const sourceDb = clusterConnections.getSync(sourceCluster)
@@ -680,21 +771,30 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
         const targetDb = clusterConnections.getSync(targetCluster)
             .useDb(`dental_org_${orgId}`, { useCache: true, noListener: true }).db;
 
-        report.dump = await syncEngine._dumpAndRestore({
-            sourceDb, targetDb,
-        });
+        report.dump = await syncEngine._dumpAndRestore({ sourceDb, targetDb });
+        assertBudget("post-dump");
 
-        // ── Step 4: atomic cluster swap ─────────────────────────────────
+        // ── Step 4: post-dump parity verification ───────────────────────
+        // Collection counts must match + random _id samples must resolve
+        // on the target. Anything else is a silent-copy-failure symptom
+        // and we must rollback.
+        report.verify = await _verifyParity({
+            sourceDb, targetDb,
+            skipCollections: syncEngine.SKIP_COLLECTIONS,
+        });
+        assertBudget("post-verify");
+
+        // ── Step 5: atomic cluster swap (KEEP maintenance + writeLock ON) ─
+        // We do NOT unlock here. Unlocking before cache eviction is the
+        // phantom-write bug: a request sneaks in, uses a still-cached
+        // source connection, writes to the OLD cluster, and the write
+        // vanishes on cutover. Fix: swap -> evict -> THEN unlock.
         const swapped = await Organization().findOneAndUpdate(
             { _id: orgId, maintenanceMode: true },
             {
                 $set: {
                     cluster: targetCluster,
-                    maintenanceMode: false,
-                    maintenanceStartedAt: null,
-                    writeLocked: false,
                     targetCluster: null,
-                    migrationId: null,
                 },
                 $inc: { routingEpoch: 1 },
             },
@@ -704,7 +804,7 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
             throw new Error("Cluster swap lost the atomic update (maintenanceMode flipped externally)");
         }
 
-        // ── Step 5: evict cached connections ────────────────────────────
+        // ── Step 6: evict cached connections BEFORE unlocking ───────────
         let evicted = 0;
         try {
             evicted = dbManager.evictByOrg(String(orgId));
@@ -717,8 +817,29 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
         report.cacheEvicted = evicted;
         report.routingEpoch = swapped.routingEpoch;
 
+        // ── Step 7: NOW unlock (second atomic update) ───────────────────
+        const unlocked = await Organization().findOneAndUpdate(
+            { _id: orgId, maintenanceMode: true },
+            {
+                $set: {
+                    maintenanceMode: false,
+                    maintenanceStartedAt: null,
+                    writeLocked: false,
+                    migrationId: null,
+                },
+            },
+            { new: true }
+        );
+        if (!unlocked) {
+            logger.error(
+                { event: "DOWNTIME_UNLOCK_RACE", orgId: String(orgId) },
+                "[Migration] Unlock phase lost the atomic update — org left in maintenanceMode; operator intervention required"
+            );
+            throw new Error("Unlock phase lost atomic update (operator: clear maintenanceMode manually)");
+        }
+
         await _logTransition({
-            org: swapped,
+            org: unlocked,
             from: "MAINTENANCE_ENABLED",
             to: "DOWNTIME_COMPLETE",
             actor,
@@ -726,7 +847,7 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
             details: { ...report },
         });
 
-        // ── Step 6: report ──────────────────────────────────────────────
+        // ── Step 8: report ──────────────────────────────────────────────
         report.finishedAt = new Date();
         report.durationMs = report.finishedAt - report.startedAt;
         report.success = true;
@@ -756,7 +877,8 @@ async function runDowntimeMigration({ orgId, sourceCluster, targetCluster, actor
                 to: "DOWNTIME_FAILED",
                 actor,
                 reason: err.message,
-                details: { sourceCluster, targetCluster, error: err.message },
+                details: { sourceCluster, targetCluster, error: err.message,
+                           parityReport: err.parityReport },
             });
         } catch (cleanupErr) {
             logger.error(
