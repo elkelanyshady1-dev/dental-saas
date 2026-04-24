@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - Patient (../../organization/patient/models/patient.model) — tenant + no req access (worker/utility)
 /**
  * src/shared/models/Patient.js
  * 
@@ -8,5 +10,4 @@
 "use strict";
 
 const Patient = require("../../organization/patient/models/patient.model").default;
-
 module.exports = Patient;

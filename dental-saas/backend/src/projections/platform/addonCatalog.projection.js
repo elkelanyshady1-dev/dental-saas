@@ -7,7 +7,9 @@
 
 "use strict";
 
-const AddOn = require("../../platform/domain/models/addOn.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const AddOnDef = require("../../platform/domain/models/addOn.model");
+const AddOn = getPlatformModel(AddOnDef);
 const Money = require("../../utils/money");
 
 /**
@@ -17,30 +19,30 @@ const Money = require("../../utils/money");
  * @returns {Promise<Array>} List of AddOn DTOs
  */
 async function buildAddOnCatalog() {
-    const addons = await AddOn.find({ isActive: true }).lean();
-
-    return addons.map(addon => ({
-        id: addon._id,
-        name: addon.name,
-        code: addon.code,
-        description: addon.description,
-        type: addon.type,
-        benefits: addon.benefits,
-        pricing: {
-            baseCurrency: addon.pricing.baseCurrency,
-            regions: addon.pricing.regions.map(region => ({
-                regionCode: region.regionCode,
-                countries: region.countries,
-                currency: region.currency,
-                monthly: new Money(region.monthly).value(),
-                yearly: new Money(region.yearly).value()
-            }))
-        },
-        version: addon.version,
-        createdAt: addon.createdAt
-    }));
+  const addons = await AddOn.find({
+    isActive: true
+  }).lean();
+  return addons.map(addon => ({
+    id: addon._id,
+    name: addon.name,
+    code: addon.code,
+    description: addon.description,
+    type: addon.type,
+    benefits: addon.benefits,
+    pricing: {
+      baseCurrency: addon.pricing.baseCurrency,
+      regions: addon.pricing.regions.map(region => ({
+        regionCode: region.regionCode,
+        countries: region.countries,
+        currency: region.currency,
+        monthly: new Money(region.monthly).value(),
+        yearly: new Money(region.yearly).value()
+      }))
+    },
+    version: addon.version,
+    createdAt: addon.createdAt
+  }));
 }
-
 module.exports = {
-    buildAddOnCatalog
+  buildAddOnCatalog
 };

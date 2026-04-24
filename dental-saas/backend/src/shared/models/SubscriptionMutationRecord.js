@@ -5,4 +5,8 @@
  * This proxy allows organization-plane code to import it
  * via the shared layer without violating plane isolation.
  */
-module.exports = require("../../platform/billing/models/SubscriptionMutationRecord.model").default;
+"use strict";
+
+const getPlatformModel = require("@core/db/getPlatformModel");
+const SubscriptionMutationRecordDef = require("../../platform/billing/models/SubscriptionMutationRecord.model");
+module.exports = getPlatformModel(SubscriptionMutationRecordDef);

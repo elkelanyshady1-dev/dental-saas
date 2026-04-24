@@ -17,19 +17,23 @@
  */
 "use strict";
 
-const PlatformInvoice = require("../../platform/billing/models/PlatformInvoice.model").default;
-
+const getPlatformModel = require("@core/db/getPlatformModel");
+const PlatformInvoiceDef = require("../../platform/billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
 module.exports = PlatformInvoice;
 
 // Compat alias: consumers that destructure { billingInvoiceSchema } or { invoiceSchema }
 // now receive the platformInvoiceSchema under those names.
 // This prevents import-destructure errors in files that were not yet refactored.
-const { platformInvoiceSchema } = (() => {
-    const mongoose = require("mongoose");
-    // PlatformInvoice.schema is the Mongoose schema object on the model
-    return { platformInvoiceSchema: PlatformInvoice.schema };
+const {
+  platformInvoiceSchema
+} = (() => {
+  const mongoose = require("mongoose");
+  // PlatformInvoice.schema is the Mongoose schema object on the model
+  return {
+    platformInvoiceSchema: PlatformInvoice.schema
+  };
 })();
-
 module.exports.billingInvoiceSchema = platformInvoiceSchema;
 module.exports.invoiceSchema = platformInvoiceSchema;
 module.exports.platformInvoiceSchema = platformInvoiceSchema;

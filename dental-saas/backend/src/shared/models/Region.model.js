@@ -5,4 +5,6 @@
  */
 "use strict";
 
-module.exports = require("../../platform/domain/models/Region.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const RegionDef = require("../../platform/domain/models/Region.model");
+module.exports = getPlatformModel(RegionDef);

@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - Appointment (../../organization/appointment/models/appointment.model) — tenant + no req access (worker/utility)
 /**
  * src/shared/models/Appointment.js
  * 
@@ -8,5 +10,4 @@
 "use strict";
 
 const Appointment = require("../../organization/appointment/models/appointment.model").default;
-
 module.exports = Appointment;

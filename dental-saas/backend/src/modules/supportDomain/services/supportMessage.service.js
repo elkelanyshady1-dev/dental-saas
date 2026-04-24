@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - TicketMessage (@modules/supportDomain/models/TicketMessage.model) — tenant + req present but no _getModels(req) helper
 /**
  * supportMessage.service.js — Phase 3 E5
  *
@@ -22,9 +24,11 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
 const TicketMessage = require("@modules/supportDomain/models/TicketMessage.model").default;
-const Ticket = require("@shared/models/Ticket").default;
+const TicketDef = require("@shared/models/Ticket");
+const Ticket = getPlatformModel(TicketDef);
 const {
   metrics
 } = require("@infra/metrics/metrics");

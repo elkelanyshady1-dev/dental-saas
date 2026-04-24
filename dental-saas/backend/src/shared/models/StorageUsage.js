@@ -5,4 +5,8 @@
  * This proxy allows platform-plane projections to import it
  * via the shared layer without violating plane isolation.
  */
-module.exports = require("../../core/storage/models/organizationStorageUsage.model").default;
+"use strict";
+
+const getPlatformModel = require("@core/db/getPlatformModel");
+const StorageUsageDef = require("../../core/storage/models/organizationStorageUsage.model");
+module.exports = getPlatformModel(StorageUsageDef);

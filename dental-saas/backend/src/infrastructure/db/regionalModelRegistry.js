@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - PatientModel (../../organization/patient/models/patient.model) — tenant + no req access (worker/utility)
 /**
  * regionalModelRegistry.js
  * DDD Migration — Phase 1 Fix
@@ -26,7 +28,10 @@
 
 "use strict";
 
-const { getRegionContext } = require("../regionRouter");
+const getPlatformModel = require("@core/db/getPlatformModel");
+const {
+  getRegionContext
+} = require("../regionRouter");
 
 // ── Schema imports (schema only, NOT the compiled models) ────────────────────
 // We import the compiled model just to extract its .schema property.
@@ -36,21 +41,13 @@ const ClinicalRecordModel = require("../../modules/patientDomain/clinical/clinic
 const PatientPolicyModel = require("../../modules/patientDomain/policies/patientPolicy.model");
 const PatientUserModel = require("../../modules/patientDomain/access/patientUser.model");
 const EventOutboxModel = require("../../core/EventOutbox.model");
-const AuditLogModel = require("../../shared/models/AuditLog").default;
-
+const AuditLogModelDef = require("../../shared/models/AuditLog");
+const AuditLogModel = getPlatformModel(AuditLogModelDef);
 /**
  * Model definitions: [modelName, schemaSource]
  * The schema is extracted from the globally-compiled model.
  */
-const MODEL_DEFINITIONS = [
-    ["Patient", PatientModel.schema],
-    ["BranchCounter", BranchCounterModel.schema],
-    ["ClinicalRecord", ClinicalRecordModel.schema],
-    ["PatientPolicy", PatientPolicyModel.schema],
-    ["PatientUser", PatientUserModel.schema],
-    ["EventOutbox", EventOutboxModel.schema],
-    ["AuditLog", AuditLogModel.schema],
-];
+const MODEL_DEFINITIONS = [["Patient", PatientModel.schema], ["BranchCounter", BranchCounterModel.schema], ["ClinicalRecord", ClinicalRecordModel.schema], ["PatientPolicy", PatientPolicyModel.schema], ["PatientUser", PatientUserModel.schema], ["EventOutbox", EventOutboxModel.schema], ["AuditLog", AuditLogModel.schema]];
 
 // Cache: regionCode → { Patient: Model, BranchCounter: Model, ... }
 const _cache = {};
@@ -73,30 +70,27 @@ const _cache = {};
  * }>}
  */
 async function getRegionalModels(regionCode) {
-    if (!regionCode) {
-        throw new Error("[RegionalModelRegistry] regionCode is required.");
+  if (!regionCode) {
+    throw new Error("[RegionalModelRegistry] regionCode is required.");
+  }
+  const code = regionCode.toUpperCase();
+  if (_cache[code]) {
+    return _cache[code];
+  }
+  const {
+    mongooseConnection
+  } = await getRegionContext(code);
+  const models = {};
+  for (const [modelName, schema] of MODEL_DEFINITIONS) {
+    // If already compiled on this connection, reuse it
+    if (mongooseConnection.models[modelName]) {
+      models[modelName] = mongooseConnection.models[modelName];
+    } else {
+      models[modelName] = mongooseConnection.model(modelName, schema);
     }
-
-    const code = regionCode.toUpperCase();
-
-    if (_cache[code]) {
-        return _cache[code];
-    }
-
-    const { mongooseConnection } = await getRegionContext(code);
-
-    const models = {};
-    for (const [modelName, schema] of MODEL_DEFINITIONS) {
-        // If already compiled on this connection, reuse it
-        if (mongooseConnection.models[modelName]) {
-            models[modelName] = mongooseConnection.models[modelName];
-        } else {
-            models[modelName] = mongooseConnection.model(modelName, schema);
-        }
-    }
-
-    _cache[code] = models;
-    return models;
+  }
+  _cache[code] = models;
+  return models;
 }
 
 /**
@@ -104,9 +98,11 @@ async function getRegionalModels(regionCode) {
  * For testing only — clears the model cache.
  */
 function clearRegionalModelCache() {
-    for (const key of Object.keys(_cache)) {
-        delete _cache[key];
-    }
+  for (const key of Object.keys(_cache)) {
+    delete _cache[key];
+  }
 }
-
-module.exports = { getRegionalModels, clearRegionalModelCache };
+module.exports = {
+  getRegionalModels,
+  clearRegionalModelCache
+};

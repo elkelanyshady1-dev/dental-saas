@@ -1,3 +1,5 @@
+// TODO(5e-B-manual): 1 .default import(s) not auto-migrated:
+//   - Notification (./notification.model) — tenant + no req access (worker/utility)
 /**
  * notification.service.js
  * Thin service layer — validates payload then persists a notification.

@@ -16,8 +16,9 @@
 
 "use strict";
 
-const OrgContract = require("../../platform/billing/models/OrgContract.model").default;
-
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrgContractDef = require("../../platform/billing/models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
 /**
  * loadActiveContractForOrg
  *
@@ -28,22 +29,20 @@ const OrgContract = require("../../platform/billing/models/OrgContract.model").d
  * @returns {Promise<{planCode, contractStatus, currency, effectiveTo, trialEndDate, autoRenew}|null>}
  */
 async function loadActiveContractForOrg(organizationId) {
-    if (!organizationId) return null;
-
-    try {
-        const contract = await OrgContract.findOne({
-            organizationId,
-            contractStatus: "active"
-        })
-            .select("planCode contractStatus currency effectiveTo trialEndDate autoRenew gracePeriodDays")
-            .sort({ createdAt: -1 })
-            .lean();
-
-        return contract || null;
-    } catch (err) {
-        // Non-throwing — org UI degrades gracefully if contract unresolvable
-        return null;
-    }
+  if (!organizationId) return null;
+  try {
+    const contract = await OrgContract.findOne({
+      organizationId,
+      contractStatus: "active"
+    }).select("planCode contractStatus currency effectiveTo trialEndDate autoRenew gracePeriodDays").sort({
+      createdAt: -1
+    }).lean();
+    return contract || null;
+  } catch (err) {
+    // Non-throwing — org UI degrades gracefully if contract unresolvable
+    return null;
+  }
 }
-
-module.exports = { loadActiveContractForOrg };
+module.exports = {
+  loadActiveContractForOrg
+};

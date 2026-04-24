@@ -25,6 +25,7 @@
 
 "use strict";
 
+const getSharedModel = require("@core/db/getSharedModel");
 const mongoose = require("mongoose");
 const RefundDef = require("./Refund.model");
 const PatientPaymentDef = require("../organizationFinance/models/PatientPayment.model");
@@ -49,7 +50,8 @@ const logger = require("@utils/logger");
 // Phase D: centralized request-idempotency store. Lives on the platform DB;
 // key/scope/org-scoped. Refund.schema stays untouched — transport-level
 // idempotency should not be a domain concern.
-const IdempotencyKey = require("@core/IdempotencyKey.model").default;
+const IdempotencyKeyDef = require("@core/IdempotencyKey.model");
+const IdempotencyKey = getSharedModel(IdempotencyKeyDef);
 const {
   v4: uuidv4
 } = require("uuid");
