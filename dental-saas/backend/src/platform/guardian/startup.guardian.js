@@ -116,8 +116,11 @@ function checkOrgContractLockedPriceConstraint() {
   }
 }
 async function checkTransactionSupport() {
-  // Attempt to start a session — will succeed on replica set, fail on standalone
-  const session = await mongoose.startSession();
+  // Attempt to start a session — will succeed on replica set, fail on standalone.
+  // Must use the platform sibling connection: post-5d, the global mongoose
+  // namespace has no connected client, so mongoose.startSession() buffers
+  // forever and trips the 10s timeout.
+  const session = await getPlatformConnection().startSession();
   try {
     session.startTransaction();
     await session.abortTransaction();
@@ -293,13 +296,29 @@ function checkLegacyPlanModelTombstone() {
     throw new Error("LEGACY_PLAN_MODEL_TOMBSTONE_PRESENT violated: The legacy 'Plan' Mongoose model is registered. " + "The migration to PlanTemplate/PlanVersion removed this model. " + "Fix: ensure platform/domain/models/plan.model.js exports only a LegacyPlanShim (not a Mongoose model).");
   }
 
-  // Secondary check: require the model file and verify it is NOT a Mongoose Model
+  // Secondary check: require the model file and verify it is NOT a Mongoose Model.
+  //
+  // We DO NOT call getPlatformModel() on the export — the LegacyPlanShim is a
+  // plain object, not a `{ modelName, schema }` def, so binding would crash
+  // the guardian itself with "[getModel] Invalid modelDef". Instead we
+  // inspect the export shape directly:
+  //   - A real Mongoose Model is a function whose .modelName === "Plan"
+  //     AND has a .schema property.
+  //   - A `{ modelName: "Plan", schema }` def would also be a violation.
+  //   - The LegacyPlanShim is a plain object with .find/.findById/etc.
   try {
-    const planModelExportDef = require("../domain/models/plan.model");
-    const planModelExport = getPlatformModel(planModelExportDef); // A real mongoose model is a function whose .modelName === the registered name
-    const isMongooseModel = planModelExport && typeof planModelExport === "function" && planModelExport.modelName === "Plan";
-    if (isMongooseModel) {
-      throw new Error("LEGACY_PLAN_MODEL_TOMBSTONE_PRESENT violated: platform/domain/models/plan.model.js exports a Mongoose Model named 'Plan'. " + "This file must export the LegacyPlanShim only (no mongoose.model() call). " + "The tombstone shim has been replaced or deleted. Restore it.");
+    const planModelExport = require("../domain/models/plan.model");
+    const isMongooseModel =
+      planModelExport &&
+      typeof planModelExport === "function" &&
+      planModelExport.modelName === "Plan";
+    const isModelDef =
+      planModelExport &&
+      typeof planModelExport === "object" &&
+      planModelExport.modelName === "Plan" &&
+      planModelExport.schema != null;
+    if (isMongooseModel || isModelDef) {
+      throw new Error("LEGACY_PLAN_MODEL_TOMBSTONE_PRESENT violated: platform/domain/models/plan.model.js exports a Mongoose Model (or model def) named 'Plan'. " + "This file must export the LegacyPlanShim only (no mongoose.model() call, no { modelName, schema } def). " + "The tombstone shim has been replaced or deleted. Restore it.");
     }
   } catch (err) {
     if (err.message && err.message.includes("LEGACY_PLAN_MODEL_TOMBSTONE_PRESENT")) throw err;

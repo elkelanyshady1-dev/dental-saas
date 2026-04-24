@@ -113,16 +113,25 @@ async function seed() {
     console.log("╚══════════════════════════════════════════════════════════╝");
     console.log("");
 
-    const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    const uri = process.env.MONGO_URI_PLATFORM || process.env.MONGO_URI_DEV_SINGLE;
     if (!uri) {
-        console.error("[SEED] ❌  MONGO_URI not set. Add to .env");
+        console.error("[SEED] ❌  MONGO_URI_PLATFORM (or MONGO_URI_DEV_SINGLE) not set. Add to .env");
         process.exit(1);
     }
 
     await mongoose.connect(uri);
     console.log(`  ℹ️  Connected to: ${mongoose.connection.host}/${mongoose.connection.name}`);
 
-    const Region = require("../src/platform/domain/models/Region.model");
+    // Region.model.js exports a lazy proxy in v9.4.2; pull the def + bind on
+    // this CLI's own mongoose connection (NOT platformConnection — the
+    // sibling isn't initialised in this standalone script).
+    const RegionDef = require("../src/platform/domain/models/Region.model");
+    const RegionSchema = RegionDef.__def?.schema || RegionDef.schema;
+    if (!RegionSchema) {
+        console.error("[SEED] ❌  Could not resolve Region schema from def");
+        process.exit(1);
+    }
+    const Region = mongoose.connection.models["Region"] || mongoose.connection.model("Region", RegionSchema);
 
     let created = 0;
     let updated = 0;

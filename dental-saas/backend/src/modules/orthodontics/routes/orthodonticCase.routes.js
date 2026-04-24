@@ -91,8 +91,8 @@ router.get("/", requireOrgPermission(P.ORTHO_READ), fieldFilterMiddleware("ortho
  *     responses:
  *       200:
  *         description: Dashboard DTO
- *   Route order matters — this must precede `/:id`.
  */
+// Route order matters - this handler must precede the "/:id" route below.
 // Note on FLS: the Situation Room payload is aggregate counts plus two short
 // lists that carry `patientName`. Access is already gated by ORTHO_READ (RBAC)
 // and narrowed to owner/shared cases (PBAC) inside the service. A generic

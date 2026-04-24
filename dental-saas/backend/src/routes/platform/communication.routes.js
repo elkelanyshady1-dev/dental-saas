@@ -120,7 +120,7 @@ router.post("/dlq/:channel/:jobId/retry", ...MANAGE, ctrl.retryDLQJob);
  * /api/platform/communication/test/send:
  *   post:
  *     summary: Send a single test message
- *     description: Enqueues a real job via communicationService. Required capability: MANAGE_COMMUNICATION.
+ *     description: "Enqueues a real job via communicationService. Required capability: MANAGE_COMMUNICATION."
  *     tags: [Communication]
  *     security: [{ platformToken: [] }]
  *     requestBody:

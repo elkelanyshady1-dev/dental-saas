@@ -274,14 +274,12 @@ router.get("/finance/exchange-rates", ...pSettings, exchangeRateController.listE
  */
 router.get("/billing/dashboard", ...pAnalytics, billingDashboardController.getDashboard);
 
-/**
- * @swagger annotation is in billingIntegrity.controller.js
- *
- * GET /api/platform/billing/integrity-check
- * Runs all billing invariant checks on demand.
- * Sentinel: GET → VIEW_* — uses VIEW_PLATFORM_ANALYTICS (VIEW_BILLING not in contract).
- * Optional query: ?organizationId=&currency=&from=&to=
- */
+// NOTE: @swagger annotation for this route is in billingIntegrity.controller.js
+//
+// GET /api/platform/billing/integrity-check
+// Runs all billing invariant checks on demand.
+// Sentinel: GET -> VIEW_* - uses VIEW_PLATFORM_ANALYTICS (VIEW_BILLING not in contract).
+// Optional query: ?organizationId=&currency=&from=&to=
 router.get("/billing/integrity-check", platformProtect, authorizePlatformPermission(CAP.VIEW_PLATFORM_ANALYTICS), asyncHandler(billingIntegrityController.getBillingIntegrityStatus));
 
 /**
