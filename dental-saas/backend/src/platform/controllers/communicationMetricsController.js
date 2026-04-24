@@ -34,9 +34,8 @@ const CommunicationMetricsDef = require("../../platform/models/CommunicationMetr
 const CommunicationMetrics = getSharedModel(CommunicationMetricsDef);
 const CommunicationRetryLogDef = require("../../platform/models/CommunicationRetryLog.model");
 const CommunicationRetryLog = getSharedModel(CommunicationRetryLogDef);
-const {
-  EmailEvent
-} = require("../../platform/models/EmailEvent.model");
+const EmailEventDef = require("../../platform/models/EmailEvent.model");
+const EmailEvent = getSharedModel(EmailEventDef);
 const {
   sendCommunication,
   sendBulkCommunication

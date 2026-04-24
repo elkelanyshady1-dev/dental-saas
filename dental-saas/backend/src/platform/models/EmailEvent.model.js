@@ -112,13 +112,10 @@ emailEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60
 emailEventSchema.index({ channel: 1, status: 1, createdAt: -1 });
 
 const modelName = "EmailEvent";
-const EmailEvent = mongoose.models[modelName] || mongoose.model(modelName, emailEventSchema);
 
 module.exports = {
     modelName,
     schema: emailEventSchema,
-    default: EmailEvent,
-    EmailEvent,
     hashRecipient,
     maskEmail,
     getDomain,

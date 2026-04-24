@@ -26,9 +26,8 @@ const getSharedModel = require("@core/db/getSharedModel");
 const logger = require("@utils/logger");
 const CommunicationMetricsDef = require("../models/CommunicationMetrics.model");
 const CommunicationMetrics = getSharedModel(CommunicationMetricsDef);
-const {
-  EmailEvent
-} = require("../models/EmailEvent.model");
+const EmailEventDef = require("../models/EmailEvent.model");
+const EmailEvent = getSharedModel(EmailEventDef);
 
 // Shared response body for endpoints that cannot be answered without the
 // removed BullMQ/Redis surface. Kept consistent with communicationMetricsController
