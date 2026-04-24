@@ -1,46 +1,93 @@
 /**
  * changeApplier.js — Apply a single MongoDB change-stream event to a target DB
  *
- * Pure function (one external call — the target write). Idempotent: replaying
- * the same event against the same target leaves state unchanged.
+ * v2 (post-review hardening):
+ *   • Stale-update guard — when both incoming and existing docs carry
+ *     `updatedAt`, skip if incoming ≤ existing. Prevents out-of-order
+ *     replay from rolling a document back.
+ *   • `invalidate` is a HARD FAILURE (throws) — the stream is dead; any
+ *     event after it is silent data loss. Caller must retry from a fresh
+ *     resumeToken.
+ *   • Idempotency preserved: every write uses upsert / _id-based updates.
+ *     E11000 duplicate-key is still swallowed (dump/replay overlap).
  *
  * Supported operationTypes:
- *   insert  → upsert on _id (dump/replay overlap: row may already exist)
- *   update  → $set + $unset from updateDescription, OR replaceOne when
- *             fullDocument is present (fullDocument: "updateLookup")
- *   replace → replaceOne upsert
+ *   insert  → upsert on _id
+ *   update  → replaceOne when fullDocument present + stale guard,
+ *             else $set/$unset upsert
+ *   replace → replaceOne upsert + stale guard
  *   delete  → deleteOne({ _id })
- *   drop / dropDatabase / rename / invalidate → logged + skipped (these
- *             invalidate the stream itself; the caller's catch-up loop will
- *             detect and bail out)
+ *   drop / dropDatabase / rename → skipped (return { skipped: true })
+ *   invalidate                   → THROWS ChangeStreamInvalidatedError
  *
- * Contract:
- *   - Takes the *raw change-stream document*, not a normalised shape.
- *   - Returns a small summary the caller uses for progress reporting.
- *   - Throws only on unrecoverable DB errors. Idempotency-friendly errors
- *     (e.g. duplicate-key on re-insert) are swallowed — we already have the
- *     document from the dump.
- *
- * PLANE: Platform. Runs inside the migration worker.
+ * PLANE: Platform. Runs inside the migration sync engine.
  */
 
 "use strict";
+
+class ChangeStreamInvalidatedError extends Error {
+    constructor(message = "Change stream invalidated") {
+        super(message);
+        this.code = "CHANGE_STREAM_INVALIDATED";
+        this.fatal = true;
+    }
+}
+
+/**
+ * Compare two updatedAt values (Date | ISO string). Returns:
+ *    1 if a > b
+ *   -1 if a < b
+ *    0 if equal / uncomparable
+ */
+function _compareTimestamps(a, b) {
+    if (!a || !b) return 0;
+    const ta = a instanceof Date ? a.getTime() : new Date(a).getTime();
+    const tb = b instanceof Date ? b.getTime() : new Date(b).getTime();
+    if (Number.isNaN(ta) || Number.isNaN(tb)) return 0;
+    if (ta > tb) return 1;
+    if (ta < tb) return -1;
+    return 0;
+}
+
+/**
+ * Returns true if the incoming document should be written.
+ * Returns false if the existing target document has a *newer* updatedAt
+ * (stale-update protection).
+ */
+async function _shouldApplyUpdate(col, id, incomingDoc) {
+    // Only applicable when incoming actually carries updatedAt.
+    if (!incomingDoc?.updatedAt) return true;
+    const existing = await col.findOne({ _id: id }, { projection: { updatedAt: 1 } });
+    if (!existing?.updatedAt) return true;
+    // Skip if incoming is strictly older than what we already have.
+    return _compareTimestamps(incomingDoc.updatedAt, existing.updatedAt) >= 0;
+}
 
 /**
  * Apply one change-stream event to the target DB.
  *
  * @param {mongoose.Connection | import("mongodb").Db} target
- *        Either the target tenant connection (we use .db) OR the underlying
- *        MongoClient Db directly.
+ *        Either a mongoose Connection (we read .db) or a raw MongoDB Db.
  * @param {object} change — raw change-stream event
- * @returns {Promise<{ op: string, ns: string, id: any, skipped?: boolean, reason?: string }>}
+ * @returns {Promise<{ op, ns, id, skipped?, reason? }>}
+ * @throws {ChangeStreamInvalidatedError} on `invalidate` events
  */
 async function applyChange(target, change) {
     if (!change || !change.operationType) {
         return { op: "unknown", ns: "?", id: null, skipped: true, reason: "malformed-event" };
     }
 
-    // Unwrap mongoose connection → raw Db (sync) if needed.
+    // ── Hard failure: invalidate ──────────────────────────────────────────
+    // Once invalidated, the stream is dead. ANY event after this is lost.
+    // The caller must abort and retry from a fresh resumeToken.
+    if (change.operationType === "invalidate") {
+        throw new ChangeStreamInvalidatedError(
+            "[changeApplier] Change stream invalidated (drop/rename/dropDatabase upstream). " +
+            "Every event after this point is silent data loss. Abort and retry."
+        );
+    }
+
+    // Unwrap mongoose connection → raw Db.
     const db = target?.db ? target.db : target;
     if (!db || typeof db.collection !== "function") {
         throw new Error("[changeApplier] target must expose a .collection() — got " + typeof db);
@@ -60,8 +107,11 @@ async function applyChange(target, change) {
                 if (!change.fullDocument) {
                     return { op: operationType, ns: collName, id, skipped: true, reason: "no-fullDocument" };
                 }
-                // Upsert so replay against a target that already received the
-                // dumped copy is a no-op.
+                // Stale-update guard (matters when the same _id was already
+                // copied by the dump with a fresher updatedAt).
+                if (!(await _shouldApplyUpdate(col, id, change.fullDocument))) {
+                    return { op: operationType, ns: collName, id, skipped: true, reason: "stale" };
+                }
                 await col.updateOne(
                     { _id: id },
                     { $set: change.fullDocument },
@@ -70,14 +120,18 @@ async function applyChange(target, change) {
                 return { op: operationType, ns: collName, id };
             }
 
-            case "update": {
-                // Prefer replaceOne when fullDocument is present — it's atomic
-                // and deals with nested paths correctly. Fall back to surgical
-                // $set/$unset when only updateDescription is provided.
+            case "update":
+            case "replace": {
+                // Prefer full-document path — always safer than surgical updates.
                 if (change.fullDocument) {
+                    if (!(await _shouldApplyUpdate(col, id, change.fullDocument))) {
+                        return { op: operationType, ns: collName, id, skipped: true, reason: "stale" };
+                    }
                     await col.replaceOne({ _id: id }, change.fullDocument, { upsert: true });
                     return { op: operationType, ns: collName, id };
                 }
+                // update-only: no fullDocument (fullDocument: "updateLookup" may
+                // return null if the doc was deleted mid-stream). Surgical path.
                 const updated = change.updateDescription?.updatedFields || {};
                 const removed = change.updateDescription?.removedFields || [];
                 const update = {};
@@ -89,18 +143,12 @@ async function applyChange(target, change) {
                 if (!Object.keys(update).length) {
                     return { op: operationType, ns: collName, id, skipped: true, reason: "empty-update" };
                 }
-                // Upsert: if the row was created AFTER the dump and the live
-                // stream first delivered the insert event that we may have
-                // missed, we don't lose data by creating the row here.
-                await col.updateOne({ _id: id }, update, { upsert: true });
-                return { op: operationType, ns: collName, id };
-            }
-
-            case "replace": {
-                if (!change.fullDocument) {
-                    return { op: operationType, ns: collName, id, skipped: true, reason: "no-fullDocument" };
+                // Stale guard via updatedAt in updatedFields.
+                if (updated.updatedAt &&
+                    !(await _shouldApplyUpdate(col, id, { updatedAt: updated.updatedAt }))) {
+                    return { op: operationType, ns: collName, id, skipped: true, reason: "stale" };
                 }
-                await col.replaceOne({ _id: id }, change.fullDocument, { upsert: true });
+                await col.updateOne({ _id: id }, update, { upsert: true });
                 return { op: operationType, ns: collName, id };
             }
 
@@ -112,16 +160,15 @@ async function applyChange(target, change) {
             case "drop":
             case "dropDatabase":
             case "rename":
-            case "invalidate":
-                // These terminate the change stream; the caller's replay loop
-                // will see `invalidate` and bail out. We skip here — the
-                // target DB state is best handled by operator intervention.
+                // The stream will emit `invalidate` right after these; we handle
+                // the invalidate (hard failure). Return a skipped result here so
+                // the loop sees normal completion of THIS event.
                 return {
                     op: operationType,
                     ns: collName,
                     id,
                     skipped: true,
-                    reason: "stream-invalidating-op",
+                    reason: "stream-invalidating-op-pending",
                 };
 
             default:
@@ -134,9 +181,8 @@ async function applyChange(target, change) {
                 };
         }
     } catch (err) {
-        // E11000 = duplicate key. If we race a dump+replay and the dumped
-        // insert landed first, a replayed insert may trip this — swallow
-        // because the row is already correct.
+        // E11000 = duplicate key. Dump/replay overlap is expected; the dump
+        // already wrote the row, replay wants to insert it again — harmless.
         if (err.code === 11000) {
             return { op: operationType, ns: collName, id, skipped: true, reason: "dup-key-idempotent" };
         }
@@ -144,4 +190,7 @@ async function applyChange(target, change) {
     }
 }
 
-module.exports = { applyChange };
+module.exports = {
+    applyChange,
+    ChangeStreamInvalidatedError,
+};

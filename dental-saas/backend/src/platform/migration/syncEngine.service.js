@@ -1,35 +1,29 @@
 /**
  * syncEngine.service.js — Phase 8 Zero-Downtime Sync Engine
  *
+ * v2 (post-review hardening):
+ *   • Replay loop uses cs.tryNext() — no listener re-entry possible.
+ *   • Catch-up is now token-based: we probe the source's latest
+ *     clusterTime via { hello: 1 } and refuse to stop replaying until
+ *     our last-applied event's clusterTime is ≥ source's clusterTime.
+ *     The idle-ms heuristic is retained as a FLOOR (must be idle for at
+ *     least CATCHUP_IDLE_MS) but is no longer the ceiling.
+ *   • Dump phase runs collections in parallel (capped) for speed.
+ *   • `invalidate` surfaces as a fatal ChangeStreamInvalidatedError —
+ *     caller must retry from a fresh resumeToken.
+ *   • Returns a formal MigrationReport object.
+ *
  * CRITICAL ORDERING (do NOT reorder — correctness depends on this):
  *
- *   1. Resolve source + target tenant connections
- *   2. Open a change stream on the SOURCE and capture the initial resumeToken
- *      BEFORE doing anything else. This is the one step that's non-negotiable:
- *      any event that happens after this token will be delivered to the
- *      replay stream. Any event that happens BEFORE this token will be in
- *      the dump. No gap. No duplicate (applier is idempotent).
- *   3. Dump every user-facing collection from source → target. Replay is
- *      idempotent, so dumping + replaying the same document is safe.
- *   4. Open a NEW change stream with `startAfter: savedToken` and replay
- *      every event to the target until "caught up" (no new events for
- *      CATCHUP_IDLE_MS AND live-lag < MAX_LAG_MS).
- *   5. Close the replay stream. Return success. Migration service flips
+ *   1. Resolve source + target tenant connections.
+ *   2. Open a change stream on SOURCE and capture the initial resumeToken
+ *      BEFORE anything else. Any event after this token is guaranteed to
+ *      appear when we later open a stream with `startAfter: token`.
+ *   3. Dump every user-facing collection (parallel, upsert, idempotent).
+ *   4. Open a NEW change stream with `startAfter: savedToken` and apply
+ *      every event until TOKEN-BASED convergence + minimum idle time.
+ *   5. Return MigrationReport. Migration service flips
  *      SYNCING → CUTOVER_PENDING.
- *
- * This is safe to call multiple times on the same org — resuming after a
- * failed run is the normal recovery path. The applier uses upsert for
- * inserts so overlap between dump and replay is harmless.
- *
- * PREREQUISITES:
- *   - Source AND target clusters must support change streams (= replica set
- *     or sharded deployment). Single-node mongod will fail at step 2 with
- *     a clear error.
- *   - org.writeLocked MUST be true at entry. The migration service sets
- *     this in startMigration(); we assert it here so the engine never
- *     silently copies a live, mutating DB when it thinks writes are frozen.
- *   - Target per-org DB is either empty or contains a partial prior run.
- *     Partial runs are safe — dump inserts are upserts.
  *
  * PLANE: Platform. Runs from the migration worker / admin endpoint.
  */
@@ -42,25 +36,24 @@ const logger = require("@utils/logger");
 
 const OrganizationDef = require("@shared/models/Organization");
 const MigrationLogDef = require("../domain/models/MigrationLog.model");
-const { applyChange } = require("./changeApplier");
+const { applyChange, ChangeStreamInvalidatedError } = require("./changeApplier");
 
-// Lazy bindings — platformConnection is initialised by boot, but this file
-// can be required at any point in the boot sequence.
+// Lazy bindings — platformConnection is initialised by boot, but this
+// module may be required at any point in the boot sequence.
 function Organization() { return getPlatformModel(OrganizationDef); }
 function MigrationLog() { return getPlatformModel(MigrationLogDef); }
 
 // ─── Tunables (env-overrideable) ────────────────────────────────────────────
 
-const DUMP_BATCH_SIZE     = parseInt(process.env.SYNC_DUMP_BATCH_SIZE     || "500", 10);
-const CATCHUP_IDLE_MS     = parseInt(process.env.SYNC_CATCHUP_IDLE_MS     || "2000", 10);
-const MAX_LAG_MS          = parseInt(process.env.SYNC_MAX_LAG_MS          || "1500", 10);
-const MAX_REPLAY_WALL_MS  = parseInt(process.env.SYNC_MAX_REPLAY_WALL_MS  || String(30 * 60 * 1000), 10);
-const LOG_EVERY_N_EVENTS  = parseInt(process.env.SYNC_LOG_EVERY_N_EVENTS  || "500", 10);
+const DUMP_BATCH_SIZE      = parseInt(process.env.SYNC_DUMP_BATCH_SIZE      || "500", 10);
+const DUMP_PARALLELISM     = parseInt(process.env.SYNC_DUMP_PARALLELISM     || "4", 10);
+const CATCHUP_IDLE_MS      = parseInt(process.env.SYNC_CATCHUP_IDLE_MS      || "2000", 10);
+const CATCHUP_PROBE_MS     = parseInt(process.env.SYNC_CATCHUP_PROBE_MS     || "1000", 10);
+const MAX_REPLAY_WALL_MS   = parseInt(process.env.SYNC_MAX_REPLAY_WALL_MS   || String(30 * 60 * 1000), 10);
+const LOG_EVERY_N_EVENTS   = parseInt(process.env.SYNC_LOG_EVERY_N_EVENTS   || "500", 10);
+const REPLAY_MAX_AWAIT_MS  = parseInt(process.env.SYNC_REPLAY_MAX_AWAIT_MS  || "1000", 10);
 
-// Collections that are noisy + ephemeral and should NOT be dumped/replayed.
-// Sessions, idempotency keys, rate-limit rows — all are short-lived or live
-// on the shared/platform planes, not the tenant. But if an operator has
-// placed such a collection in a tenant DB, we skip it here defensively.
+// Collections we never copy — ephemeral or plane-bound elsewhere.
 const SKIP_COLLECTIONS = new Set([
     "sessions",
     "idempotencykeys",
@@ -73,10 +66,44 @@ const SKIP_COLLECTIONS = new Set([
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function _tenantDb(clusterKey, orgId) {
-    // clusterConnections.getSync() returns the shared cluster root connection.
-    // .useDb() gives us the per-org database off it.
     const root = clusterConnections.getSync(clusterKey);
     return root.useDb(`dental_org_${orgId}`, { useCache: true, noListener: true });
+}
+
+function _nowMs() { return Date.now(); }
+
+function _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Compare two BSON Timestamp values (server-side clusterTime).
+ * Returns: 1 if a > b, -1 if a < b, 0 if equal. Null-safe (nulls compare last).
+ */
+function _cmpTs(a, b) {
+    if (!a && !b) return 0;
+    if (!a) return -1;
+    if (!b) return 1;
+    if (a.high !== b.high) return a.high > b.high ? 1 : -1;
+    if (a.low !== b.low) return a.low > b.low ? 1 : -1;
+    return 0;
+}
+
+/**
+ * Probe the source for its latest clusterTime via { hello: 1 }.
+ * Returns the BSON Timestamp, or null if the probe failed.
+ */
+async function _probeSourceClusterTime(sourceDb) {
+    try {
+        const res = await sourceDb.admin().command({ hello: 1 });
+        return res?.$clusterTime?.clusterTime || null;
+    } catch (err) {
+        logger.warn(
+            { event: "SYNC_CLUSTER_TIME_PROBE_FAILED", err: err.message },
+            "[SyncEngine] hello probe failed — convergence will fall back to idle-only"
+        );
+        return null;
+    }
 }
 
 async function _logProgress({ orgId, migrationId, stage, details }) {
@@ -100,17 +127,29 @@ async function _logProgress({ orgId, migrationId, stage, details }) {
     }
 }
 
-function _nowMs() { return Date.now(); }
+// ─── Concurrency limiter (tiny, no external dep) ────────────────────────────
+
+function _createLimiter(maxConcurrent) {
+    let active = 0;
+    const queue = [];
+    const run = async (fn, resolve, reject) => {
+        active++;
+        try { resolve(await fn()); }
+        catch (err) { reject(err); }
+        finally {
+            active--;
+            const next = queue.shift();
+            if (next) run(next.fn, next.resolve, next.reject);
+        }
+    };
+    return (fn) => new Promise((resolve, reject) => {
+        if (active < maxConcurrent) run(fn, resolve, reject);
+        else queue.push({ fn, resolve, reject });
+    });
+}
 
 // ─── Step 2: Capture resume token ───────────────────────────────────────────
-/**
- * Open a probe change stream just long enough to capture the initial
- * resumeToken, then close it. The token represents the position in the
- * oplog; any subsequent write is guaranteed to appear when we later open
- * a stream with `startAfter: token`.
- *
- * If the deployment isn't a replica set we fail fast with a clear error.
- */
+
 async function _captureInitialResumeToken(sourceDb) {
     let cs;
     try {
@@ -122,20 +161,13 @@ async function _captureInitialResumeToken(sourceDb) {
             `Original error: ${err.message}`
         );
     }
-    // On Mongo ≥ 4.2, resumeToken is available as soon as the stream opens.
-    // If null here we wait briefly for the first post-batch token.
     let token = cs.resumeToken;
     if (!token) {
-        // 1s window — if nothing's available we fail cleanly.
         const got = await Promise.race([
             new Promise((resolve) => {
                 const check = setInterval(() => {
-                    if (cs.resumeToken) {
-                        clearInterval(check);
-                        resolve(cs.resumeToken);
-                    }
+                    if (cs.resumeToken) { clearInterval(check); resolve(cs.resumeToken); }
                 }, 50);
-                // Bail after 1s
                 setTimeout(() => { clearInterval(check); resolve(null); }, 1000);
             }),
         ]);
@@ -148,91 +180,10 @@ async function _captureInitialResumeToken(sourceDb) {
     return token;
 }
 
-// ─── Step 3: Dump source → Step 4: Restore into target ──────────────────────
-/**
- * Programmatic dump-and-restore: stream every document from every
- * user-facing collection into the target DB. Uses updateOne with upsert
- * so re-runs are idempotent.
- *
- * Returns per-collection stats: { [collName]: { copied, skipped } }.
- */
-async function _dumpAndRestore({ sourceDb, targetDb, onProgress }) {
-    const collections = await sourceDb.listCollections({}, { nameOnly: true }).toArray();
-    const stats = {};
-    let totalDocs = 0;
-    const startedAt = _nowMs();
-
-    // Pass 1: count totals upfront for progress reporting. Cheap — metadata only.
-    const totals = {};
-    for (const c of collections) {
-        if (SKIP_COLLECTIONS.has(c.name) || c.name.startsWith("system.")) continue;
-        try {
-            totals[c.name] = await sourceDb.collection(c.name).estimatedDocumentCount();
-            totalDocs += totals[c.name];
-        } catch (_) {
-            totals[c.name] = 0;
-        }
-    }
-
-    let copiedOverall = 0;
-
-    for (const c of collections) {
-        if (SKIP_COLLECTIONS.has(c.name) || c.name.startsWith("system.")) continue;
-
-        const srcCol = sourceDb.collection(c.name);
-        const dstCol = targetDb.collection(c.name);
-        let copied = 0;
-        let batch = [];
-
-        const cursor = srcCol.find({}, { noCursorTimeout: false });
-        for await (const doc of cursor) {
-            batch.push(doc);
-            if (batch.length >= DUMP_BATCH_SIZE) {
-                await _flushBatch(dstCol, batch);
-                copied += batch.length;
-                copiedOverall += batch.length;
-                batch = [];
-                if (onProgress) {
-                    onProgress({
-                        stage: "DUMP",
-                        progress: totalDocs > 0 ? Math.round((copiedOverall / totalDocs) * 100) : 0,
-                        collection: c.name,
-                        copiedSoFar: copiedOverall,
-                        total: totalDocs,
-                    });
-                }
-            }
-        }
-        if (batch.length) {
-            await _flushBatch(dstCol, batch);
-            copied += batch.length;
-            copiedOverall += batch.length;
-            batch = [];
-            if (onProgress) {
-                onProgress({
-                    stage: "DUMP",
-                    progress: totalDocs > 0 ? Math.round((copiedOverall / totalDocs) * 100) : 0,
-                    collection: c.name,
-                    copiedSoFar: copiedOverall,
-                    total: totalDocs,
-                });
-            }
-        }
-        stats[c.name] = { copied };
-    }
-
-    return {
-        stats,
-        totalDocs,
-        copied: copiedOverall,
-        durationMs: _nowMs() - startedAt,
-    };
-}
+// ─── Step 3 + 4: Parallel dump + restore ────────────────────────────────────
 
 async function _flushBatch(dstCol, docs) {
     if (!docs.length) return;
-    // bulkWrite with upsert semantics so partial prior runs don't trip
-    // duplicate-key errors on retry.
     const ops = docs.map((d) => ({
         updateOne: {
             filter: { _id: d._id },
@@ -243,70 +194,156 @@ async function _flushBatch(dstCol, docs) {
     await dstCol.bulkWrite(ops, { ordered: false });
 }
 
-// ─── Step 5: Replay change stream → catch-up ────────────────────────────────
+async function _dumpOneCollection({ sourceDb, targetDb, name, onProgress, sharedCounter }) {
+    const srcCol = sourceDb.collection(name);
+    const dstCol = targetDb.collection(name);
+    let copied = 0;
+    let batch = [];
+
+    const cursor = srcCol.find({}, { noCursorTimeout: false });
+    for await (const doc of cursor) {
+        batch.push(doc);
+        if (batch.length >= DUMP_BATCH_SIZE) {
+            await _flushBatch(dstCol, batch);
+            copied += batch.length;
+            sharedCounter.add(batch.length);
+            batch = [];
+            if (onProgress) onProgress({ collection: name, copiedSoFar: sharedCounter.get() });
+        }
+    }
+    if (batch.length) {
+        await _flushBatch(dstCol, batch);
+        copied += batch.length;
+        sharedCounter.add(batch.length);
+        if (onProgress) onProgress({ collection: name, copiedSoFar: sharedCounter.get() });
+    }
+    return { name, copied };
+}
+
+async function _dumpAndRestore({ sourceDb, targetDb, onProgress }) {
+    const startedAt = _nowMs();
+    const collections = await sourceDb.listCollections({}, { nameOnly: true }).toArray();
+    const eligible = collections.filter((c) =>
+        !SKIP_COLLECTIONS.has(c.name) && !c.name.startsWith("system.")
+    );
+
+    // Pre-count for progress (cheap — metadata only).
+    let totalDocs = 0;
+    const totals = {};
+    for (const c of eligible) {
+        try {
+            totals[c.name] = await sourceDb.collection(c.name).estimatedDocumentCount();
+            totalDocs += totals[c.name];
+        } catch (_) {
+            totals[c.name] = 0;
+        }
+    }
+
+    const sharedCounter = (() => {
+        let v = 0;
+        return {
+            add: (n) => { v += n; },
+            get: () => v,
+        };
+    })();
+
+    const limit = _createLimiter(DUMP_PARALLELISM);
+    const stats = {};
+
+    await Promise.all(eligible.map((c) =>
+        limit(async () => {
+            try {
+                const res = await _dumpOneCollection({
+                    sourceDb, targetDb, name: c.name,
+                    onProgress: (p) => {
+                        if (onProgress) onProgress({
+                            stage: "DUMP",
+                            progress: totalDocs > 0
+                                ? Math.round((sharedCounter.get() / totalDocs) * 100)
+                                : 0,
+                            ...p,
+                            total: totalDocs,
+                        });
+                    },
+                    sharedCounter,
+                });
+                stats[res.name] = { copied: res.copied };
+            } catch (err) {
+                stats[c.name] = { copied: 0, error: err.message };
+                throw err; // fail fast — one broken collection is a fatal issue
+            }
+        })
+    ));
+
+    return {
+        stats,
+        totalDocs,
+        copied: sharedCounter.get(),
+        durationMs: _nowMs() - startedAt,
+        parallelism: DUMP_PARALLELISM,
+    };
+}
+
+// ─── Step 5: Replay using tryNext() + token-based convergence ───────────────
 /**
- * Open a change stream on the source, starting from `resumeToken`, and
- * apply every event to the target until caught up.
+ * Replay loop structure:
  *
- * Catch-up signal:
- *   - No new events for CATCHUP_IDLE_MS consecutive milliseconds, AND
- *   - live-lag (wallclock − event.clusterTime) < MAX_LAG_MS on the last
- *     event we did see.
+ *   while (!converged):
+ *     change = cs.tryNext()                 // awaits up to maxAwaitTimeMS
+ *     if (change) {
+ *       if invalidate → throw (fatal)
+ *       apply(change)                       // sequential, no re-entry
+ *       update lastAppliedTs
+ *       continue                            // drain as fast as events arrive
+ *     }
+ *     // no event — probe for convergence
+ *     if (idle ≥ CATCHUP_IDLE_MS):
+ *       srcTs = source.hello.$clusterTime
+ *       if (lastAppliedTs >= srcTs OR !srcTs and idle ≥ CATCHUP_IDLE_MS):
+ *         → converged
+ *     sleep CATCHUP_PROBE_MS
  *
- * If the stream emits an `invalidate` event (collection drop / rename)
- * we bail with a clear error — the caller must start over.
- *
- * Hard wall: MAX_REPLAY_WALL_MS. If we haven't caught up by then,
- * something is wrong (massive write volume, dead stream, etc.) and the
- * caller should retry.
+ *   Hard wall: MAX_REPLAY_WALL_MS.
  */
 async function _replayUntilCaughtUp({ sourceDb, targetDb, startToken, onProgress, migrationContext }) {
     const startedAt = _nowMs();
     let eventsProcessed = 0;
     let lastEventAt = _nowMs();
-    let lastLagMs = 0;
+    let lastAppliedTs = null;   // BSON Timestamp of last applied event
     let lastToken = startToken;
+    let convergenceProbes = 0;
 
     const cs = sourceDb.watch([], {
         startAfter: startToken,
         fullDocument: "updateLookup",
+        maxAwaitTimeMS: REPLAY_MAX_AWAIT_MS,
     });
 
-    // Promise that resolves when we detect catch-up, rejects on error.
-    const result = await new Promise((resolve, reject) => {
-        let idleTimer = null;
-        let watchdog = null;
-        let finished = false;
+    try {
+        while (true) {
+            // Hard wall
+            if (_nowMs() - startedAt > MAX_REPLAY_WALL_MS) {
+                throw new Error(
+                    `[SyncEngine] Replay did not converge within ${MAX_REPLAY_WALL_MS}ms ` +
+                    `(events=${eventsProcessed}, probes=${convergenceProbes})`
+                );
+            }
 
-        const finish = async (outcome, err) => {
-            if (finished) return;
-            finished = true;
-            if (idleTimer) clearInterval(idleTimer);
-            if (watchdog) clearTimeout(watchdog);
-            try { await cs.close(); } catch (_) { /* best-effort */ }
-            if (err) reject(err);
-            else resolve(outcome);
-        };
-
-        cs.on("change", async (change) => {
+            let change = null;
             try {
-                if (change.operationType === "invalidate") {
-                    return finish(
-                        null,
-                        new Error("[SyncEngine] Change stream invalidated (drop/rename). Abort and retry.")
-                    );
-                }
+                change = await cs.tryNext();
+            } catch (err) {
+                // Transient read errors are rare — bail and let caller decide.
+                throw err;
+            }
+
+            if (change) {
+                // applyChange throws ChangeStreamInvalidatedError on invalidate.
                 const res = await applyChange(targetDb, change);
                 eventsProcessed++;
                 lastEventAt = _nowMs();
+                lastAppliedTs = change.clusterTime || lastAppliedTs;
                 lastToken = change._id || cs.resumeToken || lastToken;
-
-                // Compute live-lag: clusterTime is a BSON Timestamp.
-                // High bits = seconds since epoch.
-                if (change.clusterTime?.high) {
-                    const seconds = change.clusterTime.high;
-                    lastLagMs = _nowMs() - seconds * 1000;
-                }
 
                 if (eventsProcessed % LOG_EVERY_N_EVENTS === 0) {
                     logger.debug(
@@ -314,63 +351,86 @@ async function _replayUntilCaughtUp({ sourceDb, targetDb, startToken, onProgress
                             event: "SYNC_REPLAY_PROGRESS",
                             orgId: migrationContext?.orgId,
                             eventsProcessed,
-                            lagMs: lastLagMs,
                             lastOp: res.op,
                         },
-                        `[SyncEngine] Replayed ${eventsProcessed} events (lag=${lastLagMs}ms)`
+                        `[SyncEngine] Replayed ${eventsProcessed} events`
                     );
                 }
                 if (onProgress) {
                     onProgress({
                         stage: "REPLAY",
                         eventsProcessed,
-                        lagMs: lastLagMs,
                         lastOp: res.op,
                         lastNs: res.ns,
                     });
                 }
-            } catch (err) {
-                await finish(null, err);
+                continue;
             }
-        });
 
-        cs.on("error", async (err) => { await finish(null, err); });
-        cs.on("close", () => { if (!finished) finish({ reason: "stream-closed" }); });
-
-        // Periodic catch-up probe: if the stream has been idle ≥ CATCHUP_IDLE_MS
-        // AND our last measured lag is under MAX_LAG_MS, we've caught up.
-        // (If lag is high, the source is still writing quickly — keep waiting.)
-        idleTimer = setInterval(() => {
+            // ── No new events right now — check convergence ──────────────
             const idleFor = _nowMs() - lastEventAt;
-            if (idleFor >= CATCHUP_IDLE_MS && lastLagMs < MAX_LAG_MS) {
-                finish({
-                    reason: "caught-up",
-                    eventsProcessed,
-                    lastLagMs,
-                    idleMs: idleFor,
-                });
+            if (idleFor < CATCHUP_IDLE_MS) {
+                await _sleep(CATCHUP_PROBE_MS);
+                continue;
             }
-        }, Math.max(200, Math.floor(CATCHUP_IDLE_MS / 4)));
 
-        // Hard wall.
-        watchdog = setTimeout(() => {
-            finish(
-                null,
-                new Error(
-                    `[SyncEngine] Replay did not catch up within ${MAX_REPLAY_WALL_MS}ms ` +
-                    `(events=${eventsProcessed}, lag=${lastLagMs}ms)`
-                )
-            );
-        }, MAX_REPLAY_WALL_MS);
-        watchdog.unref?.();
-    });
+            convergenceProbes++;
+            const srcTs = await _probeSourceClusterTime(sourceDb);
 
+            if (!srcTs) {
+                // Probe unavailable → fall back to idle-only convergence.
+                // Conservative: require TWICE the idle window before accepting.
+                if (idleFor >= CATCHUP_IDLE_MS * 2) {
+                    return _summary({ startedAt, eventsProcessed, lastToken,
+                        reason: "caught-up-idle-fallback",
+                        convergenceProbes, idleMs: idleFor });
+                }
+                await _sleep(CATCHUP_PROBE_MS);
+                continue;
+            }
+
+            // Token-based convergence: our last-applied clusterTime must have
+            // caught up to (or passed) the source's latest clusterTime.
+            if (lastAppliedTs && _cmpTs(lastAppliedTs, srcTs) >= 0) {
+                return _summary({ startedAt, eventsProcessed, lastToken,
+                    reason: "caught-up-token",
+                    convergenceProbes, idleMs: idleFor });
+            }
+            // Special case: no events replayed yet AND source has no writes
+            // since our token was captured. srcTs reflects the baseline; if
+            // we've been idle and there's simply been no writes at all,
+            // accept convergence after the idle window expires.
+            if (!lastAppliedTs && idleFor >= CATCHUP_IDLE_MS) {
+                // Reconfirm on the NEXT probe cycle to avoid a race where a
+                // write just landed during our convergence probe.
+                await _sleep(CATCHUP_PROBE_MS);
+                const second = await _probeSourceClusterTime(sourceDb);
+                if (!second || _cmpTs(srcTs, second) === 0) {
+                    return _summary({ startedAt, eventsProcessed, lastToken,
+                        reason: "caught-up-no-writes",
+                        convergenceProbes: convergenceProbes + 1,
+                        idleMs: _nowMs() - lastEventAt });
+                }
+                // Source advanced between probes — loop and catch up.
+                continue;
+            }
+
+            // Source is still ahead of us — keep draining.
+            await _sleep(CATCHUP_PROBE_MS);
+        }
+    } finally {
+        try { await cs.close(); } catch (_) { /* best-effort */ }
+    }
+}
+
+function _summary({ startedAt, eventsProcessed, lastToken, reason, convergenceProbes, idleMs }) {
     return {
         eventsProcessed,
-        lastLagMs,
+        convergenceProbes,
+        idleMs,
         durationMs: _nowMs() - startedAt,
         lastToken,
-        ...result,
+        reason,
     };
 }
 
@@ -384,8 +444,18 @@ async function _replayUntilCaughtUp({ sourceDb, targetDb, startToken, onProgress
  * @param {string} params.orgId
  * @param {string} params.sourceCluster
  * @param {string} params.targetCluster
- * @param {function} [params.onProgress] — called with { stage, progress?, ... }
- * @returns {Promise<object>} summary — dump + replay stats, savedToken, etc.
+ * @param {function} [params.onProgress] — { stage, progress, ... } callbacks
+ * @returns {Promise<MigrationReport>}
+ *
+ * MigrationReport shape:
+ * {
+ *   orgId, migrationId, sourceCluster, targetCluster,
+ *   startedAt, finishedAt, durationMs, status: "SUCCESS",
+ *   token: { captured: true },
+ *   dump:  { copied, totalDocs, durationMs, parallelism, stats },
+ *   replay:{ eventsProcessed, convergenceProbes, idleMs, durationMs, reason },
+ *   retries: 0,
+ * }
  */
 async function syncOrgData({ orgId, sourceCluster, targetCluster, onProgress }) {
     if (!orgId || !sourceCluster || !targetCluster) {
@@ -395,7 +465,7 @@ async function syncOrgData({ orgId, sourceCluster, targetCluster, onProgress }) 
         throw new Error("[SyncEngine] source and target clusters cannot be the same");
     }
 
-    // Defensive check: org MUST be writeLocked before we touch its data.
+    // Defensive: org MUST be writeLocked before we touch its data.
     const org = await Organization().findById(orgId)
         .select("_id writeLocked migrationState migrationId cluster targetCluster")
         .lean();
@@ -420,19 +490,19 @@ async function syncOrgData({ orgId, sourceCluster, targetCluster, onProgress }) 
         targetCluster,
     };
 
-    const summary = {
+    const report = {
         orgId: String(orgId),
+        migrationId: org.migrationId,
         sourceCluster,
         targetCluster,
         startedAt: new Date(),
-        stages: {},
+        retries: 0,
     };
 
     const emit = (evt) => {
         try { onProgress?.(evt); } catch (_) { /* subscriber errors are non-fatal */ }
     };
 
-    // Step 1: resolve per-org DB on both clusters.
     const sourceDb = _tenantDb(sourceCluster, orgId).db;
     const targetDb = _tenantDb(targetCluster, orgId).db;
 
@@ -441,77 +511,78 @@ async function syncOrgData({ orgId, sourceCluster, targetCluster, onProgress }) 
         `[SyncEngine] START orgId=${orgId} ${sourceCluster} → ${targetCluster}`
     );
 
-    // Step 2: CAPTURE RESUME TOKEN FIRST — the critical ordering invariant.
-    emit({ stage: "TOKEN", progress: 1 });
-    const resumeToken = await _captureInitialResumeToken(sourceDb);
-    summary.stages.token = { capturedAt: new Date() };
-    await _logProgress({
-        orgId, migrationId: org.migrationId, stage: "token-captured",
-        details: { ...migrationContext },
-    });
+    try {
+        // Step 2 — token FIRST.
+        emit({ stage: "TOKEN", progress: 1 });
+        const resumeToken = await _captureInitialResumeToken(sourceDb);
+        report.token = { captured: true, capturedAt: new Date() };
+        await _logProgress({
+            orgId, migrationId: org.migrationId, stage: "token-captured",
+            details: { ...migrationContext },
+        });
 
-    // Step 3 + 4: dump source → restore target.
-    emit({ stage: "DUMP", progress: 5 });
-    const dumpStats = await _dumpAndRestore({
-        sourceDb, targetDb,
-        onProgress: emit,
-    });
-    summary.stages.dump = dumpStats;
-    logger.info(
-        {
-            event: "SYNC_DUMP_COMPLETE",
-            ...migrationContext,
-            copied: dumpStats.copied,
-            durationMs: dumpStats.durationMs,
-        },
-        `[SyncEngine] DUMP complete: copied ${dumpStats.copied} docs in ${dumpStats.durationMs}ms`
-    );
-    await _logProgress({
-        orgId, migrationId: org.migrationId, stage: "dump-complete",
-        details: { copied: dumpStats.copied, durationMs: dumpStats.durationMs, ...migrationContext },
-    });
+        // Steps 3 + 4 — parallel dump.
+        emit({ stage: "DUMP", progress: 5 });
+        report.dump = await _dumpAndRestore({ sourceDb, targetDb, onProgress: emit });
+        logger.info(
+            { event: "SYNC_DUMP_COMPLETE", ...migrationContext,
+              copied: report.dump.copied, durationMs: report.dump.durationMs },
+            `[SyncEngine] DUMP complete: ${report.dump.copied} docs in ${report.dump.durationMs}ms ` +
+            `(parallel=${report.dump.parallelism})`
+        );
+        await _logProgress({
+            orgId, migrationId: org.migrationId, stage: "dump-complete",
+            details: { ...migrationContext, copied: report.dump.copied,
+                       durationMs: report.dump.durationMs, parallelism: report.dump.parallelism },
+        });
 
-    // Step 5: replay change stream from saved token until caught up.
-    emit({ stage: "REPLAY", progress: 75 });
-    const replayStats = await _replayUntilCaughtUp({
-        sourceDb, targetDb,
-        startToken: resumeToken,
-        onProgress: emit,
-        migrationContext,
-    });
-    summary.stages.replay = replayStats;
-    logger.info(
-        {
-            event: "SYNC_REPLAY_COMPLETE",
-            ...migrationContext,
-            events: replayStats.eventsProcessed,
-            durationMs: replayStats.durationMs,
-            lagMs: replayStats.lastLagMs,
-        },
-        `[SyncEngine] REPLAY caught up: ${replayStats.eventsProcessed} events, lag=${replayStats.lastLagMs}ms`
-    );
-    await _logProgress({
-        orgId, migrationId: org.migrationId, stage: "replay-complete",
-        details: {
-            events: replayStats.eventsProcessed,
-            lagMs: replayStats.lastLagMs,
-            durationMs: replayStats.durationMs,
-            ...migrationContext,
-        },
-    });
+        // Step 5 — token-based replay.
+        emit({ stage: "REPLAY", progress: 75 });
+        report.replay = await _replayUntilCaughtUp({
+            sourceDb, targetDb,
+            startToken: resumeToken,
+            onProgress: emit,
+            migrationContext,
+        });
+        logger.info(
+            { event: "SYNC_REPLAY_COMPLETE", ...migrationContext,
+              events: report.replay.eventsProcessed,
+              durationMs: report.replay.durationMs,
+              reason: report.replay.reason },
+            `[SyncEngine] REPLAY ${report.replay.reason}: ` +
+            `${report.replay.eventsProcessed} events in ${report.replay.durationMs}ms`
+        );
+        await _logProgress({
+            orgId, migrationId: org.migrationId, stage: "replay-complete",
+            details: { ...migrationContext, ...report.replay },
+        });
 
-    summary.completedAt = new Date();
-    summary.durationMs = summary.completedAt - summary.startedAt;
+        report.finishedAt = new Date();
+        report.durationMs = report.finishedAt - report.startedAt;
+        report.status = "SUCCESS";
 
-    emit({ stage: "SYNCED", progress: 100 });
-    return summary;
+        emit({ stage: "SYNCED", progress: 100 });
+        return report;
+    } catch (err) {
+        report.finishedAt = new Date();
+        report.durationMs = report.finishedAt - report.startedAt;
+        report.status = err instanceof ChangeStreamInvalidatedError ? "INVALIDATED" : "FAILED";
+        report.error = err.message;
+        logger.error(
+            { event: "SYNC_FAILED", ...migrationContext, err: err.message, status: report.status },
+            `[SyncEngine] FAILED: ${err.message}`
+        );
+        throw err;
+    }
 }
 
 module.exports = {
     syncOrgData,
-    // Exported for tests / reuse:
+    // Exported for tests / diagnostic reuse:
     _captureInitialResumeToken,
     _dumpAndRestore,
     _replayUntilCaughtUp,
+    _probeSourceClusterTime,
+    _cmpTs,
     SKIP_COLLECTIONS,
 };
