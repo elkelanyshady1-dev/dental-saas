@@ -1,11 +1,11 @@
 # DENTAL SAAS — ROOT SYSTEM SPECIFICATION
 
 **Document Type:** Technical Design Specification (TDS)
-**Version:** 5.2
-**Generated From:** Repository Audit — March 2026
-**Updated From:** ORTHODONTIC EVENT-SOURCED ARCHITECTURE REFACTOR v1.0 (2026-04-11) — P0→P1→P2 refactor enforcing single write path, deterministic replay, snapshot integrity, transactional audit trail, and undo correctness. previous: ORTHODONTIC RBAC ABSTRACTION v8.0 (2026-04-11).
+**Version:** 5.3
+**Generated From:** Repository Audit — April 2026
+**Updated From:** 3-LAYER DATABASE ARCHITECTURE — Steps 5c → 5d → 5e → 5f → v9.4.1 Hardening → v9.4.2 Lazy Binding (2026-04-24). Cumulative cutover from a single global `mongoose.connection` to physically separable Platform / Shared / per-Cluster Tenant connections; complete removal of `mongoose.model()` and `.default` patterns from runtime code; ESLint hard lockdown; ghost-model runtime detector; Phase 8 migration seams (`routingEpoch`, `writeLocked`, `migrationState`, `evictByOrg`, `assertWriteAllowed`) wired Day-1; legacy `MONGO_URI` retired in favour of strict 3-layer env contract. previous: ORTHODONTIC EVENT-SOURCED ARCHITECTURE REFACTOR v1.0 (2026-04-11) — P0→P1→P2 refactor enforcing single write path, deterministic replay, snapshot integrity, transactional audit trail, and undo correctness. previous: ORTHODONTIC RBAC ABSTRACTION v8.0 (2026-04-11).
 **Audit Scope:** `backend/`, `frontend/`, `packages/`, `python-ai-engine/`
-**Compliance Sections Added:** Orthodontic Domain Abstraction, Boot-Time Permission Registry Guard, Guardian Pointer Integrity, Mongoose Index Warning Reduction, Staff Avatar Persistence, Multi-part Photo Uploads, User Field Write Guards, React Query Staff Pipeline, Controller-Driven Auth, req.context SSoT, Throw-Pattern RBAC, Frontend Cache Governance, React Query Invalidation pipelines, Zero-Trust Cross-Tab Communication, Database-Level Visibility Filtering, Data Retention, Refund Policy, Financial Immutability, AI Data Privacy, Patient Anonymization (GDPR), Domain Naming Law (§41), Orthodontic Event-Sourced Architecture (§44)
+**Compliance Sections Added:** Orthodontic Domain Abstraction, Boot-Time Permission Registry Guard, Guardian Pointer Integrity, Mongoose Index Warning Reduction, Staff Avatar Persistence, Multi-part Photo Uploads, User Field Write Guards, React Query Staff Pipeline, Controller-Driven Auth, req.context SSoT, Throw-Pattern RBAC, Frontend Cache Governance, React Query Invalidation pipelines, Zero-Trust Cross-Tab Communication, Database-Level Visibility Filtering, Data Retention, Refund Policy, Financial Immutability, AI Data Privacy, Patient Anonymization (GDPR), Domain Naming Law (§41), Orthodontic Event-Sourced Architecture (§44), 3-Layer Database Architecture & Connection-Bound Models (§43)
 
 ---
 
@@ -9619,3 +9619,167 @@ ok: old orthodontics.create policy gone
 ```powershell
 $env:DRY_RUN="false"; node backend/src/rbac/migrations/migrateOrthoDomainRbac.js
 ```
+
+---
+
+## SECTION 43 — 3-LAYER DATABASE ARCHITECTURE & CONNECTION-BOUND MODELS (v9.0 → v9.4.2)
+
+**Status:** COMPLETE.
+**Window:** 2026-04-12 → 2026-04-24.
+**Branch:** `backend-architecture-v9.1`.
+**Tags landed:** `refactor-step-5d-complete`, `refactor-step-5e-a-complete`, `v9.3-models-fully-bound`, `v9.4-fully-bound-final`, `refactor-step-5f-audit-fixes`, `refactor-env-3layer-cutover`, `refactor-step-5f-hardening-h1-h10`, `refactor-boot-fix-lazy-binding`, `refactor-boot-clean-v9.4.1`.
+
+### 43.1 Goal
+
+Move the backend from a single global `mongoose.connection` (one cluster, one URI) to a **physically separable** 3-layer Mongo topology while preserving all domain logic and re-binding every model to an explicit connection.
+
+| Plane | Connection | URI Env | Stores |
+|---|---|---|---|
+| **Platform** | `platformConnection` (sibling) | `MONGO_URI_PLATFORM` | Organizations, PlatformUser, tokens, plans, billing, ShareLink, audit trails tied to users/orgs/contracts |
+| **Shared Infra** | `sharedConnection` (sibling) | `MONGO_URI_SHARED` | `communicationLogs`, `emailEvents`, `outbox`, retry queues, idempotency keys, `RateLimitEntry`, `SideEffectOutbox` |
+| **Tenant Cluster(s)** | `clusterConnections.get(key)` → `useDb("dental_org_<id>")` | `MONGO_URI_<CLUSTER_KEY>` (e.g. `MONGO_URI_MEA_EG_1`) | Per-org clinical / treatment / financial data |
+
+### 43.2 Routing — Region → Cluster → Org DB
+
+```
+Org doc:  { _id, country, region, cluster, routingEpoch, ... }
+
+resolveOrgConnection(orgId):
+  1. clusterEntry = clusterRegistry.get(org.cluster)        // ENV-seeded, DB-decorated
+  2. clusterRoot   = clusterConnections.getSync(clusterKey) // pooled, lazy-opened
+  3. return clusterRoot.useDb(`dental_org_${orgId}`, { useCache: true, noListener: true })
+```
+
+**Hybrid registry rule (load-bearing):**
+
+| Source | Holds |
+|---|---|
+| **ENV** (source of truth, never required at runtime) | `MONGO_URI_<KEY>`, `CLUSTER_PRIORITY_<KEY>`, `CLUSTER_REGION_<KEY>` |
+| **DB** (`clusters` collection on platform plane, refreshed every 5 min) | `status`, `load`, `capacity`, `lastHealthCheck` |
+
+ENV is the single source of routing truth — a platform DB outage cannot break tenant routing. DB layer only decorates the registry with status/load (used by the provisioning picker, not the request path).
+
+### 43.3 Step Map (full breadth)
+
+| Step | Tag | Scope |
+|---|---|---|
+| **5c** (Commits 1–4) | `refactor-step-5c-*` | Removed `organizationId` field from every tenant schema (orthodontics, patient/portal/supervisor/notification, billing/inventory/treatments/stage/clinical, organization core, ShareLink → platform). |
+| **5d** | `refactor-step-5d-complete` | Deleted `mongoose.connect()`, switched the cluster path on, made `platformConnection` / `sharedConnection` / `clusterConnections` the sole connection holders. |
+| **5e-A** | `refactor-step-5e-a-complete` | Flipped tenant ESLint guards from WARN → ERROR (architecture invariants are now CI-blocking). |
+| **5e-B** (Commits A1, A2, B, C, D) | `v9.3-models-fully-bound` | AST-codemod migrated every `.default` import call site (≈283P + 12S + 16T flagged) to `getPlatformModel(Def)` / `getSharedModel(Def)` / request-scoped `getModel(req.dbConnection, Def)`. |
+| **5f** (Commits A, B, C, E, F) | `v9.4-fully-bound-final` | Removed `default: mongoose.model(...)` from 153 model files; migrated 4 direct-export models + EmailEvent (5 files + 8 consumers); converted plural model files / DLQ / inline schema / `DistributedLock` lazy-bind; resolved 16 tenant TODO sites with `resolveOrgConnection`; lifted ESLint exemptions; added ghost-model runtime detector. |
+| **Audit Fixes** | `refactor-step-5f-audit-fixes` | C1: removed `requireModel.js` + `billingModelValidator.js`, migrated 3 billing engines. C2: replaced `mongoose.connection` in `replayEngine`, `retryService`, `dlq.service` with `platformConnection.get()`. C3: implemented `dbManager.evictByOrg(orgId)` for both 2-segment and 3-segment cache keys. |
+| **Env Cutover** | `refactor-env-3layer-cutover` | Removed legacy `MONGO_URI`. New required env: `MONGO_URI_PLATFORM`, `MONGO_URI_SHARED`, `MONGO_URI_MEA_EG_1`. Removed all cross-layer fallback chains. |
+| **H1–H10 Hardening** | `refactor-step-5f-hardening-h1-h10` | Centralised env validation (`@config/validateEnv`), boot-time connection health guard, ghost detector verified, write-guard ESLint rule, CI grep script `scripts/ci-arch-invariants.sh`, deprecated proxy deletes, doc cleanup. |
+| **Lazy Binding** | `refactor-boot-fix-lazy-binding` + `refactor-boot-clean-v9.4.1` | AST codemod converted 148 files / 274 module-scope bindings to lazy getters; `lazyModelProxy.js` Proxy helper for shared re-export shims; `BillingInvoice.js` Proxy with `SCHEMA_ALIASES`; `sovereignGuard.js` audit-chain check now reads schema directly from Def. |
+
+### 43.4 Model Binding Contract (final shape)
+
+**Models** export only `{ modelName, schema }` — no compiled Model leaks at module load.
+
+**Bindings** happen at three plane-aware getters, all resolved at runtime (never module scope):
+
+| Plane | API | Notes |
+|---|---|---|
+| Platform | `getPlatformModel(def)` | Wraps `getModel(platformConnection.get(), def)` |
+| Shared Infra | `getSharedModel(def)` | Wraps `getModel(sharedConnection.get(), def)` |
+| Tenant — request-scoped | `getModel(req.dbConnection, def)` | Inside `_getModels(req)` helper or controller body |
+| Tenant — worker / async | `getModel(await resolveOrgConnection(orgId), def)` | Used by listeners, schedulers, jobs |
+
+**Forbidden patterns** (CI-enforced via ESLint `no-restricted-syntax` + `scripts/ci-arch-invariants.sh`):
+
+```
+mongoose.model(...)         ❌  (only the 4 connection factories may call .model())
+mongoose.connection         ❌  (global root no longer exists post-5d)
+require(...).default        ❌  (model files no longer export a default key)
+const X = getXModel(Def)    ❌  at module scope (binds before init() resolves)
+organizationId schema field ❌  inside src/modules/**/models/** or src/organization/**/models/**
+```
+
+### 43.5 Phase 8 Migration Seams (wired Day-1, tooling deferred)
+
+| Seam | Location | Purpose |
+|---|---|---|
+| `Organization.migrationState` | `src/shared/models/Organization.js:534` | `PREPARING → SYNCING → CUTOVER_PENDING → CUTOVER → VERIFYING → COMPLETE / FAILED` |
+| `Organization.targetCluster` | same, line 540 | Set during PREPARING |
+| `Organization.writeLocked` | same, line 547 | Two-layer enforcement: `orgWriteLock.middleware.js` + `assertWriteAllowed(org, orgId)` |
+| `Organization.routingEpoch` | same, line 524 | Bumped on cutover; part of dbManager cache key (`${cluster}:${orgId}:${epoch}`) → automatic cache invalidation, no coordinated eviction needed |
+| `Organization.migrationId` | same, line 553 | Correlates with `MigrationLog` entries |
+| `Organization.routingVersion` | same, line 514 | Records which assignment algorithm placed this org (Day-1 = `1`, priority-first-ACTIVE) |
+| `assertWriteAllowed(org, orgId)` | `src/core/db/assertWriteAllowed.js` | Stale-context re-verification when `org.migrationState !== null`; zero overhead in steady state |
+| `orgWriteLock.middleware.js` | `src/middleware/` | 503 `Retry-After: 5` on mutating methods when `org.writeLocked === true` |
+| `dbManager.evictByOrg(orgId)` | `src/core/db/dbManager.js` | Matches both 2-seg (`shard:orgId`) and 3-seg (`cluster:orgId:epoch`) keys; reuses `evictEntry` for consistent close + log |
+| `MigrationLog` model | `src/platform/migration/MigrationLog.model.js` | Append-only audit, platform plane, never moves |
+
+The actual migration **service** (state machine + sync engine) and admin **dashboard** UI are deferred follow-ups — every supporting primitive is in place.
+
+### 43.6 ENV Contract (v9.4)
+
+**Production (required):**
+
+```
+MONGO_URI_PLATFORM=mongodb+srv://…/platform
+MONGO_URI_SHARED=mongodb+srv://…/shared
+MONGO_URI_MEA_EG_1=mongodb+srv://…/mea-eg-1   # one per cluster key
+CLUSTER_PRIORITY_MEA_EG_1=1                   # explicit ordering
+STORAGE_PROVIDER=r2                           # boot-guarded in production
+```
+
+**Dev (single-URI shortcut):**
+
+```
+MONGO_URI_DEV_SINGLE=mongodb://localhost:27017
+```
+
+When `MONGO_URI_DEV_SINGLE` is set in non-production, every layer reuses it. `clusterRegistry` synthesises a `default` MEA cluster from the shared URI when no `CLUSTER_KEYS` are configured. Production refuses to boot if `MONGO_URI_DEV_SINGLE` is set.
+
+**Removed (legacy, retired in v9.4):** `MONGO_URI` (bare). All cross-layer fallback chains (`MONGO_URI_PLATFORM || MONGO_URI`) eliminated.
+
+### 43.7 Boot Sequence (final)
+
+```
+1. validateEnv()                     // throws if any of the 3 MONGO_URI_* vars missing
+2. seedClusterRegistryFromEnv()      // pure, synchronous
+3. await platformConnection.init()   // sibling mongoose.createConnection
+4. await sharedConnection.init()
+5. await clusterRegistry.refreshFromDb()  // non-fatal — ENV is SSOT
+6. validateClusterRegistryVsDb()     // bidirectional sanity
+7. (clusters open lazily on first resolveOrgConnection)
+8. SovereignGuard runs (now reads schema from Def, never binds models)
+9. /api/health/db reports { platform, shared, clusters[] }
+10. Server listens
+```
+
+### 43.8 Verification Gates (all green)
+
+| Gate | Command | Result |
+|---|---|---|
+| `mongoose.model(` calls in runtime code | `grep -rn "mongoose\.model(" src/` | **0** |
+| `default:` mongoose fallback in src/ | `grep -rn "default:\s*mongoose\." src/` | **0** |
+| `module.exports = mongoose.model(...)` direct | `grep -rE "^module\.exports = mongoose\.model" src/` | **0** |
+| `require().default` in runtime code | `grep -rn "require([^)]*)\.default" src/` (excl tests/scripts) | **0** (only doc comments) |
+| Module-scope `getPlatformModel/getSharedModel/getModel` | `grep -rE "^const \w+ = getXModel\(" src/` | **0** |
+| `TODO(5e-B-manual)` flags | `grep -rn "TODO(5e-B-manual)" src/` | **0** |
+| Premature `platformConnection.get()` at boot | tracer probe | **0** |
+| `ci-arch-invariants.sh` | `bash scripts/ci-arch-invariants.sh` | **ALL CHECKS PASSED** |
+| Live boot | `npm run dev` | `🚀 LISTENING on port 5000` + `event: DB_READY` + ✅ SovereignGuard |
+| `platformConnection.isReady` after boot | runtime check | `true` |
+| `sharedConnection.isReady` after boot | runtime check | `true` |
+
+### 43.9 Forbidden / Allowed Reference Card
+
+| Operation | Forbidden | Allowed |
+|---|---|---|
+| Compile a Model | `mongoose.model(name, schema)` | `getPlatformModel(def)` · `getSharedModel(def)` · `getModel(conn, def)` |
+| Open a connection | `mongoose.connect(uri)` · `mongoose.connection` | `platformConnection.init()` · `sharedConnection.init()` · `clusterConnections.getSync(key)` |
+| Read tenant data | global model · `Model.find({organizationId})` | request: `getModel(req.dbConnection, Def)` · worker: `getModel(await resolveOrgConnection(id), Def)` |
+| Re-export a platform model from `shared/models/*` | `module.exports = getPlatformModel(Def)` (eager) | `module.exports = makeLazyPlatformModel(Def)` (Proxy in `@core/db/lazyModelProxy`) |
+| Read schema metadata at boot (e.g. SovereignGuard) | `getPlatformModel(Def).schema` | `Def.schema` (or `Def.__def?.schema` for lazy proxies) |
+
+### 43.10 Carry-Over (next milestones)
+
+1. **Phase 8 implementation** — `migration.service.js` (state machine + sync engine), `POST /api/admin/migration/*` routes, React `MigrationDashboard` UI, integration tests proving zero-data-loss cutover.
+2. **Test-suite migration** — ~24 test files still use `.default` imports (ESLint-exempt; functional only inside test runs).
+3. **Phase 10 cleanup** — delete confirmed-dead proxies (`organization/models/Lead.js`), prune stale tenant docstrings still mentioning `organizationId`.
+4. **Optional ESLint rule** `no-module-scope-model-binding` — currently enforced via `scripts/ci-arch-invariants.sh`; could be promoted to a custom AST rule once the patterns settle.
+
