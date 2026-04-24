@@ -860,12 +860,47 @@ function evictLRU() {
 }
 
 /**
+ * evictByOrg
+ * Removes every cache entry belonging to a specific orgId, regardless of
+ * shard/cluster or routing epoch. Intended for Phase 8 migration cutover
+ * (cache hygiene after `org.cluster` / `org.routingEpoch` change).
+ *
+ * Correctness of routing is already guaranteed by the cache-key design
+ * (epoch suffix invalidates stale entries automatically); this is bounded
+ * cleanup, not a correctness gate.
+ *
+ * Handles BOTH current 2-segment keys (`shard:orgId`) and the future
+ * 3-segment keys (`cluster:orgId:epoch`) so the same call works across
+ * the Phase 8 key shape transition.
+ *
+ * @param {string} orgId
+ * @returns {number} number of entries evicted
+ */
+function evictByOrg(orgId) {
+    const suffix = `:${orgId}`;        // current 2-segment: shard:orgId
+    const middle = `:${orgId}:`;       // future 3-segment:  cluster:orgId:epoch
+
+    const toEvict = [];
+    for (const [cacheKey] of connectionCache) {
+        if (cacheKey.endsWith(suffix) || cacheKey.includes(middle)) {
+            toEvict.push(cacheKey);
+        }
+    }
+
+    for (const cacheKey of toEvict) {
+        evictEntry(cacheKey, "MIGRATION");
+    }
+
+    return toEvict.length;
+}
+
+/**
  * evictEntry
  * Removes a single connection from the cache and closes it.
  * Phase 3.5: Accepts composite key.
  *
  * @param {string} key    — Composite cache key (shard:orgId)
- * @param {string} reason — "TTL" | "LRU" | "HEALTH" | "HEALTH_ON_ACCESS" | "HEALTH_POST_WAIT" | "SHUTDOWN"
+ * @param {string} reason — "TTL" | "LRU" | "HEALTH" | "HEALTH_ON_ACCESS" | "HEALTH_POST_WAIT" | "SHUTDOWN" | "MIGRATION"
  */
 function evictEntry(key, reason) {
     const entry = connectionCache.get(key);
@@ -1189,6 +1224,9 @@ module.exports = {
     releaseConnection,
     getStats,
     shutdown,
+
+    // ─── Phase 8: Migration Seam ────────────────────────────────────────
+    evictByOrg,               // Used by cluster-migration cutover for cache hygiene.
 
     // ─── Utilities ──────────────────────────────────────────────────────
     getDbName,

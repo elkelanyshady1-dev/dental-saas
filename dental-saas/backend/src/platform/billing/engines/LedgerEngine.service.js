@@ -31,15 +31,14 @@ const logger = require("@utils/logger");
 const { computeLedgerHash, verifyLedgerHash } = require("../utils/ledgerHash");
 
 // ── Model reference ──────────────────────────────────────────────────────────
-const requireModel = require("../utils/requireModel");
+// Bound to the platform connection via getPlatformModel (Step 5f).
+const getPlatformModel = require("@core/db/getPlatformModel");
+const BillingLedgerDef = require("../models/BillingLedger.model");
 
 let _BillingLedger;
 function getBillingLedger() {
     if (!_BillingLedger) {
-        _BillingLedger = requireModel(
-            "../models/BillingLedger.model",
-            ["findOne", "create", "find"]
-        );
+        _BillingLedger = getPlatformModel(BillingLedgerDef);
     }
     return _BillingLedger;
 }

@@ -34,30 +34,28 @@
 "use strict";
 
 const logger = require("@utils/logger");
-const requireModel = require("../utils/requireModel");
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrgContractDef = require("../models/OrgContract.model");
+const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
+const BillingLedgerDef = require("../models/BillingLedger.model");
 const { verifyChain } = require("../engines/LedgerEngine.service");
 
 // ── Lazy model references ────────────────────────────────────────────────────
+// Bound to the platform connection via getPlatformModel (Step 5f).
 let _OrgContract, _PlatformInvoice, _BillingLedger;
 
 function getOrgContract() {
-    if (!_OrgContract) {
-        _OrgContract = requireModel("../models/OrgContract.model", ["findOne", "find"]);
-    }
+    if (!_OrgContract) _OrgContract = getPlatformModel(OrgContractDef);
     return _OrgContract;
 }
 
 function getPlatformInvoice() {
-    if (!_PlatformInvoice) {
-        _PlatformInvoice = requireModel("../models/PlatformInvoice.model", ["findOne", "find"]);
-    }
+    if (!_PlatformInvoice) _PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
     return _PlatformInvoice;
 }
 
 function getBillingLedger() {
-    if (!_BillingLedger) {
-        _BillingLedger = requireModel("../models/BillingLedger.model", ["findOne", "find"]);
-    }
+    if (!_BillingLedger) _BillingLedger = getPlatformModel(BillingLedgerDef);
     return _BillingLedger;
 }
 

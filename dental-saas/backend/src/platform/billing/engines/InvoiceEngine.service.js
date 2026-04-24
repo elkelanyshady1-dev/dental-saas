@@ -39,19 +39,15 @@ const {
 } = require("../services/invoiceStateMachine");
 
 // ── Lazy model references ────────────────────────────────────────────────────
-//
-// v22.3: Uses requireModel() guard to ensure .default is accessed and
-// required Mongoose methods exist. Prevents "X is not a function" at runtime.
-const requireModel = require("../utils/requireModel");
+// Bound to the platform connection via getPlatformModel (Step 5f).
+const getPlatformModel = require("@core/db/getPlatformModel");
+const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
 
 let _PlatformInvoice, _invoiceEngineService;
 
 function getPlatformInvoice() {
     if (!_PlatformInvoice) {
-        _PlatformInvoice = requireModel(
-            "../models/PlatformInvoice.model",
-            ["findById", "findOne", "create"]
-        );
+        _PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
     }
     return _PlatformInvoice;
 }

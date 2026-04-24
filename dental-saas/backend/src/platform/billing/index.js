@@ -82,20 +82,6 @@ logger.info(
     `[BillingDomain] All ${BILLING_MODULES.length} billing modules loaded successfully`
 );
 
-// ─── v22.3: Model Resolution Self-Check ─────────────────────────────────────
-// Validates that all billing models resolve to valid Mongoose Model instances
-// with required methods BEFORE any request is served.
-// If any model is broken, the server exits — no silent runtime failures.
-const { validateBillingModels } = require("./utils/billingModelValidator");
-const modelValidation = validateBillingModels();
-if (!modelValidation.valid) {
-    logger.error(
-        { event: "BILLING_MODEL_VALIDATION_FATAL", failures: modelValidation.failures },
-        `[BillingDomain] FATAL: ${modelValidation.failures.length} billing model(s) failed validation — exiting`
-    );
-    process.exit(1);
-}
-
 // ─── Start ContractActivationScheduler ────────────────────────────────────────
 // Skip in test environments to avoid interfering with CI/unit tests.
 if (process.env.NODE_ENV !== "test") {
