@@ -51,7 +51,9 @@
  *       403:
  *         description: Forbidden
  */
-const BillingTimeline = require("../models/BillingTimeline.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const BillingTimelineDef = require("../models/BillingTimeline.model");
+const BillingTimeline = getPlatformModel(BillingTimelineDef);
 const mongoose = require("mongoose");
 
 /**
@@ -59,27 +61,26 @@ const mongoose = require("mongoose");
  * Returns the last 100 timeline events for a specific contract.
  */
 exports.getContractTimeline = async (req, res) => {
-    const { contractId } = req.params;
-
-    if (!mongoose.isValidObjectId(contractId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid contractId format"
-        });
-    }
-
-    const events = await BillingTimeline
-        .find({ contractId })
-        .sort({ occurredAt: -1 })
-        .limit(100)
-        .lean();
-
-    return res.json({
-        success: true,
-        contractId,
-        count: events.length,
-        data: events
+  const {
+    contractId
+  } = req.params;
+  if (!mongoose.isValidObjectId(contractId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid contractId format"
     });
+  }
+  const events = await BillingTimeline.find({
+    contractId
+  }).sort({
+    occurredAt: -1
+  }).limit(100).lean();
+  return res.json({
+    success: true,
+    contractId,
+    count: events.length,
+    data: events
+  });
 };
 
 /**
@@ -112,25 +113,24 @@ exports.getContractTimeline = async (req, res) => {
  * Returns the last 100 timeline events for an organization.
  */
 exports.getOrgTimeline = async (req, res) => {
-    const { orgId } = req.params;
-
-    if (!mongoose.isValidObjectId(orgId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid orgId format"
-        });
-    }
-
-    const events = await BillingTimeline
-        .find({ organizationId: orgId })
-        .sort({ occurredAt: -1 })
-        .limit(100)
-        .lean();
-
-    return res.json({
-        success: true,
-        orgId,
-        count: events.length,
-        data: events
+  const {
+    orgId
+  } = req.params;
+  if (!mongoose.isValidObjectId(orgId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid orgId format"
     });
+  }
+  const events = await BillingTimeline.find({
+    organizationId: orgId
+  }).sort({
+    occurredAt: -1
+  }).limit(100).lean();
+  return res.json({
+    success: true,
+    orgId,
+    count: events.length,
+    data: events
+  });
 };

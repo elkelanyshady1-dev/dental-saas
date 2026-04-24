@@ -22,28 +22,32 @@
 
 "use strict";
 
-const BillingControl = require("../models/BillingControl.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const BillingControlDef = require("../models/BillingControl.model");
+const BillingControl = getPlatformModel(BillingControlDef);
 const logger = require("@utils/logger");
 
 // ─── In-process cache ─────────────────────────────────────────────────────────
 
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds
 
-let _cache = null;          // { killSwitch: bool, ...doc fields }
-let _cacheSetAt = 0;        // timestamp of last cache fill
+let _cache = null; // { killSwitch: bool, ...doc fields }
+let _cacheSetAt = 0; // timestamp of last cache fill
 
 function _isCacheValid() {
-    return _cache !== null && (Date.now() - _cacheSetAt) < CACHE_TTL_MS;
+  return _cache !== null && Date.now() - _cacheSetAt < CACHE_TTL_MS;
 }
-
 function _setCache(doc) {
-    _cache = { killSwitch: doc.killSwitch, source: doc.source, reason: doc.reason };
-    _cacheSetAt = Date.now();
+  _cache = {
+    killSwitch: doc.killSwitch,
+    source: doc.source,
+    reason: doc.reason
+  };
+  _cacheSetAt = Date.now();
 }
-
 function invalidateCache() {
-    _cache = null;
-    _cacheSetAt = 0;
+  _cache = null;
+  _cacheSetAt = 0;
 }
 
 // ─── Internal: get or create singleton document ───────────────────────────────
@@ -55,33 +59,34 @@ function invalidateCache() {
  * @returns {Promise<import('../models/BillingControl.model').default>}
  */
 async function _getOrCreateControl() {
-    let doc = await BillingControl.findOne({ singleton: "global" });
-
-    if (!doc) {
-        // First boot — create safe default (kill switch OFF)
-        doc = await BillingControl.findOneAndUpdate(
-            { singleton: "global" },
-            {
-                $setOnInsert: {
-                    singleton: "global",
-                    killSwitch: false,
-                    reason: "",
-                    activatedBy: "system",
-                    activatedAt: null,
-                    source: "system",
-                    history: []
-                }
-            },
-            { upsert: true, new: true, runValidators: true }
-        );
-
-        logger.info(
-            { billing: true, event: "BILLING_CONTROL_INITIALIZED" },
-            "[BillingControl] Singleton document created — kill switch OFF by default"
-        );
-    }
-
-    return doc;
+  let doc = await BillingControl.findOne({
+    singleton: "global"
+  });
+  if (!doc) {
+    // First boot — create safe default (kill switch OFF)
+    doc = await BillingControl.findOneAndUpdate({
+      singleton: "global"
+    }, {
+      $setOnInsert: {
+        singleton: "global",
+        killSwitch: false,
+        reason: "",
+        activatedBy: "system",
+        activatedAt: null,
+        source: "system",
+        history: []
+      }
+    }, {
+      upsert: true,
+      new: true,
+      runValidators: true
+    });
+    logger.info({
+      billing: true,
+      event: "BILLING_CONTROL_INITIALIZED"
+    }, "[BillingControl] Singleton document created — kill switch OFF by default");
+  }
+  return doc;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -95,9 +100,9 @@ async function _getOrCreateControl() {
  * @returns {Promise<object>}
  */
 async function getBillingControl() {
-    const doc = await _getOrCreateControl();
-    _setCache(doc);
-    return doc;
+  const doc = await _getOrCreateControl();
+  _setCache(doc);
+  return doc;
 }
 
 /**
@@ -109,23 +114,23 @@ async function getBillingControl() {
  * @returns {Promise<boolean>}
  */
 async function isBillingKillSwitchActive() {
-    if (_isCacheValid()) {
-        return _cache.killSwitch;
-    }
-
-    try {
-        const doc = await _getOrCreateControl();
-        _setCache(doc);
-        return doc.killSwitch;
-    } catch (err) {
-        // If DB is unreachable during a hot-path billing check, FAIL SAFE: block billing.
-        // This prevents billing operations from proceeding when the control system is down.
-        logger.error(
-            { billing: true, event: "BILLING_CONTROL_READ_FAILED", err: err.message },
-            "[BillingControl] CRITICAL: Cannot read kill switch state — defaulting to BLOCKED (fail-safe)"
-        );
-        return true; // fail-safe: treat as active
-    }
+  if (_isCacheValid()) {
+    return _cache.killSwitch;
+  }
+  try {
+    const doc = await _getOrCreateControl();
+    _setCache(doc);
+    return doc.killSwitch;
+  } catch (err) {
+    // If DB is unreachable during a hot-path billing check, FAIL SAFE: block billing.
+    // This prevents billing operations from proceeding when the control system is down.
+    logger.error({
+      billing: true,
+      event: "BILLING_CONTROL_READ_FAILED",
+      err: err.message
+    }, "[BillingControl] CRITICAL: Cannot read kill switch state — defaulting to BLOCKED (fail-safe)");
+    return true; // fail-safe: treat as active
+  }
 }
 
 /**
@@ -140,51 +145,45 @@ async function isBillingKillSwitchActive() {
  * @returns {Promise<object>} Updated control document
  */
 async function activateBillingKillSwitch(reason, source = "manual", actor = "system") {
-    const now = new Date();
-
-    const historyEntry = {
-        killSwitch: true,
-        reason,
-        activatedBy: actor,
-        source,
-        changedAt: now
-    };
-
-    const doc = await BillingControl.findOneAndUpdate(
-        { singleton: "global" },
-        {
-            $set: {
-                killSwitch: true,
-                reason,
-                activatedBy: actor,
-                activatedAt: now,
-                source
-            },
-            $push: {
-                history: {
-                    $each: [historyEntry],
-                    $slice: -50  // keep last 50 entries only
-                }
-            }
-        },
-        { upsert: true, new: true, runValidators: true }
-    );
-
-    invalidateCache();
-
-    logger.error(
-        {
-            billing: true,
-            event: "BILLING_KILL_SWITCH_ACTIVATED",
-            reason,
-            source,
-            actor,
-            activatedAt: now.toISOString()
-        },
-        `[BILLING] BILLING_KILL_SWITCH_ACTIVATED — reason: ${reason} | source: ${source} | actor: ${actor}`
-    );
-
-    return doc;
+  const now = new Date();
+  const historyEntry = {
+    killSwitch: true,
+    reason,
+    activatedBy: actor,
+    source,
+    changedAt: now
+  };
+  const doc = await BillingControl.findOneAndUpdate({
+    singleton: "global"
+  }, {
+    $set: {
+      killSwitch: true,
+      reason,
+      activatedBy: actor,
+      activatedAt: now,
+      source
+    },
+    $push: {
+      history: {
+        $each: [historyEntry],
+        $slice: -50 // keep last 50 entries only
+      }
+    }
+  }, {
+    upsert: true,
+    new: true,
+    runValidators: true
+  });
+  invalidateCache();
+  logger.error({
+    billing: true,
+    event: "BILLING_KILL_SWITCH_ACTIVATED",
+    reason,
+    source,
+    actor,
+    activatedAt: now.toISOString()
+  }, `[BILLING] BILLING_KILL_SWITCH_ACTIVATED — reason: ${reason} | source: ${source} | actor: ${actor}`);
+  return doc;
 }
 
 /**
@@ -196,57 +195,51 @@ async function activateBillingKillSwitch(reason, source = "manual", actor = "sys
  * @returns {Promise<object>} Updated control document
  */
 async function deactivateBillingKillSwitch(actor = "system") {
-    const now = new Date();
-
-    const historyEntry = {
-        killSwitch: false,
-        reason: "Manual deactivation",
-        activatedBy: actor,
-        source: "manual",
-        changedAt: now
-    };
-
-    const doc = await BillingControl.findOneAndUpdate(
-        { singleton: "global" },
-        {
-            $set: {
-                killSwitch: false,
-                reason: "Manually cleared",
-                activatedBy: actor,
-                activatedAt: now,
-                source: "manual"
-            },
-            $push: {
-                history: {
-                    $each: [historyEntry],
-                    $slice: -50
-                }
-            }
-        },
-        { upsert: true, new: true, runValidators: true }
-    );
-
-    invalidateCache();
-
-    logger.warn(
-        {
-            billing: true,
-            event: "BILLING_KILL_SWITCH_DEACTIVATED",
-            actor,
-            deactivatedAt: now.toISOString()
-        },
-        `[BILLING] BILLING_KILL_SWITCH_DEACTIVATED — actor: ${actor}`
-    );
-
-    return doc;
+  const now = new Date();
+  const historyEntry = {
+    killSwitch: false,
+    reason: "Manual deactivation",
+    activatedBy: actor,
+    source: "manual",
+    changedAt: now
+  };
+  const doc = await BillingControl.findOneAndUpdate({
+    singleton: "global"
+  }, {
+    $set: {
+      killSwitch: false,
+      reason: "Manually cleared",
+      activatedBy: actor,
+      activatedAt: now,
+      source: "manual"
+    },
+    $push: {
+      history: {
+        $each: [historyEntry],
+        $slice: -50
+      }
+    }
+  }, {
+    upsert: true,
+    new: true,
+    runValidators: true
+  });
+  invalidateCache();
+  logger.warn({
+    billing: true,
+    event: "BILLING_KILL_SWITCH_DEACTIVATED",
+    actor,
+    deactivatedAt: now.toISOString()
+  }, `[BILLING] BILLING_KILL_SWITCH_DEACTIVATED — actor: ${actor}`);
+  return doc;
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
-    getBillingControl,
-    isBillingKillSwitchActive,
-    activateBillingKillSwitch,
-    deactivateBillingKillSwitch,
-    invalidateCache,
+  getBillingControl,
+  isBillingKillSwitchActive,
+  activateBillingKillSwitch,
+  deactivateBillingKillSwitch,
+  invalidateCache
 };

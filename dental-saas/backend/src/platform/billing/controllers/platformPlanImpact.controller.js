@@ -20,8 +20,11 @@
 
 "use strict";
 
-const PlanVersion = require("../models/PlanVersion.model").default;
-const OrgContract = require("../models/OrgContract.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const PlanVersionDef = require("../models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
+const OrgContractDef = require("../models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
 const logger = require("@utils/logger");
 
 /**
@@ -108,83 +111,79 @@ const logger = require("@utils/logger");
  *         description: Internal error
  */
 exports.previewPlanVersionImpact = async (req, res) => {
-    try {
-        const { versionId } = req.params;
+  try {
+    const {
+      versionId
+    } = req.params;
 
-        // ── 1. Load PlanVersion ────────────────────────────────────────────────
-        const version = await PlanVersion.findById(versionId).lean();
-        if (!version) {
-            return res.status(404).json({
-                success: false,
-                message: "PlanVersion not found"
-            });
-        }
-
-        // ── 2. Aggregate active contracts on this version ──────────────────────
-        // We query OrgContract (source of truth for commercial terms):
-        //   - planVersionId matches this version
-        //   - contractStatus === "active" (only live subscriptions count)
-        //
-        // Note: we intentionally do NOT filter by billing interval here.
-        // Revenue aggregation is done in lockedPrice terms so it's interval-agnostic.
-        const activeContracts = await OrgContract.find({
-            planVersionId: versionId,
-            contractStatus: "active"
-        })
-            .select("organizationId lockedPrice currency")
-            .lean();
-
-        const orgCount = activeContracts.length;
-        const contractCount = activeContracts.length;
-
-        // ── 3. Compute estimated revenue ───────────────────────────────────────
-        // lockedPrice is the authoritative monthly subscription price for each contract.
-        // Sum gives the estimated monthly revenue if all contracts renew.
-        const monthlyRevenue = activeContracts.reduce(
-            (sum, c) => sum + (c.lockedPrice || 0),
-            0
-        );
-
-        // ── 4. Resolve currency ────────────────────────────────────────────────
-        // Prefer the primary region currency from the version's pricing definition.
-        // Fall back to contract-level currency detection.
-        const versionCurrency = version.pricing?.regions?.[0]?.currency;
-
-        let resolvedCurrency = versionCurrency || "USD";
-        if (!versionCurrency && activeContracts.length > 0) {
-            // Check whether contracts use a uniform currency
-            const currencies = [...new Set(activeContracts.map(c => c.currency).filter(Boolean))];
-            resolvedCurrency = currencies.length === 1 ? currencies[0] : "MIXED";
-        }
-
-        // ── 5. Log for observability ───────────────────────────────────────────
-        logger.info(
-            {
-                versionId,
-                templateCode: version.templateCode,
-                versionTag: version.versionTag,
-                orgCount,
-                monthlyRevenue,
-                actorId: req.platformUser._id
-            },
-            "[PlanImpactController] Impact preview served"
-        );
-
-        return res.json({
-            success: true,
-            data: {
-                versionId,
-                templateCode: version.templateCode,
-                versionTag: version.versionTag,
-                versionStatus: version.status,
-                organizationsAffected: orgCount,
-                estimatedMonthlyRevenue: monthlyRevenue,
-                currency: resolvedCurrency,
-                contractCount
-            }
-        });
-    } catch (err) {
-        logger.error({ err }, "[PlanImpactController] previewPlanVersionImpact failed");
-        return res.status(500).json({ success: false, message: err.message });
+    // ── 1. Load PlanVersion ────────────────────────────────────────────────
+    const version = await PlanVersion.findById(versionId).lean();
+    if (!version) {
+      return res.status(404).json({
+        success: false,
+        message: "PlanVersion not found"
+      });
     }
+
+    // ── 2. Aggregate active contracts on this version ──────────────────────
+    // We query OrgContract (source of truth for commercial terms):
+    //   - planVersionId matches this version
+    //   - contractStatus === "active" (only live subscriptions count)
+    //
+    // Note: we intentionally do NOT filter by billing interval here.
+    // Revenue aggregation is done in lockedPrice terms so it's interval-agnostic.
+    const activeContracts = await OrgContract.find({
+      planVersionId: versionId,
+      contractStatus: "active"
+    }).select("organizationId lockedPrice currency").lean();
+    const orgCount = activeContracts.length;
+    const contractCount = activeContracts.length;
+
+    // ── 3. Compute estimated revenue ───────────────────────────────────────
+    // lockedPrice is the authoritative monthly subscription price for each contract.
+    // Sum gives the estimated monthly revenue if all contracts renew.
+    const monthlyRevenue = activeContracts.reduce((sum, c) => sum + (c.lockedPrice || 0), 0);
+
+    // ── 4. Resolve currency ────────────────────────────────────────────────
+    // Prefer the primary region currency from the version's pricing definition.
+    // Fall back to contract-level currency detection.
+    const versionCurrency = version.pricing?.regions?.[0]?.currency;
+    let resolvedCurrency = versionCurrency || "USD";
+    if (!versionCurrency && activeContracts.length > 0) {
+      // Check whether contracts use a uniform currency
+      const currencies = [...new Set(activeContracts.map(c => c.currency).filter(Boolean))];
+      resolvedCurrency = currencies.length === 1 ? currencies[0] : "MIXED";
+    }
+
+    // ── 5. Log for observability ───────────────────────────────────────────
+    logger.info({
+      versionId,
+      templateCode: version.templateCode,
+      versionTag: version.versionTag,
+      orgCount,
+      monthlyRevenue,
+      actorId: req.platformUser._id
+    }, "[PlanImpactController] Impact preview served");
+    return res.json({
+      success: true,
+      data: {
+        versionId,
+        templateCode: version.templateCode,
+        versionTag: version.versionTag,
+        versionStatus: version.status,
+        organizationsAffected: orgCount,
+        estimatedMonthlyRevenue: monthlyRevenue,
+        currency: resolvedCurrency,
+        contractCount
+      }
+    });
+  } catch (err) {
+    logger.error({
+      err
+    }, "[PlanImpactController] previewPlanVersionImpact failed");
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };

@@ -20,7 +20,9 @@
 
 "use strict";
 
-const BillingTimeline = require("../models/BillingTimeline.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const BillingTimelineDef = require("../models/BillingTimeline.model");
+const BillingTimeline = getPlatformModel(BillingTimelineDef);
 const logger = require("@utils/logger");
 
 /**
@@ -42,66 +44,71 @@ const logger = require("@utils/logger");
  * @returns {Promise<void>}  Always resolves — never rejects
  */
 async function emitBillingTimelineEvent({
-    organizationId,
-    contractId = null,
-    invoiceId = null,
-    eventType,
-    providerEventId = null,
-    source = "system",
-    payload = null,
-    occurredAt = null
+  organizationId,
+  contractId = null,
+  invoiceId = null,
+  eventType,
+  providerEventId = null,
+  source = "system",
+  payload = null,
+  occurredAt = null
 }) {
-    if (!organizationId || !eventType) {
-        logger.warn(
-            { organizationId, eventType },
-            "[BillingTimeline] emitBillingTimelineEvent called with missing required fields — skipped"
-        );
+  if (!organizationId || !eventType) {
+    logger.warn({
+      organizationId,
+      eventType
+    }, "[BillingTimeline] emitBillingTimelineEvent called with missing required fields — skipped");
+    return;
+  }
+  try {
+    // ── Idempotency / Duplicate Detection ────────────────────────────────────
+    // For provider events (webhooks), check by providerEventId.
+    // This prevents duplicate entries during webhook retries or replay runs.
+    if (providerEventId) {
+      const exists = await BillingTimeline.exists({
+        organizationId,
+        contractId: contractId || null,
+        eventType,
+        providerEventId
+      });
+      if (exists) {
+        logger.info({
+          organizationId,
+          contractId,
+          eventType,
+          providerEventId
+        }, "[BillingTimeline] Duplicate event detected — skipping insert");
         return;
+      }
     }
-
-    try {
-        // ── Idempotency / Duplicate Detection ────────────────────────────────────
-        // For provider events (webhooks), check by providerEventId.
-        // This prevents duplicate entries during webhook retries or replay runs.
-        if (providerEventId) {
-            const exists = await BillingTimeline.exists({
-                organizationId,
-                contractId: contractId || null,
-                eventType,
-                providerEventId
-            });
-            if (exists) {
-                logger.info(
-                    { organizationId, contractId, eventType, providerEventId },
-                    "[BillingTimeline] Duplicate event detected — skipping insert"
-                );
-                return;
-            }
-        }
-
-        await BillingTimeline.create({
-            organizationId,
-            contractId: contractId || null,
-            invoiceId: invoiceId || null,
-            eventType,
-            providerEventId: providerEventId || null,
-            source,
-            payload: payload || null,
-            occurredAt: occurredAt || new Date()
-        });
-
-        logger.debug(
-            { organizationId, contractId, eventType },
-            "[BillingTimeline] Event emitted"
-        );
-
-    } catch (err) {
-        // NEVER propagate — timeline is a projection layer only.
-        logger.error(
-            { err: { message: err.message, code: err.code }, organizationId, contractId, eventType },
-            "[BillingTimeline] Insert failed (non-fatal — billing flow continues)"
-        );
-    }
+    await BillingTimeline.create({
+      organizationId,
+      contractId: contractId || null,
+      invoiceId: invoiceId || null,
+      eventType,
+      providerEventId: providerEventId || null,
+      source,
+      payload: payload || null,
+      occurredAt: occurredAt || new Date()
+    });
+    logger.debug({
+      organizationId,
+      contractId,
+      eventType
+    }, "[BillingTimeline] Event emitted");
+  } catch (err) {
+    // NEVER propagate — timeline is a projection layer only.
+    logger.error({
+      err: {
+        message: err.message,
+        code: err.code
+      },
+      organizationId,
+      contractId,
+      eventType
+    }, "[BillingTimeline] Insert failed (non-fatal — billing flow continues)");
+  }
 }
-
-module.exports = { emitBillingTimelineEvent };
+module.exports = {
+  emitBillingTimelineEvent
+};

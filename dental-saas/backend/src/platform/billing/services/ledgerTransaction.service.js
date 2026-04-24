@@ -48,7 +48,9 @@
 
 "use strict";
 
-const LedgerTransaction = require("../models/LedgerTransaction.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const LedgerTransactionDef = require("../models/LedgerTransaction.model");
+const LedgerTransaction = getPlatformModel(LedgerTransactionDef);
 const logger = require("@utils/logger");
 
 /**
@@ -72,45 +74,42 @@ const logger = require("@utils/logger");
  * @returns {Promise<LedgerTransaction|null>} null on failure (non-throwing)
  */
 async function writeLedgerTransaction(opts) {
-    try {
-        // Validate balance before attempting save
-        const totalDebit = (opts.entries || []).reduce((s, e) => s + (e.debit || 0), 0);
-        const totalCredit = (opts.entries || []).reduce((s, e) => s + (e.credit || 0), 0);
-
-        if (Math.abs(totalDebit - totalCredit) >= 0.001) {
-            logger.error({
-                event: "LEDGER_TRANSACTION_UNBALANCED",
-                referenceType: opts.referenceType,
-                referenceId: opts.referenceId,
-                totalDebit,
-                totalCredit
-            }, "[ledgerTransaction] LEDGER_TRANSACTION_UNBALANCED — transaction rejected");
-            return null;
-        }
-
-        const doc = await LedgerTransaction.create({
-            description: opts.description,
-            referenceType: opts.referenceType,
-            referenceId: opts.referenceId,
-            referenceLabel: opts.referenceLabel ?? "",
-            currency: opts.currency,
-            totalAmount: opts.totalAmount ?? totalDebit,
-            organizationId: opts.organizationId ?? null,
-            billingLedgerRef: opts.billingLedgerRef ?? null,
-            source: opts.source ?? "system",
-            entries: opts.entries
-        });
-
-        return doc;
-    } catch (err) {
-        logger.error({
-            err,
-            event: "LEDGER_TRANSACTION_WRITE_FAILED",
-            referenceType: opts.referenceType,
-            referenceId: opts.referenceId
-        }, "[ledgerTransaction] LEDGER_TRANSACTION_WRITE_FAILED — non-fatal");
-        return null;
+  try {
+    // Validate balance before attempting save
+    const totalDebit = (opts.entries || []).reduce((s, e) => s + (e.debit || 0), 0);
+    const totalCredit = (opts.entries || []).reduce((s, e) => s + (e.credit || 0), 0);
+    if (Math.abs(totalDebit - totalCredit) >= 0.001) {
+      logger.error({
+        event: "LEDGER_TRANSACTION_UNBALANCED",
+        referenceType: opts.referenceType,
+        referenceId: opts.referenceId,
+        totalDebit,
+        totalCredit
+      }, "[ledgerTransaction] LEDGER_TRANSACTION_UNBALANCED — transaction rejected");
+      return null;
     }
+    const doc = await LedgerTransaction.create({
+      description: opts.description,
+      referenceType: opts.referenceType,
+      referenceId: opts.referenceId,
+      referenceLabel: opts.referenceLabel ?? "",
+      currency: opts.currency,
+      totalAmount: opts.totalAmount ?? totalDebit,
+      organizationId: opts.organizationId ?? null,
+      billingLedgerRef: opts.billingLedgerRef ?? null,
+      source: opts.source ?? "system",
+      entries: opts.entries
+    });
+    return doc;
+  } catch (err) {
+    logger.error({
+      err,
+      event: "LEDGER_TRANSACTION_WRITE_FAILED",
+      referenceType: opts.referenceType,
+      referenceId: opts.referenceId
+    }, "[ledgerTransaction] LEDGER_TRANSACTION_WRITE_FAILED — non-fatal");
+    return null;
+  }
 }
 
 /**
@@ -121,7 +120,7 @@ async function writeLedgerTransaction(opts) {
  * @returns {Promise<LedgerTransaction|null>}
  */
 async function getLedgerTransactionById(id) {
-    return LedgerTransaction.findById(id).lean();
+  return LedgerTransaction.findById(id).lean();
 }
 
 /**
@@ -134,14 +133,15 @@ async function getLedgerTransactionById(id) {
  * @returns {Promise<LedgerTransaction[]>}
  */
 async function getLedgerTransactionsByReference(referenceType, referenceId) {
-    return LedgerTransaction
-        .find({ referenceType, referenceId })
-        .sort({ createdAt: -1 })
-        .lean();
+  return LedgerTransaction.find({
+    referenceType,
+    referenceId
+  }).sort({
+    createdAt: -1
+  }).lean();
 }
-
 module.exports = {
-    writeLedgerTransaction,
-    getLedgerTransactionById,
-    getLedgerTransactionsByReference
+  writeLedgerTransaction,
+  getLedgerTransactionById,
+  getLedgerTransactionsByReference
 };

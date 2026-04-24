@@ -15,9 +15,12 @@
 
 "use strict";
 
-const { assertValidTransition } = require("./paymentStateMachine");
-const PlatformInvoice = require("../../../platform/billing/models/PlatformInvoice.model").default;
-
+const getPlatformModel = require("@core/db/getPlatformModel");
+const {
+  assertValidTransition
+} = require("./paymentStateMachine");
+const PlatformInvoiceDef = require("../../../platform/billing/models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
 const auditService = require("../../../services/auditService");
 const logger = require("@utils/logger");
 
@@ -37,65 +40,65 @@ const logger = require("@utils/logger");
  * @returns {Promise<object>} Updated invoice document
  */
 async function updatePaymentStatus({
-    paymentId,
-    nextStatus,
-    actorId = "000000000000000000000000",
-    actorType = "system",
-    regionCode,
-    session,
-    metadata = {}
+  paymentId,
+  nextStatus,
+  actorId = "000000000000000000000000",
+  actorType = "system",
+  regionCode,
+  session,
+  metadata = {}
 }) {
-    // 1. Load the payment record
-    const invoice = await PlatformInvoice.findById(paymentId).session(session || null);
+  // 1. Load the payment record
+  const invoice = await PlatformInvoice.findById(paymentId).session(session || null);
+  if (!invoice) {
+    throw new Error(`[paymentStatusService] Payment not found: ${paymentId}`);
+  }
+  const currentStatus = invoice.paymentStatus || "pending";
 
-    if (!invoice) {
-        throw new Error(`[paymentStatusService] Payment not found: ${paymentId}`);
-    }
+  // 2. Enforce state machine — throws if invalid
+  assertValidTransition(currentStatus, nextStatus);
+  logger.info({
+    paymentId,
+    currentStatus,
+    nextStatus,
+    actorId,
+    actorType,
+    regionCode
+  }, "[paymentStatusService] Applying payment status transition");
 
-    const currentStatus = invoice.paymentStatus || "pending";
+  // 3. Apply transition
+  invoice.paymentStatus = nextStatus;
+  invoice.version = (invoice.version || 0) + 1;
+  const queryOptions = session ? {
+    session
+  } : {};
+  await invoice.save(queryOptions);
 
-    // 2. Enforce state machine — throws if invalid
-    assertValidTransition(currentStatus, nextStatus);
-
-    logger.info({
-        paymentId,
-        currentStatus,
-        nextStatus,
-        actorId,
-        actorType,
-        regionCode
-    }, "[paymentStatusService] Applying payment status transition");
-
-    // 3. Apply transition
-    invoice.paymentStatus = nextStatus;
-    invoice.version = (invoice.version || 0) + 1;
-
-    const queryOptions = session ? { session } : {};
-    await invoice.save(queryOptions);
-
-    // 4. Audit
-    try {
-        await auditService.createAuditRecord({
-            regionCode: regionCode || "GLOBAL",
-            organizationId: invoice.organizationId,
-            actorId,
-            actorType,
-            action: "PAYMENT_STATUS_TRANSITION",
-            entity: "PLATFORM_INVOICE",
-
-            entityId: invoice._id,
-            details: {
-                from: currentStatus,
-                to: nextStatus,
-                ...metadata
-            }
-        }, session);
-    } catch (auditErr) {
-        // Audit failure must not block payment state change — log and continue
-        logger.error({ auditErr, paymentId, nextStatus }, "[paymentStatusService] Audit write failed — continuing");
-    }
-
-    return invoice;
+  // 4. Audit
+  try {
+    await auditService.createAuditRecord({
+      regionCode: regionCode || "GLOBAL",
+      organizationId: invoice.organizationId,
+      actorId,
+      actorType,
+      action: "PAYMENT_STATUS_TRANSITION",
+      entity: "PLATFORM_INVOICE",
+      entityId: invoice._id,
+      details: {
+        from: currentStatus,
+        to: nextStatus,
+        ...metadata
+      }
+    }, session);
+  } catch (auditErr) {
+    // Audit failure must not block payment state change — log and continue
+    logger.error({
+      auditErr,
+      paymentId,
+      nextStatus
+    }, "[paymentStatusService] Audit write failed — continuing");
+  }
+  return invoice;
 }
 
 /**
@@ -109,18 +112,23 @@ async function updatePaymentStatus({
  * @param {object} [rest] - Passed to updatePaymentStatus
  */
 async function updatePaymentStatusByProviderPaymentId({
-    providerPaymentId,
+  providerPaymentId,
+  nextStatus,
+  ...rest
+}) {
+  const invoice = await PlatformInvoice.findOne({
+    providerPaymentId
+  });
+  if (!invoice) {
+    throw new Error(`[paymentStatusService] No invoice found with providerPaymentId: ${providerPaymentId}`);
+  }
+  return updatePaymentStatus({
+    paymentId: invoice._id,
     nextStatus,
     ...rest
-}) {
-    const invoice = await PlatformInvoice.findOne({ providerPaymentId });
-
-    if (!invoice) {
-        throw new Error(
-            `[paymentStatusService] No invoice found with providerPaymentId: ${providerPaymentId}`
-        );
-    }
-    return updatePaymentStatus({ paymentId: invoice._id, nextStatus, ...rest });
+  });
 }
-
-module.exports = { updatePaymentStatus, updatePaymentStatusByProviderPaymentId };
+module.exports = {
+  updatePaymentStatus,
+  updatePaymentStatusByProviderPaymentId
+};

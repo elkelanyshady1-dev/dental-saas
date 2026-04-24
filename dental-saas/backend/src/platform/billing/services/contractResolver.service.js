@@ -20,7 +20,9 @@
 
 "use strict";
 
-const OrgContract = require("../models/OrgContract.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const OrgContractDef = require("../models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
 const logger = require("@utils/logger");
 
 // ─── Contract Invariant Enforcement ─────────────────────────────────────────
@@ -40,38 +42,32 @@ const logger = require("@utils/logger");
  * @returns {object|null}
  */
 function enforceContractInvariant(contract) {
-    if (!contract) return contract;
-
-    const now = new Date();
-    const isStuckExpired =
-        contract.autoRenew === false &&
-        contract.effectiveTo &&
-        new Date(contract.effectiveTo) < now &&
-        contract.contractStatus === "active";
-
-    if (isStuckExpired) {
-        logger.warn(
-            { contractId: contract._id, organizationId: contract.organizationId, effectiveTo: contract.effectiveTo },
-            "[ContractInvariant] STUCK_EXPIRED_CONTRACTS detected — read-time correction applied (DB correction pending cron)"
-        );
-        return {
-            ...contract,
-            contractStatus: "expired",
-            _invariantCorrected: true,
-        };
-    }
-
-    return contract;
+  if (!contract) return contract;
+  const now = new Date();
+  const isStuckExpired = contract.autoRenew === false && contract.effectiveTo && new Date(contract.effectiveTo) < now && contract.contractStatus === "active";
+  if (isStuckExpired) {
+    logger.warn({
+      contractId: contract._id,
+      organizationId: contract.organizationId,
+      effectiveTo: contract.effectiveTo
+    }, "[ContractInvariant] STUCK_EXPIRED_CONTRACTS detected — read-time correction applied (DB correction pending cron)");
+    return {
+      ...contract,
+      contractStatus: "expired",
+      _invariantCorrected: true
+    };
+  }
+  return contract;
 }
 
 // ─── Domain Violation Error ───────────────────────────────────────────────────
 class DomainViolation extends Error {
-    constructor(message, code = "DOMAIN_VIOLATION") {
-        super(message);
-        this.name = "DomainViolation";
-        this.code = code;
-        this.statusCode = 422;
-    }
+  constructor(message, code = "DOMAIN_VIOLATION") {
+    super(message);
+    this.name = "DomainViolation";
+    this.code = code;
+    this.statusCode = 422;
+  }
 }
 
 // ─── loadActiveContract ────────────────────────────────────────────────────────
@@ -85,20 +81,23 @@ class DomainViolation extends Error {
  * @returns {Promise<OrgContract|null>}
  */
 async function loadActiveContract(organizationId, session = null) {
-    const query = OrgContract.findOne({
-        organizationId,
-        contractStatus: "active"
-    }).sort({ createdAt: -1 });
-
-    if (session) query.session(session);
-
-    try {
-        const contract = await query.lean();
-        return enforceContractInvariant(contract);
-    } catch (err) {
-        logger.error({ err, organizationId }, "[ContractResolver] Failed to load active contract");
-        return null;
-    }
+  const query = OrgContract.findOne({
+    organizationId,
+    contractStatus: "active"
+  }).sort({
+    createdAt: -1
+  });
+  if (session) query.session(session);
+  try {
+    const contract = await query.lean();
+    return enforceContractInvariant(contract);
+  } catch (err) {
+    logger.error({
+      err,
+      organizationId
+    }, "[ContractResolver] Failed to load active contract");
+    return null;
+  }
 }
 
 // ─── requireActiveContract ─────────────────────────────────────────────────────
@@ -112,19 +111,14 @@ async function loadActiveContract(organizationId, session = null) {
  * @throws {DomainViolation} if no active contract exists
  */
 async function requireActiveContract(organizationId, session = null) {
-    const contract = await loadActiveContract(organizationId, session);
-    if (!contract) {
-        logger.error(
-            { organizationId },
-            "[ContractResolver] STRICT: No active OrgContract found — DomainViolation thrown"
-        );
-        throw new DomainViolation(
-            `No active OrgContract found for organization ${organizationId}. ` +
-            "Run seedCleanArchitecture.js or backfillOrgContracts.js to provision a contract.",
-            "NO_ACTIVE_CONTRACT"
-        );
-    }
-    return contract;
+  const contract = await loadActiveContract(organizationId, session);
+  if (!contract) {
+    logger.error({
+      organizationId
+    }, "[ContractResolver] STRICT: No active OrgContract found — DomainViolation thrown");
+    throw new DomainViolation(`No active OrgContract found for organization ${organizationId}. ` + "Run seedCleanArchitecture.js or backfillOrgContracts.js to provision a contract.", "NO_ACTIVE_CONTRACT");
+  }
+  return contract;
 }
 
 // ─── Field Resolvers ──────────────────────────────────────────────────────────
@@ -138,10 +132,10 @@ async function requireActiveContract(organizationId, session = null) {
  * @returns {string}
  */
 function resolvePlanCode(contract) {
-    if (!contract?.planCode) {
-        throw new DomainViolation("Contract is missing planCode", "CONTRACT_FIELD_MISSING");
-    }
-    return contract.planCode;
+  if (!contract?.planCode) {
+    throw new DomainViolation("Contract is missing planCode", "CONTRACT_FIELD_MISSING");
+  }
+  return contract.planCode;
 }
 
 /**
@@ -150,10 +144,10 @@ function resolvePlanCode(contract) {
  * @returns {string}
  */
 function resolveCurrency(contract) {
-    if (!contract?.currency) {
-        throw new DomainViolation("Contract is missing currency", "CONTRACT_FIELD_MISSING");
-    }
-    return contract.currency;
+  if (!contract?.currency) {
+    throw new DomainViolation("Contract is missing currency", "CONTRACT_FIELD_MISSING");
+  }
+  return contract.currency;
 }
 
 /**
@@ -163,10 +157,10 @@ function resolveCurrency(contract) {
  * @returns {number}
  */
 function resolveLockedPrice(contract) {
-    if (contract?.lockedPrice == null) {
-        throw new DomainViolation("Contract is missing lockedPrice", "CONTRACT_FIELD_MISSING");
-    }
-    return contract.lockedPrice;
+  if (contract?.lockedPrice == null) {
+    throw new DomainViolation("Contract is missing lockedPrice", "CONTRACT_FIELD_MISSING");
+  }
+  return contract.lockedPrice;
 }
 
 /**
@@ -176,8 +170,8 @@ function resolveLockedPrice(contract) {
  * @returns {object|null}
  */
 function resolveAppliedCoupon(contract) {
-    if (!contract?.appliedCoupon?.code) return null;
-    return contract.appliedCoupon;
+  if (!contract?.appliedCoupon?.code) return null;
+  return contract.appliedCoupon;
 }
 
 /**
@@ -187,11 +181,11 @@ function resolveAppliedCoupon(contract) {
  * @returns {{ inflationPercent: number, autoRenew: boolean, interval: string }}
  */
 function resolveRenewalTerms(contract) {
-    return {
-        inflationPercent: contract?.renewalTerms?.inflationPercent ?? 0,
-        autoRenew: contract?.autoRenew !== undefined ? contract.autoRenew : true,
-        interval: contract?.renewalTerms?.billingInterval || "monthly"
-    };
+  return {
+    inflationPercent: contract?.renewalTerms?.inflationPercent ?? 0,
+    autoRenew: contract?.autoRenew !== undefined ? contract.autoRenew : true,
+    interval: contract?.renewalTerms?.billingInterval || "monthly"
+  };
 }
 
 /**
@@ -201,12 +195,12 @@ function resolveRenewalTerms(contract) {
  * @returns {{ isCustom: boolean, lockedPrice: number }|null}
  */
 function resolvePricingOverride(contract) {
-    if (!contract?.pricingOverride?.isCustom) return null;
-    return {
-        isCustom: true,
-        lockedPrice: contract.pricingOverride.lockedPrice || 0,
-        reason: contract.pricingOverride.reason || ""
-    };
+  if (!contract?.pricingOverride?.isCustom) return null;
+  return {
+    isCustom: true,
+    lockedPrice: contract.pricingOverride.lockedPrice || 0,
+    reason: contract.pricingOverride.reason || ""
+  };
 }
 
 /**
@@ -215,7 +209,7 @@ function resolvePricingOverride(contract) {
  * @returns {number}
  */
 function resolveCreditBalance(contract) {
-    return contract?.creditBalance ?? 0;
+  return contract?.creditBalance ?? 0;
 }
 
 /**
@@ -224,7 +218,7 @@ function resolveCreditBalance(contract) {
  * @returns {number}
  */
 function resolveGracePeriodDays(contract) {
-    return contract?.gracePeriodDays ?? 7;
+  return contract?.gracePeriodDays ?? 7;
 }
 
 /**
@@ -233,7 +227,7 @@ function resolveGracePeriodDays(contract) {
  * @returns {boolean}
  */
 function resolveAutoRenew(contract) {
-    return contract?.autoRenew !== undefined ? contract.autoRenew : true;
+  return contract?.autoRenew !== undefined ? contract.autoRenew : true;
 }
 
 // ─── resolveCommercialContext ──────────────────────────────────────────────────
@@ -251,64 +245,51 @@ function resolveAutoRenew(contract) {
  * @throws {DomainViolation} if no active OrgContract
  */
 async function resolveCommercialContext(org, preloadedContract = null, options = {}) {
-    const contract = preloadedContract
-        ?? await requireActiveContract(org._id, options.session);
-
-    const commercial = {
-        // Audit metadata
-        _source: "contract",
-        _contractId: contract._id,
-        _planVersionId: contract.planVersionId || null,
-
-        // Commercial fields — all from OrgContract
-        planCode: resolvePlanCode(contract),
-        planVersionTag: contract.planVersionTag || "v1",
-        currency: resolveCurrency(contract),
-        lockedPrice: resolveLockedPrice(contract),
-        appliedCoupon: resolveAppliedCoupon(contract),
-        renewalTerms: resolveRenewalTerms(contract),
-        pricingOverride: resolvePricingOverride(contract),
-        creditBalance: resolveCreditBalance(contract),
-        gracePeriodDays: resolveGracePeriodDays(contract),
-        autoRenew: resolveAutoRenew(contract)
-    };
-
-    logger.debug(
-        {
-            orgId: org._id,
-            contractId: contract._id,
-            planCode: commercial.planCode,
-            currency: commercial.currency
-        },
-        "[ContractResolver] Commercial context resolved from OrgContract"
-    );
-
-    return commercial;
+  const contract = preloadedContract ?? (await requireActiveContract(org._id, options.session));
+  const commercial = {
+    // Audit metadata
+    _source: "contract",
+    _contractId: contract._id,
+    _planVersionId: contract.planVersionId || null,
+    // Commercial fields — all from OrgContract
+    planCode: resolvePlanCode(contract),
+    planVersionTag: contract.planVersionTag || "v1",
+    currency: resolveCurrency(contract),
+    lockedPrice: resolveLockedPrice(contract),
+    appliedCoupon: resolveAppliedCoupon(contract),
+    renewalTerms: resolveRenewalTerms(contract),
+    pricingOverride: resolvePricingOverride(contract),
+    creditBalance: resolveCreditBalance(contract),
+    gracePeriodDays: resolveGracePeriodDays(contract),
+    autoRenew: resolveAutoRenew(contract)
+  };
+  logger.debug({
+    orgId: org._id,
+    contractId: contract._id,
+    planCode: commercial.planCode,
+    currency: commercial.currency
+  }, "[ContractResolver] Commercial context resolved from OrgContract");
+  return commercial;
 }
-
 module.exports = {
-    // ── Invariant enforcement (exported for testing + direct use) ────
-    enforceContractInvariant,
-
-    // ── Core loaders ─────────────────────────────────────────────
-    loadActiveContract,
-    requireActiveContract,
-
-    // ── Composite resolver ───────────────────────────────────────
-    resolveCommercialContext,
-
-    // ── Individual field resolvers ───────────────────────────────
-    // NOTE: Sprint 5 — these now take (contract) not (org, contract)
-    resolvePlanCode,
-    resolveCurrency,
-    resolveLockedPrice,
-    resolveAppliedCoupon,
-    resolveRenewalTerms,
-    resolvePricingOverride,
-    resolveCreditBalance,
-    resolveGracePeriodDays,
-    resolveAutoRenew,
-
-    // ── Error class ──────────────────────────────────────────────
-    DomainViolation
+  // ── Invariant enforcement (exported for testing + direct use) ────
+  enforceContractInvariant,
+  // ── Core loaders ─────────────────────────────────────────────
+  loadActiveContract,
+  requireActiveContract,
+  // ── Composite resolver ───────────────────────────────────────
+  resolveCommercialContext,
+  // ── Individual field resolvers ───────────────────────────────
+  // NOTE: Sprint 5 — these now take (contract) not (org, contract)
+  resolvePlanCode,
+  resolveCurrency,
+  resolveLockedPrice,
+  resolveAppliedCoupon,
+  resolveRenewalTerms,
+  resolvePricingOverride,
+  resolveCreditBalance,
+  resolveGracePeriodDays,
+  resolveAutoRenew,
+  // ── Error class ──────────────────────────────────────────────
+  DomainViolation
 };

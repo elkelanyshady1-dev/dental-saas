@@ -17,6 +17,31 @@
 
 const mongoose = require("mongoose");
 
+// ─── Global Pricing Block (Phase 1 — pricing decoupling) ────────────────────
+// Single USD price list. EG billing is handled at resolve-time (USD → EGP via
+// Kashier), not stored per-region. Legacy `regions[]` below is kept for
+// backward compatibility with unmigrated templates.
+const globalPricingSchema = new mongoose.Schema({
+    currency: {
+        type: String,
+        required: true,
+        uppercase: true,
+        default: "USD"
+    },
+    amountMonthly: { type: Number, required: true, min: 0 },
+    amountYearly: { type: Number, required: true, min: 0 },
+    providerPriceIds: {
+        stripe: {
+            monthly: { type: String, default: "" },
+            yearly: { type: String, default: "" }
+        },
+        kashier: {
+            monthly: { type: String, default: "" },
+            yearly: { type: String, default: "" }
+        }
+    }
+}, { _id: false });
+
 // ─── Region Pricing Block ────────────────────────────────────────────────────
 // Each PlanTemplate defines pricing per sovereign region.
 // ISO country list maps to a billing region for provider price lookup.
@@ -118,9 +143,17 @@ const planTemplateSchema = new mongoose.Schema(
             default: () => ({})
         },
 
-        // ── Regional Pricing ──────────────────────────────────────────────────
+        // ── Pricing ───────────────────────────────────────────────────────────
+        // Phase 1 (pricing decoupling): `global` is the new canonical shape.
+        // `regions[]` remains for backward compatibility until all templates
+        // are migrated via scripts/migratePricingToGlobal.js.
         pricing: {
             baseCurrency: { type: String, default: "USD", uppercase: true },
+            // New canonical field — optional during migration window.
+            global: { type: globalPricingSchema, default: null },
+            // @deprecated — Phase 10. Read-only from this version forward.
+            // Scheduled for removal in Phase 11 once auditLegacyPricing.js
+            // reports zero unmigrated documents.
             regions: [regionPricingSchema]
         },
 

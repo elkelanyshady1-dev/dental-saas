@@ -14,13 +14,20 @@
 "use strict";
 
 const stripeProvider = require("./StripeProvider");
-const paymobProvider = require("./PaymobProvider");
 const paypalProvider = require("./PayPalProvider");
+const kashierProvider = require("./KashierProvider");
 
+// Phase 10 — PaymobProvider was a stub-only class with no real
+// implementation. Removed entirely. `getProvider("paymob")` now throws
+// PROVIDER_NOT_IMPLEMENTED, which is the correct failure mode (the
+// upstream providerGuard already rejects "paymob" with
+// PROVIDER_NOT_SUPPORTED before this factory is reached). Schema enums
+// keep the literal "paymob" for legacy data reads — see Organization +
+// OrgContract + OrgAddOn + BillingEventLog.
 const PROVIDERS = {
     stripe: stripeProvider,
-    paymob: paymobProvider,
     paypal: paypalProvider,
+    kashier: kashierProvider,
 };
 
 /**
@@ -34,9 +41,12 @@ const PROVIDERS = {
 function getProvider(providerType) {
     const provider = PROVIDERS[providerType];
     if (!provider) {
-        throw new Error(
-            `[paymentProviderFactory] Unsupported payment provider: "${providerType}". ` +
-            `Supported: ${Object.keys(PROVIDERS).join(", ")}`
+        throw Object.assign(
+            new Error(
+                `PROVIDER_NOT_IMPLEMENTED: "${providerType}". ` +
+                `Registered: ${Object.keys(PROVIDERS).join(", ")}`
+            ),
+            { code: "PROVIDER_NOT_IMPLEMENTED", provider: providerType, status: 501 }
         );
     }
     return provider;

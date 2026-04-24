@@ -151,6 +151,15 @@ function resolveBasePrice(planVersion, billingInterval, resolvedRegionResult) {
  *   }
  * }>}
  */
+/**
+ * @deprecated Phase 10 — `resolvePrice` (backend/src/platform/billing/pricing/resolvePrice.js)
+ * is the canonical pricer. computePrice is retained because four live
+ * callers still depend on it (provisioning preview, old self-serve checkout,
+ * sales-flow contract creation x3). A hard-throw was deliberately NOT used
+ * here — it would break Stripe renewals and existing contracts. STRICT_MODE
+ * (billingConfig.BILLING_FEATURES.STRICT_MODE) flips this to a hard error
+ * for staging once all callers are migrated. Scheduled removal: Phase 11.
+ */
 async function computePrice({
     planVersion,
     billingInterval = "monthly",
@@ -163,6 +172,22 @@ async function computePrice({
     provider = "manual",
     organizationId = null
 }) {
+    // Phase 10 — legacy-path observability + STRICT_MODE escape hatch.
+    const { BILLING_FEATURES } = require("@config/billingConfig");
+    if (BILLING_FEATURES.STRICT_MODE) {
+        throw Object.assign(
+            new Error("LEGACY_PATH_USED: pricingEngine.computePrice — use resolvePrice"),
+            { code: "LEGACY_PATH_USED", path: "pricingEngine.computePrice" }
+        );
+    }
+    logger.warn({
+        event: "LEGACY_PATH_USED",
+        path: "pricingEngine.computePrice",
+        planVersionId: planVersion?._id ? String(planVersion._id) : null,
+        billingInterval,
+        organizationId: organizationId ? String(organizationId) : null
+    }, "[pricingEngine] @deprecated — migrate caller to resolvePrice");
+
     if (!planVersion) {
         throw new Error("[PricingEngine] planVersion is required");
     }

@@ -12,7 +12,9 @@
 
 "use strict";
 
-const BillingSettings = require("../models/BillingSettings.model").default;
+const getPlatformModel = require("@core/db/getPlatformModel");
+const BillingSettingsDef = require("../models/BillingSettings.model");
+const BillingSettings = getPlatformModel(BillingSettingsDef);
 const logger = require("@utils/logger");
 
 // In-memory cache with TTL (60s) to avoid hitting DB on every cron tick
@@ -28,29 +30,25 @@ const CACHE_TTL_MS = 60_000;
  * @returns {Promise<{ retryScheduleDays: number[], gracePeriodDays: number, maxRetries: number }>}
  */
 async function getBillingSettings() {
-    const now = Date.now();
-    if (_cache && _cacheAt && now - _cacheAt < CACHE_TTL_MS) {
-        return _cache;
+  const now = Date.now();
+  if (_cache && _cacheAt && now - _cacheAt < CACHE_TTL_MS) {
+    return _cache;
+  }
+  let settings = await BillingSettings.findOne().lean();
+  if (!settings) {
+    logger.info("[BillingSettings] No settings document found — creating default");
+    try {
+      const doc = await BillingSettings.create({});
+      settings = doc.toObject();
+    } catch (err) {
+      // Race condition: another process may have inserted simultaneously
+      settings = await BillingSettings.findOne().lean();
+      if (!settings) throw err;
     }
-
-    let settings = await BillingSettings.findOne().lean();
-
-    if (!settings) {
-        logger.info("[BillingSettings] No settings document found — creating default");
-        try {
-            const doc = await BillingSettings.create({});
-            settings = doc.toObject();
-        } catch (err) {
-            // Race condition: another process may have inserted simultaneously
-            settings = await BillingSettings.findOne().lean();
-            if (!settings) throw err;
-        }
-    }
-
-    _cache = settings;
-    _cacheAt = now;
-
-    return settings;
+  }
+  _cache = settings;
+  _cacheAt = now;
+  return settings;
 }
 
 /**
@@ -62,20 +60,19 @@ async function getBillingSettings() {
  * @returns {Promise<BillingSettings>}
  */
 async function updateBillingSettings(updates) {
-    let settings = await BillingSettings.findOne();
-
-    if (!settings) {
-        settings = new BillingSettings(updates);
-    } else {
-        Object.assign(settings, updates);
-    }
-
-    await settings.save();
-    _cache = null;
-    _cacheAt = null;
-
-    logger.info({ updates }, "[BillingSettings] Settings updated");
-    return settings;
+  let settings = await BillingSettings.findOne();
+  if (!settings) {
+    settings = new BillingSettings(updates);
+  } else {
+    Object.assign(settings, updates);
+  }
+  await settings.save();
+  _cache = null;
+  _cacheAt = null;
+  logger.info({
+    updates
+  }, "[BillingSettings] Settings updated");
+  return settings;
 }
 
 /**
@@ -83,8 +80,11 @@ async function updateBillingSettings(updates) {
  * Useful after updateBillingSettings in tests.
  */
 function invalidateCache() {
-    _cache = null;
-    _cacheAt = null;
+  _cache = null;
+  _cacheAt = null;
 }
-
-module.exports = { getBillingSettings, updateBillingSettings, invalidateCache };
+module.exports = {
+  getBillingSettings,
+  updateBillingSettings,
+  invalidateCache
+};

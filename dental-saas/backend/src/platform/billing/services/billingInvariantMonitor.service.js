@@ -49,9 +49,12 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
-const BillingLedger = require("../models/BillingLedger.model").default;
-const PlatformInvoice = require("../models/PlatformInvoice.model").default;
+const BillingLedgerDef = require("../models/BillingLedger.model");
+const BillingLedger = getPlatformModel(BillingLedgerDef);
+const PlatformInvoiceDef = require("../models/PlatformInvoice.model");
+const PlatformInvoice = getPlatformModel(PlatformInvoiceDef);
 const logger = require("@utils/logger");
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -91,72 +94,94 @@ const MAX_ANOMALY_SAMPLE = 50;
  * }>}
  */
 async function checkPaymentTotals(opts = {}) {
-    const { organizationId, currency, from, to } = opts;
+  const {
+    organizationId,
+    currency,
+    from,
+    to
+  } = opts;
 
-    // ── Build shared match stage ────────────────────────────────────────────────
-    const matchBase = {};
-    if (organizationId) matchBase.organizationId = new mongoose.Types.ObjectId(organizationId);
-    if (currency) matchBase.currency = currency.toUpperCase();
-    if (from || to) {
-        matchBase.createdAt = {};
-        if (from) matchBase.createdAt.$gte = new Date(from);
-        if (to) matchBase.createdAt.$lte = new Date(to);
+  // ── Build shared match stage ────────────────────────────────────────────────
+  const matchBase = {};
+  if (organizationId) matchBase.organizationId = new mongoose.Types.ObjectId(organizationId);
+  if (currency) matchBase.currency = currency.toUpperCase();
+  if (from || to) {
+    matchBase.createdAt = {};
+    if (from) matchBase.createdAt.$gte = new Date(from);
+    if (to) matchBase.createdAt.$lte = new Date(to);
+  }
+
+  // ── Ledger: sum payment.succeeded amountMinor ──────────────────────────────
+  const [ledgerResult] = await BillingLedger.aggregate([{
+    $match: {
+      ...matchBase,
+      eventType: "payment.succeeded"
     }
-
-    // ── Ledger: sum payment.succeeded amountMinor ──────────────────────────────
-    const [ledgerResult] = await BillingLedger.aggregate([
-        { $match: { ...matchBase, eventType: "payment.succeeded" } },
-        { $group: { _id: null, total: { $sum: "$amountMinor" }, count: { $sum: 1 } } }
-    ]);
-    const ledgerTotalMinor = ledgerResult?.total ?? 0;
-    const ledgerCount = ledgerResult?.count ?? 0;
-
-    // ── Invoices: sum totalAmountMinor for paid invoices ───────────────────────
-    // Scope invoice date filter to paidAt (not createdAt) so the window aligns.
-    const invoiceMatch = { status: "paid" };
-    if (organizationId) invoiceMatch.organizationId = new mongoose.Types.ObjectId(organizationId);
-    if (currency) invoiceMatch.currency = currency.toUpperCase();
-    if (from || to) {
-        invoiceMatch.paidAt = {};
-        if (from) invoiceMatch.paidAt.$gte = new Date(from);
-        if (to) invoiceMatch.paidAt.$lte = new Date(to);
+  }, {
+    $group: {
+      _id: null,
+      total: {
+        $sum: "$amountMinor"
+      },
+      count: {
+        $sum: 1
+      }
     }
+  }]);
+  const ledgerTotalMinor = ledgerResult?.total ?? 0;
+  const ledgerCount = ledgerResult?.count ?? 0;
 
-    const [invoiceResult] = await PlatformInvoice.aggregate([
-        { $match: invoiceMatch },
-        { $group: { _id: null, total: { $sum: "$totalAmountMinor" }, count: { $sum: 1 } } }
-    ]);
-    const invoiceTotalMinor = invoiceResult?.total ?? 0;
-    const invoiceCount = invoiceResult?.count ?? 0;
-
-    // ── Compare ────────────────────────────────────────────────────────────────
-    const discrepancyMinor = Math.abs(ledgerTotalMinor - invoiceTotalMinor);
-    const passed = discrepancyMinor <= MINOR_UNIT_TOLERANCE;
-
-    const result = {
-        passed,
-        ledgerTotalMinor,
-        ledgerCount,
-        invoiceTotalMinor,
-        invoiceCount,
-        discrepancyMinor,
-        currency: currency?.toUpperCase() ?? null,
-        organizationId: organizationId ? String(organizationId) : null,
-        details: passed
-            ? `Invariant OK: ledger=${ledgerTotalMinor} invoice=${invoiceTotalMinor} (within ${MINOR_UNIT_TOLERANCE} minor unit tolerance)`
-            : `⚠ INVARIANT VIOLATION: ledger=${ledgerTotalMinor} invoice=${invoiceTotalMinor} discrepancy=${discrepancyMinor} minor units`
-    };
-
-    if (!passed) {
-        logger.error(
-            { ...result, context: "billingInvariantMonitor.checkPaymentTotals" },
-            "[BillingMonitor] Payment totals invariant VIOLATED"
-        );
-    } else {
-        logger.info(result, "[BillingMonitor] Payment totals invariant passed");
+  // ── Invoices: sum totalAmountMinor for paid invoices ───────────────────────
+  // Scope invoice date filter to paidAt (not createdAt) so the window aligns.
+  const invoiceMatch = {
+    status: "paid"
+  };
+  if (organizationId) invoiceMatch.organizationId = new mongoose.Types.ObjectId(organizationId);
+  if (currency) invoiceMatch.currency = currency.toUpperCase();
+  if (from || to) {
+    invoiceMatch.paidAt = {};
+    if (from) invoiceMatch.paidAt.$gte = new Date(from);
+    if (to) invoiceMatch.paidAt.$lte = new Date(to);
+  }
+  const [invoiceResult] = await PlatformInvoice.aggregate([{
+    $match: invoiceMatch
+  }, {
+    $group: {
+      _id: null,
+      total: {
+        $sum: "$totalAmountMinor"
+      },
+      count: {
+        $sum: 1
+      }
     }
+  }]);
+  const invoiceTotalMinor = invoiceResult?.total ?? 0;
+  const invoiceCount = invoiceResult?.count ?? 0;
 
-    return result;
+  // ── Compare ────────────────────────────────────────────────────────────────
+  const discrepancyMinor = Math.abs(ledgerTotalMinor - invoiceTotalMinor);
+  const passed = discrepancyMinor <= MINOR_UNIT_TOLERANCE;
+  const result = {
+    passed,
+    ledgerTotalMinor,
+    ledgerCount,
+    invoiceTotalMinor,
+    invoiceCount,
+    discrepancyMinor,
+    currency: currency?.toUpperCase() ?? null,
+    organizationId: organizationId ? String(organizationId) : null,
+    details: passed ? `Invariant OK: ledger=${ledgerTotalMinor} invoice=${invoiceTotalMinor} (within ${MINOR_UNIT_TOLERANCE} minor unit tolerance)` : `⚠ INVARIANT VIOLATION: ledger=${ledgerTotalMinor} invoice=${invoiceTotalMinor} discrepancy=${discrepancyMinor} minor units`
+  };
+  if (!passed) {
+    logger.error({
+      ...result,
+      context: "billingInvariantMonitor.checkPaymentTotals"
+    }, "[BillingMonitor] Payment totals invariant VIOLATED");
+  } else {
+    logger.info(result, "[BillingMonitor] Payment totals invariant passed");
+  }
+  return result;
 }
 
 // ─── 2. Ledger Replay Revenue Reconstruction ──────────────────────────────────
@@ -196,84 +221,91 @@ async function checkPaymentTotals(opts = {}) {
  * }>}
  */
 async function replayLedgerRevenue(opts = {}) {
-    const { organizationId, currency, from, to } = opts;
-
-    const matchStage = {
-        eventType: { $in: ["payment.succeeded", "invoice.refunded"] }
-    };
-    if (organizationId) matchStage.organizationId = new mongoose.Types.ObjectId(organizationId);
-    if (currency) matchStage.currency = currency.toUpperCase();
-    if (from || to) {
-        matchStage.createdAt = {};
-        if (from) matchStage.createdAt.$gte = new Date(from);
-        if (to) matchStage.createdAt.$lte = new Date(to);
+  const {
+    organizationId,
+    currency,
+    from,
+    to
+  } = opts;
+  const matchStage = {
+    eventType: {
+      $in: ["payment.succeeded", "invoice.refunded"]
     }
+  };
+  if (organizationId) matchStage.organizationId = new mongoose.Types.ObjectId(organizationId);
+  if (currency) matchStage.currency = currency.toUpperCase();
+  if (from || to) {
+    matchStage.createdAt = {};
+    if (from) matchStage.createdAt.$gte = new Date(from);
+    if (to) matchStage.createdAt.$lte = new Date(to);
+  }
 
-    // Aggregate per org × currency × eventType in one pass
-    const rawRows = await BillingLedger.aggregate([
-        { $match: matchStage },
-        {
-            $group: {
-                _id: {
-                    organizationId: "$organizationId",
-                    currency: "$currency",
-                    eventType: "$eventType"
-                },
-                totalMinor: { $sum: "$amountMinor" },
-                count: { $sum: 1 }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    organizationId: "$_id.organizationId",
-                    currency: "$_id.currency"
-                },
-                events: {
-                    $push: {
-                        eventType: "$_id.eventType",
-                        totalMinor: "$totalMinor",
-                        count: "$count"
-                    }
-                }
-            }
-        },
-        { $sort: { "_id.organizationId": 1, "_id.currency": 1 } }
-    ]);
+  // Aggregate per org × currency × eventType in one pass
+  const rawRows = await BillingLedger.aggregate([{
+    $match: matchStage
+  }, {
+    $group: {
+      _id: {
+        organizationId: "$organizationId",
+        currency: "$currency",
+        eventType: "$eventType"
+      },
+      totalMinor: {
+        $sum: "$amountMinor"
+      },
+      count: {
+        $sum: 1
+      }
+    }
+  }, {
+    $group: {
+      _id: {
+        organizationId: "$_id.organizationId",
+        currency: "$_id.currency"
+      },
+      events: {
+        $push: {
+          eventType: "$_id.eventType",
+          totalMinor: "$totalMinor",
+          count: "$count"
+        }
+      }
+    }
+  }, {
+    $sort: {
+      "_id.organizationId": 1,
+      "_id.currency": 1
+    }
+  }]);
 
-    // ── Reshape into clean rows ────────────────────────────────────────────────
-    const rows = rawRows.map(row => {
-        const eventsMap = {};
-        for (const e of row.events) eventsMap[e.eventType] = e;
-
-        const grossMinor = eventsMap["payment.succeeded"]?.totalMinor ?? 0;
-        const refundsMinor = eventsMap["invoice.refunded"]?.totalMinor ?? 0;
-        const netMinor = grossMinor - refundsMinor;
-
-        return {
-            organizationId: String(row._id.organizationId),
-            currency: row._id.currency,
-            grossMinor,
-            refundsMinor,
-            netMinor,
-            paymentCount: eventsMap["payment.succeeded"]?.count ?? 0,
-            refundCount: eventsMap["invoice.refunded"]?.count ?? 0
-        };
-    });
-
-    const result = {
-        rows,
-        replayedAt: new Date().toISOString(),
-        windowFrom: from ? new Date(from).toISOString() : null,
-        windowTo: to ? new Date(to).toISOString() : null
+  // ── Reshape into clean rows ────────────────────────────────────────────────
+  const rows = rawRows.map(row => {
+    const eventsMap = {};
+    for (const e of row.events) eventsMap[e.eventType] = e;
+    const grossMinor = eventsMap["payment.succeeded"]?.totalMinor ?? 0;
+    const refundsMinor = eventsMap["invoice.refunded"]?.totalMinor ?? 0;
+    const netMinor = grossMinor - refundsMinor;
+    return {
+      organizationId: String(row._id.organizationId),
+      currency: row._id.currency,
+      grossMinor,
+      refundsMinor,
+      netMinor,
+      paymentCount: eventsMap["payment.succeeded"]?.count ?? 0,
+      refundCount: eventsMap["invoice.refunded"]?.count ?? 0
     };
-
-    logger.info(
-        { rowCount: rows.length, replayedAt: result.replayedAt },
-        "[BillingMonitor] Ledger revenue replay complete"
-    );
-
-    return result;
+  });
+  const result = {
+    rows,
+    replayedAt: new Date().toISOString(),
+    windowFrom: from ? new Date(from).toISOString() : null,
+    windowTo: to ? new Date(to).toISOString() : null
+  };
+  logger.info({
+    rowCount: rows.length,
+    replayedAt: result.replayedAt
+  }, "[BillingMonitor] Ledger revenue replay complete");
+  return result;
 }
 
 // ─── 3. Anomaly Detection ─────────────────────────────────────────────────────
@@ -319,251 +351,304 @@ async function replayLedgerRevenue(opts = {}) {
  * }>}
  */
 async function detectAnomalies(opts = {}) {
-    const { organizationId, from, to } = opts;
-
-    const orgFilter = organizationId
-        ? { organizationId: new mongoose.Types.ObjectId(organizationId) }
-        : {};
-
-    const dateFilter = (from || to) ? {
-        createdAt: {
-            ...(from ? { $gte: new Date(from) } : {}),
-            ...(to ? { $lte: new Date(to) } : {})
-        }
-    } : {};
-
-    // ── A: Net-negative orgs ───────────────────────────────────────────────────
-    const netNegativeOrgs = await BillingLedger.aggregate([
-        {
-            $match: {
-                ...orgFilter,
-                ...dateFilter,
-                eventType: { $in: ["payment.succeeded", "invoice.refunded"] }
-            }
-        },
-        {
-            $group: {
-                _id: { organizationId: "$organizationId", currency: "$currency" },
-                net: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ["$eventType", "payment.succeeded"] },
-                            "$amountMinor",
-                            { $multiply: ["$amountMinor", -1] }
-                        ]
-                    }
-                }
-            }
-        },
-        { $match: { net: { $lt: 0 } } },
-        { $limit: MAX_ANOMALY_SAMPLE },
-        {
-            $project: {
-                _id: 0,
-                organizationId: { $toString: "$_id.organizationId" },
-                currency: "$_id.currency",
-                netMinor: "$net",
-                anomaly: { $literal: "refund_exceeds_payment" }
-            }
-        }
-    ]);
-
-    // ── B: Negative invoices ───────────────────────────────────────────────────
-    const negativeInvoices = await PlatformInvoice.find(
-        { ...orgFilter, ...dateFilter, totalAmountMinor: { $lt: 0 } },
-        { _id: 1, organizationId: 1, contractId: 1, totalAmountMinor: 1, createdAt: 1 }
-    ).limit(MAX_ANOMALY_SAMPLE).lean();
-
-    // ── C: Orphaned invoices (no contractId) ──────────────────────────────────
-    const orphanedInvoices = await PlatformInvoice.find(
-        {
-            ...orgFilter,
-            ...dateFilter,
-            $or: [{ contractId: null }, { contractId: { $exists: false } }]
-        },
-        { _id: 1, organizationId: 1, totalAmountMinor: 1, status: 1, createdAt: 1 }
-    ).limit(MAX_ANOMALY_SAMPLE).lean();
-
-    // ── D: Paid invoices missing ledger entry ──────────────────────────────────
-    // Fetch paid invoice IDs, then find which have no matching ledger entry.
-    // Batched to avoid O(n) lookups in tests — samples up to MAX_ANOMALY_SAMPLE.
-    const paidInvoices = await PlatformInvoice.find(
-        { ...orgFilter, status: "paid" },
-        { _id: 1, organizationId: 1, totalAmountMinor: 1, paidAt: 1 }
-    ).limit(MAX_ANOMALY_SAMPLE * 2).lean();
-
-    const paidInvoiceIds = paidInvoices.map(i => i._id);
-
-    // Find which of these paid invoice IDs have a ledger entry
-    const ledgerCoveredIds = await BillingLedger.distinct("invoiceId", {
-        eventType: "payment.succeeded",
-        invoiceId: { $in: paidInvoiceIds }
-    });
-
-    const coveredSet = new Set(ledgerCoveredIds.map(String));
-    const paidInvoicesMissingLedgerEntry = paidInvoices
-        .filter(inv => !coveredSet.has(String(inv._id)))
-        .slice(0, MAX_ANOMALY_SAMPLE)
-        .map(inv => ({
-            ...inv,
-            anomaly: "paid_invoice_no_ledger_entry"
-        }));
-
-    // ── E: Duplicate invoice numbers ───────────────────────────────────────────
-    const duplicateInvoiceNumbers = await PlatformInvoice.aggregate([
-        {
-            $match: {
-                ...orgFilter,
-                ...dateFilter,
-                invoiceNumber: { $ne: null }
-            }
-        },
-        { $group: { _id: "$invoiceNumber", count: { $sum: 1 }, ids: { $push: "$_id" } } },
-        { $match: { count: { $gt: 1 } } },
-        { $limit: MAX_ANOMALY_SAMPLE },
-        {
-            $project: {
-                _id: 0,
-                invoiceNumber: "$_id",
-                count: 1,
-                invoiceIds: { $map: { input: "$ids", as: "id", in: { $toString: "$$id" } } },
-                anomaly: { $literal: "duplicate_invoice_number" }
-            }
-        }
-    ]);
-
-    // ── F: PAYMENT_WITHOUT_INVOICE ─────────────────────────────────────────────
-    // Detect successful payment ledger events that:
-    //   a) have a null / missing invoiceId, OR
-    //   b) reference an invoiceId that no longer exists in PlatformInvoice
-    // Common causes: webhook failure, partial transaction commit, deleted invoice,
-    // manual DB corruption.
-    const orphanPaymentCandidates = await BillingLedger.find(
-        {
-            ...orgFilter,
-            ...dateFilter,
-            eventType: "payment.succeeded",
-            $or: [
-                { invoiceId: null },
-                { invoiceId: { $exists: false } }
-            ]
-        },
-        { _id: 1, organizationId: 1, contractId: 1, invoiceId: 1, amountMinor: 1, currency: 1 }
-    ).limit(MAX_ANOMALY_SAMPLE).lean();
-
-    // Deeper check: find ledger entries where invoiceId is set but points to a
-    // PlatformInvoice that was deleted or never existed.
-    const ledgerWithInvoiceId = await BillingLedger.find(
-        {
-            ...orgFilter,
-            ...dateFilter,
-            eventType: "payment.succeeded",
-            invoiceId: { $exists: true, $ne: null }
-        },
-        { _id: 1, organizationId: 1, contractId: 1, invoiceId: 1, amountMinor: 1, currency: 1 }
-    ).limit(MAX_ANOMALY_SAMPLE * 2).lean();
-
-    const invoiceIdRefs = [...new Set(
-        ledgerWithInvoiceId.map(e => String(e.invoiceId))
-    )];
-    const existingInvoiceIds = invoiceIdRefs.length > 0
-        ? await PlatformInvoice.distinct("_id", { _id: { $in: invoiceIdRefs } })
-        : [];
-    const existingSet = new Set(existingInvoiceIds.map(String));
-
-    const ghostInvoicePayments = ledgerWithInvoiceId
-        .filter(e => !existingSet.has(String(e.invoiceId)))
-        .slice(0, MAX_ANOMALY_SAMPLE);
-
-    // Merge null-invoiceId + ghost-invoiceId into one flat anomaly list
-    const paymentsWithoutInvoice = [
-        ...orphanPaymentCandidates.map(p => ({
-            type: "PAYMENT_WITHOUT_INVOICE",
-            subtype: "null_invoice_id",
-            ledgerId: p._id,
-            organizationId: p.organizationId ? String(p.organizationId) : null,
-            contractId: p.contractId ? String(p.contractId) : null,
-            invoiceId: null,
-            amountMinor: p.amountMinor,
-            currency: p.currency
-        })),
-        ...ghostInvoicePayments.map(p => ({
-            type: "PAYMENT_WITHOUT_INVOICE",
-            subtype: "dangling_invoice_ref",
-            ledgerId: p._id,
-            organizationId: p.organizationId ? String(p.organizationId) : null,
-            contractId: p.contractId ? String(p.contractId) : null,
-            invoiceId: p.invoiceId ? String(p.invoiceId) : null,
-            amountMinor: p.amountMinor,
-            currency: p.currency
-        }))
-    ].slice(0, MAX_ANOMALY_SAMPLE);
-
-    // Section 9: structured per-anomaly logging — each entry includes
-    // organizationId, contractId, invoiceId, ledgerId for monitoring correlation
-    for (const anomaly of paymentsWithoutInvoice) {
-        logger.error({
-            event: "BILLING_ANOMALY_DETECTED",
-            type: anomaly.type,
-            subtype: anomaly.subtype,
-            ledgerId: anomaly.ledgerId,
-            organizationId: anomaly.organizationId,
-            contractId: anomaly.contractId,
-            invoiceId: anomaly.invoiceId,
-            amountMinor: anomaly.amountMinor,
-            currency: anomaly.currency
-        }, "[BillingMonitor] ⚠ PAYMENT_WITHOUT_INVOICE anomaly");
+  const {
+    organizationId,
+    from,
+    to
+  } = opts;
+  const orgFilter = organizationId ? {
+    organizationId: new mongoose.Types.ObjectId(organizationId)
+  } : {};
+  const dateFilter = from || to ? {
+    createdAt: {
+      ...(from ? {
+        $gte: new Date(from)
+      } : {}),
+      ...(to ? {
+        $lte: new Date(to)
+      } : {})
     }
+  } : {};
 
-    // ── Collate results ────────────────────────────────────────────────────────
-    const anomalyCount =
-        netNegativeOrgs.length +
-        negativeInvoices.length +
-        orphanedInvoices.length +
-        paidInvoicesMissingLedgerEntry.length +
-        duplicateInvoiceNumbers.length +
-        paymentsWithoutInvoice.length;
-
-    const passed = anomalyCount === 0;
-
-    const report = {
-        passed,
-        anomalyCount,
-        scannedAt: new Date().toISOString(),
-        anomalies: {
-            netNegativeOrgs,
-            negativeInvoices,
-            orphanedInvoices,
-            paidInvoicesMissingLedgerEntry,
-            duplicateInvoiceNumbers,
-            paymentsWithoutInvoice
-        }
-    };
-
-    if (!passed) {
-        logger.error(
-            {
-                anomalyCount,
-                netNegativeOrgs: netNegativeOrgs.length,
-                negativeInvoices: negativeInvoices.length,
-                orphanedInvoices: orphanedInvoices.length,
-                paidInvoicesMissingLedgerEntry: paidInvoicesMissingLedgerEntry.length,
-                duplicateInvoiceNumbers: duplicateInvoiceNumbers.length,
-                paymentsWithoutInvoice: paymentsWithoutInvoice.length,
-                context: "billingInvariantMonitor.detectAnomalies"
-            },
-            "[BillingMonitor] ⚠ Financial anomalies detected"
-        );
-    } else {
-        logger.info(
-            { context: "billingInvariantMonitor.detectAnomalies" },
-            "[BillingMonitor] Anomaly scan clean"
-        );
+  // ── A: Net-negative orgs ───────────────────────────────────────────────────
+  const netNegativeOrgs = await BillingLedger.aggregate([{
+    $match: {
+      ...orgFilter,
+      ...dateFilter,
+      eventType: {
+        $in: ["payment.succeeded", "invoice.refunded"]
+      }
     }
+  }, {
+    $group: {
+      _id: {
+        organizationId: "$organizationId",
+        currency: "$currency"
+      },
+      net: {
+        $sum: {
+          $cond: [{
+            $eq: ["$eventType", "payment.succeeded"]
+          }, "$amountMinor", {
+            $multiply: ["$amountMinor", -1]
+          }]
+        }
+      }
+    }
+  }, {
+    $match: {
+      net: {
+        $lt: 0
+      }
+    }
+  }, {
+    $limit: MAX_ANOMALY_SAMPLE
+  }, {
+    $project: {
+      _id: 0,
+      organizationId: {
+        $toString: "$_id.organizationId"
+      },
+      currency: "$_id.currency",
+      netMinor: "$net",
+      anomaly: {
+        $literal: "refund_exceeds_payment"
+      }
+    }
+  }]);
 
-    return report;
+  // ── B: Negative invoices ───────────────────────────────────────────────────
+  const negativeInvoices = await PlatformInvoice.find({
+    ...orgFilter,
+    ...dateFilter,
+    totalAmountMinor: {
+      $lt: 0
+    }
+  }, {
+    _id: 1,
+    organizationId: 1,
+    contractId: 1,
+    totalAmountMinor: 1,
+    createdAt: 1
+  }).limit(MAX_ANOMALY_SAMPLE).lean();
+
+  // ── C: Orphaned invoices (no contractId) ──────────────────────────────────
+  const orphanedInvoices = await PlatformInvoice.find({
+    ...orgFilter,
+    ...dateFilter,
+    $or: [{
+      contractId: null
+    }, {
+      contractId: {
+        $exists: false
+      }
+    }]
+  }, {
+    _id: 1,
+    organizationId: 1,
+    totalAmountMinor: 1,
+    status: 1,
+    createdAt: 1
+  }).limit(MAX_ANOMALY_SAMPLE).lean();
+
+  // ── D: Paid invoices missing ledger entry ──────────────────────────────────
+  // Fetch paid invoice IDs, then find which have no matching ledger entry.
+  // Batched to avoid O(n) lookups in tests — samples up to MAX_ANOMALY_SAMPLE.
+  const paidInvoices = await PlatformInvoice.find({
+    ...orgFilter,
+    status: "paid"
+  }, {
+    _id: 1,
+    organizationId: 1,
+    totalAmountMinor: 1,
+    paidAt: 1
+  }).limit(MAX_ANOMALY_SAMPLE * 2).lean();
+  const paidInvoiceIds = paidInvoices.map(i => i._id);
+
+  // Find which of these paid invoice IDs have a ledger entry
+  const ledgerCoveredIds = await BillingLedger.distinct("invoiceId", {
+    eventType: "payment.succeeded",
+    invoiceId: {
+      $in: paidInvoiceIds
+    }
+  });
+  const coveredSet = new Set(ledgerCoveredIds.map(String));
+  const paidInvoicesMissingLedgerEntry = paidInvoices.filter(inv => !coveredSet.has(String(inv._id))).slice(0, MAX_ANOMALY_SAMPLE).map(inv => ({
+    ...inv,
+    anomaly: "paid_invoice_no_ledger_entry"
+  }));
+
+  // ── E: Duplicate invoice numbers ───────────────────────────────────────────
+  const duplicateInvoiceNumbers = await PlatformInvoice.aggregate([{
+    $match: {
+      ...orgFilter,
+      ...dateFilter,
+      invoiceNumber: {
+        $ne: null
+      }
+    }
+  }, {
+    $group: {
+      _id: "$invoiceNumber",
+      count: {
+        $sum: 1
+      },
+      ids: {
+        $push: "$_id"
+      }
+    }
+  }, {
+    $match: {
+      count: {
+        $gt: 1
+      }
+    }
+  }, {
+    $limit: MAX_ANOMALY_SAMPLE
+  }, {
+    $project: {
+      _id: 0,
+      invoiceNumber: "$_id",
+      count: 1,
+      invoiceIds: {
+        $map: {
+          input: "$ids",
+          as: "id",
+          in: {
+            $toString: "$$id"
+          }
+        }
+      },
+      anomaly: {
+        $literal: "duplicate_invoice_number"
+      }
+    }
+  }]);
+
+  // ── F: PAYMENT_WITHOUT_INVOICE ─────────────────────────────────────────────
+  // Detect successful payment ledger events that:
+  //   a) have a null / missing invoiceId, OR
+  //   b) reference an invoiceId that no longer exists in PlatformInvoice
+  // Common causes: webhook failure, partial transaction commit, deleted invoice,
+  // manual DB corruption.
+  const orphanPaymentCandidates = await BillingLedger.find({
+    ...orgFilter,
+    ...dateFilter,
+    eventType: "payment.succeeded",
+    $or: [{
+      invoiceId: null
+    }, {
+      invoiceId: {
+        $exists: false
+      }
+    }]
+  }, {
+    _id: 1,
+    organizationId: 1,
+    contractId: 1,
+    invoiceId: 1,
+    amountMinor: 1,
+    currency: 1
+  }).limit(MAX_ANOMALY_SAMPLE).lean();
+
+  // Deeper check: find ledger entries where invoiceId is set but points to a
+  // PlatformInvoice that was deleted or never existed.
+  const ledgerWithInvoiceId = await BillingLedger.find({
+    ...orgFilter,
+    ...dateFilter,
+    eventType: "payment.succeeded",
+    invoiceId: {
+      $exists: true,
+      $ne: null
+    }
+  }, {
+    _id: 1,
+    organizationId: 1,
+    contractId: 1,
+    invoiceId: 1,
+    amountMinor: 1,
+    currency: 1
+  }).limit(MAX_ANOMALY_SAMPLE * 2).lean();
+  const invoiceIdRefs = [...new Set(ledgerWithInvoiceId.map(e => String(e.invoiceId)))];
+  const existingInvoiceIds = invoiceIdRefs.length > 0 ? await PlatformInvoice.distinct("_id", {
+    _id: {
+      $in: invoiceIdRefs
+    }
+  }) : [];
+  const existingSet = new Set(existingInvoiceIds.map(String));
+  const ghostInvoicePayments = ledgerWithInvoiceId.filter(e => !existingSet.has(String(e.invoiceId))).slice(0, MAX_ANOMALY_SAMPLE);
+
+  // Merge null-invoiceId + ghost-invoiceId into one flat anomaly list
+  const paymentsWithoutInvoice = [...orphanPaymentCandidates.map(p => ({
+    type: "PAYMENT_WITHOUT_INVOICE",
+    subtype: "null_invoice_id",
+    ledgerId: p._id,
+    organizationId: p.organizationId ? String(p.organizationId) : null,
+    contractId: p.contractId ? String(p.contractId) : null,
+    invoiceId: null,
+    amountMinor: p.amountMinor,
+    currency: p.currency
+  })), ...ghostInvoicePayments.map(p => ({
+    type: "PAYMENT_WITHOUT_INVOICE",
+    subtype: "dangling_invoice_ref",
+    ledgerId: p._id,
+    organizationId: p.organizationId ? String(p.organizationId) : null,
+    contractId: p.contractId ? String(p.contractId) : null,
+    invoiceId: p.invoiceId ? String(p.invoiceId) : null,
+    amountMinor: p.amountMinor,
+    currency: p.currency
+  }))].slice(0, MAX_ANOMALY_SAMPLE);
+
+  // Section 9: structured per-anomaly logging — each entry includes
+  // organizationId, contractId, invoiceId, ledgerId for monitoring correlation
+  for (const anomaly of paymentsWithoutInvoice) {
+    logger.error({
+      event: "BILLING_ANOMALY_DETECTED",
+      type: anomaly.type,
+      subtype: anomaly.subtype,
+      ledgerId: anomaly.ledgerId,
+      organizationId: anomaly.organizationId,
+      contractId: anomaly.contractId,
+      invoiceId: anomaly.invoiceId,
+      amountMinor: anomaly.amountMinor,
+      currency: anomaly.currency
+    }, "[BillingMonitor] ⚠ PAYMENT_WITHOUT_INVOICE anomaly");
+  }
+
+  // ── Collate results ────────────────────────────────────────────────────────
+  const anomalyCount = netNegativeOrgs.length + negativeInvoices.length + orphanedInvoices.length + paidInvoicesMissingLedgerEntry.length + duplicateInvoiceNumbers.length + paymentsWithoutInvoice.length;
+  const passed = anomalyCount === 0;
+  const report = {
+    passed,
+    anomalyCount,
+    scannedAt: new Date().toISOString(),
+    anomalies: {
+      netNegativeOrgs,
+      negativeInvoices,
+      orphanedInvoices,
+      paidInvoicesMissingLedgerEntry,
+      duplicateInvoiceNumbers,
+      paymentsWithoutInvoice
+    }
+  };
+  if (!passed) {
+    logger.error({
+      anomalyCount,
+      netNegativeOrgs: netNegativeOrgs.length,
+      negativeInvoices: negativeInvoices.length,
+      orphanedInvoices: orphanedInvoices.length,
+      paidInvoicesMissingLedgerEntry: paidInvoicesMissingLedgerEntry.length,
+      duplicateInvoiceNumbers: duplicateInvoiceNumbers.length,
+      paymentsWithoutInvoice: paymentsWithoutInvoice.length,
+      context: "billingInvariantMonitor.detectAnomalies"
+    }, "[BillingMonitor] ⚠ Financial anomalies detected");
+  } else {
+    logger.info({
+      context: "billingInvariantMonitor.detectAnomalies"
+    }, "[BillingMonitor] Anomaly scan clean");
+  }
+  return report;
 }
-
 
 // ─── 4. Full Integrity Check (all three combined) ─────────────────────────────
 
@@ -586,73 +671,91 @@ async function detectAnomalies(opts = {}) {
  * }>}
  */
 async function runFullIntegrityCheck(opts = {}) {
-    const correlationId = opts.correlationId || `integrity-${Date.now()}`;
-    const ranAt = new Date().toISOString();
-
-    logger.info(
-        { correlationId, ranAt },
-        "[BillingMonitor] Starting full integrity check"
-    );
-
-    const [paymentTotals, revenueReplay, anomalyDetection] = await Promise.all([
-        checkPaymentTotals(opts).catch(err => {
-            logger.error({ err, correlationId }, "[BillingMonitor] checkPaymentTotals failed");
-            return { passed: false, error: err.message };
-        }),
-        replayLedgerRevenue(opts).catch(err => {
-            logger.error({ err, correlationId }, "[BillingMonitor] replayLedgerRevenue failed");
-            return { rows: [], error: err.message };
-        }),
-        detectAnomalies(opts).catch(err => {
-            logger.error({ err, correlationId }, "[BillingMonitor] detectAnomalies failed");
-            return { passed: false, anomalyCount: -1, error: err.message };
-        })
-    ]);
-
-    const passed = Boolean(paymentTotals.passed && anomalyDetection.passed);
-
-    // ── Section 5/8: Flat API shape for admin endpoint + scheduled job ────────────
-    // Flatten anomaly categories into a single typed array for easy consumption
-    // by the admin endpoint, the cron job logger, and monitoring dashboards.
-    const flatAnomalies = [
-        ...((anomalyDetection.anomalies?.netNegativeOrgs || []).map(a => ({ type: "NET_NEGATIVE_ORG", ...a }))),
-        ...((anomalyDetection.anomalies?.negativeInvoices || []).map(a => ({ type: "NEGATIVE_INVOICE", ...a }))),
-        ...((anomalyDetection.anomalies?.orphanedInvoices || []).map(a => ({ type: "ORPHANED_INVOICE", ...a }))),
-        ...((anomalyDetection.anomalies?.paidInvoicesMissingLedgerEntry || []).map(a => ({ type: "PAID_INVOICE_NO_LEDGER", ...a }))),
-        ...((anomalyDetection.anomalies?.duplicateInvoiceNumbers || []).map(a => ({ type: "DUPLICATE_INVOICE_NUMBER", ...a }))),
-        ...((anomalyDetection.anomalies?.paymentsWithoutInvoice || []))
-    ];
-
-    const report = {
-        // ── Section 8: flat { ok, checks, anomalies } output ──────────────────
-        ok: passed,
-        checks: {
-            paymentTotals: paymentTotals.passed ? "ok" : "failed",
-            replayRevenue: Array.isArray(revenueReplay.rows) ? "ok" : "failed",
-            anomalyDetection: anomalyDetection.passed ? "ok" : "failed"
-        },
-        anomalies: flatAnomalies,
-        // ── Full diagnostic detail (backwards-compat for test suite + cron job) ──
-        passed,
-        correlationId,
-        ranAt,
-        paymentTotals,
-        revenueReplay,
-        anomalyDetection
+  const correlationId = opts.correlationId || `integrity-${Date.now()}`;
+  const ranAt = new Date().toISOString();
+  logger.info({
+    correlationId,
+    ranAt
+  }, "[BillingMonitor] Starting full integrity check");
+  const [paymentTotals, revenueReplay, anomalyDetection] = await Promise.all([checkPaymentTotals(opts).catch(err => {
+    logger.error({
+      err,
+      correlationId
+    }, "[BillingMonitor] checkPaymentTotals failed");
+    return {
+      passed: false,
+      error: err.message
     };
+  }), replayLedgerRevenue(opts).catch(err => {
+    logger.error({
+      err,
+      correlationId
+    }, "[BillingMonitor] replayLedgerRevenue failed");
+    return {
+      rows: [],
+      error: err.message
+    };
+  }), detectAnomalies(opts).catch(err => {
+    logger.error({
+      err,
+      correlationId
+    }, "[BillingMonitor] detectAnomalies failed");
+    return {
+      passed: false,
+      anomalyCount: -1,
+      error: err.message
+    };
+  })]);
+  const passed = Boolean(paymentTotals.passed && anomalyDetection.passed);
 
-    logger.info(
-        { passed, correlationId, anomalyCount: anomalyDetection.anomalyCount },
-        `[BillingMonitor] Full integrity check ${passed ? "PASSED ✓" : "FAILED ✗"}`
-    );
-
-    return report;
+  // ── Section 5/8: Flat API shape for admin endpoint + scheduled job ────────────
+  // Flatten anomaly categories into a single typed array for easy consumption
+  // by the admin endpoint, the cron job logger, and monitoring dashboards.
+  const flatAnomalies = [...(anomalyDetection.anomalies?.netNegativeOrgs || []).map(a => ({
+    type: "NET_NEGATIVE_ORG",
+    ...a
+  })), ...(anomalyDetection.anomalies?.negativeInvoices || []).map(a => ({
+    type: "NEGATIVE_INVOICE",
+    ...a
+  })), ...(anomalyDetection.anomalies?.orphanedInvoices || []).map(a => ({
+    type: "ORPHANED_INVOICE",
+    ...a
+  })), ...(anomalyDetection.anomalies?.paidInvoicesMissingLedgerEntry || []).map(a => ({
+    type: "PAID_INVOICE_NO_LEDGER",
+    ...a
+  })), ...(anomalyDetection.anomalies?.duplicateInvoiceNumbers || []).map(a => ({
+    type: "DUPLICATE_INVOICE_NUMBER",
+    ...a
+  })), ...(anomalyDetection.anomalies?.paymentsWithoutInvoice || [])];
+  const report = {
+    // ── Section 8: flat { ok, checks, anomalies } output ──────────────────
+    ok: passed,
+    checks: {
+      paymentTotals: paymentTotals.passed ? "ok" : "failed",
+      replayRevenue: Array.isArray(revenueReplay.rows) ? "ok" : "failed",
+      anomalyDetection: anomalyDetection.passed ? "ok" : "failed"
+    },
+    anomalies: flatAnomalies,
+    // ── Full diagnostic detail (backwards-compat for test suite + cron job) ──
+    passed,
+    correlationId,
+    ranAt,
+    paymentTotals,
+    revenueReplay,
+    anomalyDetection
+  };
+  logger.info({
+    passed,
+    correlationId,
+    anomalyCount: anomalyDetection.anomalyCount
+  }, `[BillingMonitor] Full integrity check ${passed ? "PASSED ✓" : "FAILED ✗"}`);
+  return report;
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
-    checkPaymentTotals,
-    replayLedgerRevenue,
-    detectAnomalies,
-    runFullIntegrityCheck
+  checkPaymentTotals,
+  replayLedgerRevenue,
+  detectAnomalies,
+  runFullIntegrityCheck
 };

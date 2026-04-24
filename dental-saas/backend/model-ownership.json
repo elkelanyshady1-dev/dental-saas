@@ -1,0 +1,1104 @@
+{
+  "generatedAt": "2026-04-24T00:25:56.351Z",
+  "total": 203,
+  "byPlane": {
+    "platform": 72,
+    "shared": 10,
+    "tenant": 121
+  },
+  "warnings": [
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\accountingDomain\\dlq\\FailedEvent.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\accountingDomain\\projections\\_meta\\EventProcessingLog.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\clinicalProtocolDomain\\clinicalExtensions\\orthoExtension\\ortho.models.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\clinicalProtocolDomain\\models\\SCPEModels.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\inventoryDomain\\models\\InventoryModels.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\orthodontics\\models\\CaseRecordSet.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\modules\\orthodontics\\models\\VisitDraft.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\organization\\models\\Lead.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\organization\\models\\Patient.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\organization\\models\\SiteContent.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\platform\\domain\\models\\plan.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\Appointment.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\BillingInvoice.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\CommunicationUsage.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\Patient.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\Plan.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\Region.model.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\StorageUsage.js",
+      "reason": "no modelName extracted — derived from filename"
+    },
+    {
+      "file": "C:\\Clinic system project\\dental-saas\\backend\\src\\shared\\models\\SubscriptionMutationRecord.js",
+      "reason": "no modelName extracted — derived from filename"
+    }
+  ],
+  "models": {
+    "src/core/EventOutbox.model.js": {
+      "modelName": "EventOutbox",
+      "plane": "platform",
+      "rule": "path:src/core (default = platform)"
+    },
+    "src/core/eventProcessingLedger.model.js": {
+      "modelName": "EventProcessingLedger",
+      "plane": "platform",
+      "rule": "path:src/core (default = platform)"
+    },
+    "src/core/IdempotencyKey.model.js": {
+      "modelName": "IdempotencyKey",
+      "plane": "shared",
+      "rule": "explicit:IdempotencyKey=shared"
+    },
+    "src/core/outbox/EventOutbox.model.js": {
+      "modelName": "EventOutbox",
+      "plane": "shared",
+      "rule": "path:src/core + outbox/idempotency"
+    },
+    "src/core/outbox/Outbox.model.js": {
+      "modelName": "Outbox",
+      "plane": "shared",
+      "rule": "explicit:Outbox=shared"
+    },
+    "src/core/storage/models/organizationStorageUsage.model.js": {
+      "modelName": "OrganizationStorageUsage",
+      "plane": "platform",
+      "rule": "path:src/core (default = platform)"
+    },
+    "src/core/usage/OrgStorageAlertState.model.js": {
+      "modelName": "OrgStorageAlertState",
+      "plane": "platform",
+      "rule": "explicit:OrgStorageAlertState=platform"
+    },
+    "src/core/usage/OrgUsage.model.js": {
+      "modelName": "OrgUsage",
+      "plane": "platform",
+      "rule": "explicit:OrgUsage=platform"
+    },
+    "src/modules/accountingDomain/dlq/FailedEvent.model.js": {
+      "modelName": "FailedEvent",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/accountingDomain/projections/_meta/EventProcessingLog.model.js": {
+      "modelName": "EventProcessingLog",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/alignerProductionDomain/models/alignerProductionCase.model.js": {
+      "modelName": "AlignerProductionCase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/alignerProductionDomain/models/alignerShareToken.model.js": {
+      "modelName": "AlignerShareToken",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/analyticsDomain/analytics.layout.model.js": {
+      "modelName": "AnalyticsLayout",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/auth/magicToken.model.js": {
+      "modelName": "MagicToken",
+      "plane": "platform",
+      "rule": "explicit:MagicToken=platform"
+    },
+    "src/modules/auth/otp.model.js": {
+      "modelName": "OtpRecord",
+      "plane": "platform",
+      "rule": "explicit:OtpRecord=platform"
+    },
+    "src/modules/auth/rateLimiter.model.js": {
+      "modelName": "RateLimitEntry",
+      "plane": "shared",
+      "rule": "explicit:RateLimitEntry=shared"
+    },
+    "src/modules/billingDomain/models/JournalEntry.model.js": {
+      "modelName": "JournalEntry",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/ClinicBillingSettings.model.js": {
+      "modelName": "ClinicBillingSettings",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/FinancialLedger.model.js": {
+      "modelName": "FinancialLedger",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/PatientInvoice.model.js": {
+      "modelName": "PatientInvoice",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/PatientPayment.model.js": {
+      "modelName": "PatientPayment",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/PatientQuotation.model.js": {
+      "modelName": "PatientQuotation",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/PatientWallet.model.js": {
+      "modelName": "PatientWallet",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/PaymentAllocation.model.js": {
+      "modelName": "PaymentAllocation",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/TreatmentInvoice.model.js": {
+      "modelName": "DoctorInvoice",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/organizationFinance/models/WalletTransaction.model.js": {
+      "modelName": "WalletTransaction",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/projections/snapshot/FinancialEventLedger.model.js": {
+      "modelName": "FinancialEventLedger",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/projections/snapshot/FinancialSnapshot.model.js": {
+      "modelName": "FinancialSnapshot",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/refunds/Refund.model.js": {
+      "modelName": "Refund",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/billingDomain/resilience/JournalRetry.model.js": {
+      "modelName": "JournalRetry",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/booking/bookingRequest.model.js": {
+      "modelName": "BookingRequest",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/clinicalProtocolDomain/clinicalExtensions/orthoExtension/ortho.models.js": {
+      "modelName": "ortho",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/clinicalProtocolDomain/models/ClinicalMediaAsset.js": {
+      "modelName": "ClinicalMediaAsset",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/clinicalProtocolDomain/models/SCPEModels.js": {
+      "modelName": "SCPEModels",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/communicationDomain/models/communicationUsage.model.js": {
+      "modelName": "CommunicationUsage",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/documentEngineDomain/models/documentTemplate.model.js": {
+      "modelName": "DocumentTemplate",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/documentEngineDomain/models/printLog.model.js": {
+      "modelName": "PrintLog",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/documentEngineDomain/models/printSetting.model.js": {
+      "modelName": "PrintSetting",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/file/models/FileObject.model.js": {
+      "modelName": "FileObject",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/files/models/File.model.js": {
+      "modelName": "File",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/intelligenceDomain/config/intelligenceWeights.model.js": {
+      "modelName": "IntelligenceWeights",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/caseCostSnapshot.model.js": {
+      "modelName": "CaseCostSnapshot",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/inventoryAlertsProjection.model.js": {
+      "modelName": "InventoryAlertsProjection",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/inventoryDashboardProjection.model.js": {
+      "modelName": "InventoryDashboardProjection",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/inventoryItem.model.js": {
+      "modelName": "InventoryItem",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/InventoryModels.js": {
+      "modelName": "InventoryModels",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/inventoryDomain/models/inventoryTransaction.model.js": {
+      "modelName": "InventoryTransaction",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/purchaseOrder.model.js": {
+      "modelName": "PurchaseOrder",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/stockMovement.model.js": {
+      "modelName": "StockMovement",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/inventoryDomain/models/usageLog.model.js": {
+      "modelName": "UsageLog",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/labDomain/models/labCase.model.js": {
+      "modelName": "LabCase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/labDomain/models/labClaim.model.js": {
+      "modelName": "LabClaim",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/labDomain/models/labMessage.model.js": {
+      "modelName": "LabMessage",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/labDomain/models/labPartner.model.js": {
+      "modelName": "LabPartner",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/notificationDomain/notification.model.js": {
+      "modelName": "Notification",
+      "plane": "tenant",
+      "rule": "explicit:Notification=tenant"
+    },
+    "src/modules/ortho-todos/models/orthoTodo.model.js": {
+      "modelName": "OrthoTodo",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/AlignerPlan.model.js": {
+      "modelName": "AlignerPlan",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/Bonding.model.js": {
+      "modelName": "Bonding",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/BondingSettings.model.js": {
+      "modelName": "BondingSettings",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/CasePhase.model.js": {
+      "modelName": "CasePhase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/CaseRecordSet.model.js": {
+      "modelName": "CaseRecordSet",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/orthodontics/models/CaseSequence.model.js": {
+      "modelName": "CaseSequence",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/CastAnalysis.model.js": {
+      "modelName": "CastAnalysis",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/CephAnalysis.model.js": {
+      "modelName": "CephAnalysis",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/ClinicalAction.model.js": {
+      "modelName": "ClinicalAction",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/ClinicalEvent.model.js": {
+      "modelName": "ClinicalEvent",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/ClinicalSnapshot.model.js": {
+      "modelName": "ClinicalSnapshot",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/imagePoolPhoto.model.js": {
+      "modelName": "ImagePoolPhoto",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/orthodonticCase.model.js": {
+      "modelName": "OrthodonticCase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/orthodonticStageMetadata.model.js": {
+      "modelName": "OrthodonticStageMetadata",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/Photo.model.js": {
+      "modelName": "Photo",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/PlanIdempotencyRecord.model.js": {
+      "modelName": "PlanIdempotencyRecord",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/ScanFile.model.js": {
+      "modelName": "ScanFile",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/SequencePlan.model.js": {
+      "modelName": "SequencePlan",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/SharedCase.model.js": {
+      "modelName": "SharedCase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/SharedCaseComment.model.js": {
+      "modelName": "SharedCaseComment",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/Tad.model.js": {
+      "modelName": "Tad",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/TadSettings.model.js": {
+      "modelName": "TadSettings",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/ToothSegmentation.model.js": {
+      "modelName": "ToothSegmentation",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/TreatmentPlanVersion.model.js": {
+      "modelName": "TreatmentPlanVersion",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/VisitDraft.model.js": {
+      "modelName": "VisitDraft",
+      "plane": "tenant",
+      "rule": "path:src/modules (name derived)"
+    },
+    "src/modules/orthodontics/models/VisitRecord.model.js": {
+      "modelName": "VisitRecord",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/WorkflowRecordSet.model.js": {
+      "modelName": "WorkflowRecordSet",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/orthodontics/models/WorkflowSnapshot.model.js": {
+      "modelName": "WorkflowSnapshot",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/access/patientUser.model.js": {
+      "modelName": "PatientUser",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/access/portalInvite.model.js": {
+      "modelName": "PortalInvite",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/clinical/clinical.model.js": {
+      "modelName": "ClinicalRecord",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/clinical/prescription.model.js": {
+      "modelName": "Prescription",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/core/branchCounter.model.js": {
+      "modelName": "BranchCounter",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/intake/patientIntakeToken.model.js": {
+      "modelName": "PatientIntakeToken",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientDomain/policies/patientPolicy.model.js": {
+      "modelName": "PatientPolicy",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientPortal/models/AlignerProgress.model.js": {
+      "modelName": "AlignerProgress",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientPortal/models/MonitoringSession.model.js": {
+      "modelName": "MonitoringSession",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientPortal/models/PatientMessage.model.js": {
+      "modelName": "PatientMessage",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/patientPortal/models/PatientPhoto.model.js": {
+      "modelName": "PatientPhoto",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/procedures/models/Procedure.model.js": {
+      "modelName": "Procedure",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/stageDomain/models/stageExecution.model.js": {
+      "modelName": "StageExecution",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/stageDomain/models/stageTemplate.model.js": {
+      "modelName": "StageTemplate",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/stageDomain/models/stageTemplateOverride.model.js": {
+      "modelName": "StageTemplateOverride",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/stageDomain/models/treatmentCase.model.js": {
+      "modelName": "TreatmentCase",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supervisor/models/CaseAccess.js": {
+      "modelName": "CaseAccess",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supervisor/models/ReviewComment.js": {
+      "modelName": "ReviewComment",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supervisor/models/ReviewStage.js": {
+      "modelName": "ReviewStage",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supervisor/models/SupervisorInvitation.js": {
+      "modelName": "SupervisorInvitation",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supervisor/models/SupervisorUser.js": {
+      "modelName": "SupervisorUser",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supportDomain/models/SupportSettings.model.js": {
+      "modelName": "SupportSettings",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/supportDomain/models/TicketMessage.model.js": {
+      "modelName": "TicketMessage",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatment-catalog/infrastructure/models/TreatmentCategory.model.js": {
+      "modelName": "TreatmentCategory",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatment-catalog/infrastructure/models/TreatmentProcedure.model.js": {
+      "modelName": "TreatmentProcedure",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatments/infrastructure/models/TreatmentCategory.model.js": {
+      "modelName": "TreatmentCategory",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatments/infrastructure/models/TreatmentProcedure.model.js": {
+      "modelName": "TreatmentProcedure",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatments/models/Treatment.model.js": {
+      "modelName": "Treatment",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/modules/treatments/models/TreatmentPlan.model.js": {
+      "modelName": "TreatmentPlan",
+      "plane": "tenant",
+      "rule": "path:src/modules"
+    },
+    "src/organization/appointment/models/appointment.model.js": {
+      "modelName": "Appointment",
+      "plane": "tenant",
+      "rule": "explicit:Appointment=tenant"
+    },
+    "src/organization/billing/models/orgAddOn.model.js": {
+      "modelName": "OrgAddOn",
+      "plane": "tenant",
+      "rule": "explicit:OrgAddOn=tenant"
+    },
+    "src/organization/models/Chair.js": {
+      "modelName": "Chair",
+      "plane": "tenant",
+      "rule": "explicit:Chair=tenant"
+    },
+    "src/organization/models/Family.js": {
+      "modelName": "Family",
+      "plane": "tenant",
+      "rule": "explicit:Family=tenant"
+    },
+    "src/organization/models/FamilyMember.js": {
+      "modelName": "FamilyMember",
+      "plane": "tenant",
+      "rule": "explicit:FamilyMember=tenant"
+    },
+    "src/organization/models/Lead.js": {
+      "modelName": "Lead",
+      "plane": "platform",
+      "rule": "explicit:Lead=platform (name derived)"
+    },
+    "src/organization/models/Notification.js": {
+      "modelName": "Notification",
+      "plane": "tenant",
+      "rule": "explicit:Notification=tenant"
+    },
+    "src/organization/models/OrganizationSettings.js": {
+      "modelName": "OrganizationSettings",
+      "plane": "tenant",
+      "rule": "explicit:OrganizationSettings=tenant"
+    },
+    "src/organization/models/Patient.js": {
+      "modelName": "Patient",
+      "plane": "tenant",
+      "rule": "explicit:Patient=tenant (name derived)"
+    },
+    "src/organization/models/Recall.js": {
+      "modelName": "Recall",
+      "plane": "tenant",
+      "rule": "explicit:Recall=tenant"
+    },
+    "src/organization/models/SignupIdempotency.model.js": {
+      "modelName": "SignupIdempotency",
+      "plane": "tenant",
+      "rule": "explicit:SignupIdempotency=tenant"
+    },
+    "src/organization/models/SiteContent.js": {
+      "modelName": "SiteContent",
+      "plane": "platform",
+      "rule": "explicit:SiteContent=platform (name derived)"
+    },
+    "src/organization/patient/models/patient.model.js": {
+      "modelName": "Patient",
+      "plane": "tenant",
+      "rule": "explicit:Patient=tenant"
+    },
+    "src/organization/security/models/PolicyVersion.js": {
+      "modelName": "PolicyVersion",
+      "plane": "tenant",
+      "rule": "explicit:PolicyVersion=tenant"
+    },
+    "src/organization/security/models/SecurityAlert.js": {
+      "modelName": "SecurityAlert",
+      "plane": "tenant",
+      "rule": "explicit:SecurityAlert=tenant"
+    },
+    "src/orgRuntime/models/OrganizationModuleState.model.js": {
+      "modelName": "OrganizationModuleState",
+      "plane": "tenant",
+      "rule": "path:src/orgRuntime (per-org runtime state)"
+    },
+    "src/platform/billing/models/BillingAuditLog.model.js": {
+      "modelName": "BillingAuditLog",
+      "plane": "platform",
+      "rule": "explicit:BillingAuditLog=platform"
+    },
+    "src/platform/billing/models/BillingControl.model.js": {
+      "modelName": "BillingControl",
+      "plane": "platform",
+      "rule": "explicit:BillingControl=platform"
+    },
+    "src/platform/billing/models/BillingLedger.model.js": {
+      "modelName": "BillingLedger",
+      "plane": "platform",
+      "rule": "explicit:BillingLedger=platform"
+    },
+    "src/platform/billing/models/BillingSettings.model.js": {
+      "modelName": "BillingSettings",
+      "plane": "platform",
+      "rule": "explicit:BillingSettings=platform"
+    },
+    "src/platform/billing/models/BillingTimeline.model.js": {
+      "modelName": "BillingTimeline",
+      "plane": "platform",
+      "rule": "explicit:BillingTimeline=platform"
+    },
+    "src/platform/billing/models/FeatureFlag.model.js": {
+      "modelName": "FeatureFlag",
+      "plane": "platform",
+      "rule": "explicit:FeatureFlag=platform"
+    },
+    "src/platform/billing/models/InvoiceSequence.model.js": {
+      "modelName": "InvoiceSequence",
+      "plane": "platform",
+      "rule": "explicit:InvoiceSequence=platform"
+    },
+    "src/platform/billing/models/LedgerAccount.model.js": {
+      "modelName": "LedgerAccount",
+      "plane": "platform",
+      "rule": "explicit:LedgerAccount=platform"
+    },
+    "src/platform/billing/models/LedgerTransaction.model.js": {
+      "modelName": "LedgerTransaction",
+      "plane": "platform",
+      "rule": "explicit:LedgerTransaction=platform"
+    },
+    "src/platform/billing/models/orgAddOn.model.js": {
+      "modelName": "OrgAddOn",
+      "plane": "tenant",
+      "rule": "explicit:OrgAddOn=tenant"
+    },
+    "src/platform/billing/models/OrganizationEntitlement.model.js": {
+      "modelName": "OrganizationEntitlement",
+      "plane": "platform",
+      "rule": "explicit:OrganizationEntitlement=platform"
+    },
+    "src/platform/billing/models/OrgContract.model.js": {
+      "modelName": "OrgContract",
+      "plane": "platform",
+      "rule": "explicit:OrgContract=platform"
+    },
+    "src/platform/billing/models/PaymentAttempt.model.js": {
+      "modelName": "PaymentAttempt",
+      "plane": "platform",
+      "rule": "explicit:PaymentAttempt=platform"
+    },
+    "src/platform/billing/models/PlanTemplate.model.js": {
+      "modelName": "PlanTemplate",
+      "plane": "platform",
+      "rule": "explicit:PlanTemplate=platform"
+    },
+    "src/platform/billing/models/PlanVersion.model.js": {
+      "modelName": "PlanVersion",
+      "plane": "platform",
+      "rule": "explicit:PlanVersion=platform"
+    },
+    "src/platform/billing/models/PlatformInvoice.model.js": {
+      "modelName": "PlatformInvoice",
+      "plane": "platform",
+      "rule": "explicit:PlatformInvoice=platform"
+    },
+    "src/platform/billing/models/RevenueSnapshotProjection.model.js": {
+      "modelName": "RevenueSnapshotProjection",
+      "plane": "platform",
+      "rule": "explicit:RevenueSnapshotProjection=platform"
+    },
+    "src/platform/billing/models/SubscriptionMutationRecord.model.js": {
+      "modelName": "SubscriptionMutationRecord",
+      "plane": "platform",
+      "rule": "explicit:SubscriptionMutationRecord=platform"
+    },
+    "src/platform/billing/observability/observabilityEvent.model.js": {
+      "modelName": "ObservabilityEvent",
+      "plane": "platform",
+      "rule": "path:src/platform"
+    },
+    "src/platform/domain/models/addOn.model.js": {
+      "modelName": "AddOn",
+      "plane": "platform",
+      "rule": "path:src/platform"
+    },
+    "src/platform/domain/models/campaign.model.js": {
+      "modelName": "Campaign",
+      "plane": "platform",
+      "rule": "path:src/platform"
+    },
+    "src/platform/domain/models/Cluster.model.js": {
+      "modelName": "Cluster",
+      "plane": "platform",
+      "rule": "explicit:Cluster=platform"
+    },
+    "src/platform/domain/models/coupon.model.js": {
+      "modelName": "Coupon",
+      "plane": "platform",
+      "rule": "path:src/platform"
+    },
+    "src/platform/domain/models/FeatureDefinition.model.js": {
+      "modelName": "FeatureDefinition",
+      "plane": "platform",
+      "rule": "explicit:FeatureDefinition=platform"
+    },
+    "src/platform/domain/models/MigrationLog.model.js": {
+      "modelName": "MigrationLog",
+      "plane": "platform",
+      "rule": "explicit:MigrationLog=platform"
+    },
+    "src/platform/domain/models/ModuleDefinition.model.js": {
+      "modelName": "ModuleDefinition",
+      "plane": "platform",
+      "rule": "explicit:ModuleDefinition=platform"
+    },
+    "src/platform/domain/models/plan.model.js": {
+      "modelName": "plan",
+      "plane": "platform",
+      "rule": "path:src/platform (name derived)"
+    },
+    "src/platform/domain/models/Region.model.js": {
+      "modelName": "Region",
+      "plane": "platform",
+      "rule": "explicit:Region=platform"
+    },
+    "src/platform/domain/models/revenueAnalytics.model.js": {
+      "modelName": "RevenueAnalytics",
+      "plane": "platform",
+      "rule": "path:src/platform"
+    },
+    "src/platform/finance/models/ExchangeRate.model.js": {
+      "modelName": "ExchangeRate",
+      "plane": "platform",
+      "rule": "explicit:ExchangeRate=platform"
+    },
+    "src/platform/finance/models/RevenueSchedule.model.js": {
+      "modelName": "RevenueSchedule",
+      "plane": "platform",
+      "rule": "explicit:RevenueSchedule=platform"
+    },
+    "src/platform/guardian/models/GuardianAuditLog.model.js": {
+      "modelName": "GuardianAuditLog",
+      "plane": "platform",
+      "rule": "explicit:GuardianAuditLog=platform"
+    },
+    "src/platform/models/CommunicationLog.model.js": {
+      "modelName": "CommunicationLog",
+      "plane": "shared",
+      "rule": "explicit:CommunicationLog=shared"
+    },
+    "src/platform/models/CommunicationMetrics.model.js": {
+      "modelName": "CommunicationMetrics",
+      "plane": "shared",
+      "rule": "explicit:CommunicationMetrics=shared"
+    },
+    "src/platform/models/CommunicationRetryLog.model.js": {
+      "modelName": "CommunicationRetryLog",
+      "plane": "shared",
+      "rule": "explicit:CommunicationRetryLog=shared"
+    },
+    "src/platform/models/EmailEvent.model.js": {
+      "modelName": "EmailEvent",
+      "plane": "shared",
+      "rule": "explicit:EmailEvent=shared"
+    },
+    "src/platform/models/EmailTemplate.model.js": {
+      "modelName": "EmailTemplate",
+      "plane": "platform",
+      "rule": "explicit:EmailTemplate=platform"
+    },
+    "src/platform/models/PlatformCapability.js": {
+      "modelName": "PlatformCapability",
+      "plane": "platform",
+      "rule": "explicit:PlatformCapability=platform"
+    },
+    "src/platform/models/PlatformConfig.js": {
+      "modelName": "PlatformConfig",
+      "plane": "platform",
+      "rule": "explicit:PlatformConfig=platform"
+    },
+    "src/platform/models/PlatformNotification.js": {
+      "modelName": "PlatformNotification",
+      "plane": "platform",
+      "rule": "explicit:PlatformNotification=platform"
+    },
+    "src/platform/models/PlatformRole.js": {
+      "modelName": "PlatformRole",
+      "plane": "platform",
+      "rule": "explicit:PlatformRole=platform"
+    },
+    "src/platform/models/PlatformUser.js": {
+      "modelName": "PlatformUser",
+      "plane": "platform",
+      "rule": "explicit:PlatformUser=platform"
+    },
+    "src/platform/outbox/SideEffectOutbox.model.js": {
+      "modelName": "SideEffectOutbox",
+      "plane": "shared",
+      "rule": "explicit:SideEffectOutbox=shared"
+    },
+    "src/platform/shareLink/ShareLink.model.js": {
+      "modelName": "ShareLink",
+      "plane": "platform",
+      "rule": "explicit:ShareLink=platform"
+    },
+    "src/shared/models/Appointment.js": {
+      "modelName": "Appointment",
+      "plane": "tenant",
+      "rule": "explicit:Appointment=tenant (name derived)"
+    },
+    "src/shared/models/AuditLog.js": {
+      "modelName": "AuditLog",
+      "plane": "platform",
+      "rule": "explicit:AuditLog=platform"
+    },
+    "src/shared/models/AuthTrace.js": {
+      "modelName": "AuthTrace",
+      "plane": "platform",
+      "rule": "explicit:AuthTrace=platform"
+    },
+    "src/shared/models/BillingEventLog.js": {
+      "modelName": "BillingEventLog",
+      "plane": "platform",
+      "rule": "explicit:BillingEventLog=platform"
+    },
+    "src/shared/models/BillingInvoice.js": {
+      "modelName": "BillingInvoice",
+      "plane": "platform",
+      "rule": "explicit:BillingInvoice=platform (name derived)"
+    },
+    "src/shared/models/Branch.js": {
+      "modelName": "Branch",
+      "plane": "platform",
+      "rule": "path:src/shared (most shared models are platform)"
+    },
+    "src/shared/models/CommunicationUsage.js": {
+      "modelName": "CommunicationUsage",
+      "plane": "platform",
+      "rule": "path:src/shared (most shared models are platform) (name derived)"
+    },
+    "src/shared/models/CronLock.js": {
+      "modelName": "CronLock",
+      "plane": "platform",
+      "rule": "explicit:CronLock=platform"
+    },
+    "src/shared/models/DomainEventOutbox.js": {
+      "modelName": "DomainEventOutbox",
+      "plane": "shared",
+      "rule": "explicit:DomainEventOutbox=shared"
+    },
+    "src/shared/models/FeatureDefinition.js": {
+      "modelName": "FeatureDefinition",
+      "plane": "platform",
+      "rule": "explicit:FeatureDefinition=platform"
+    },
+    "src/shared/models/KashierEvent.js": {
+      "modelName": "KashierEvent",
+      "plane": "platform",
+      "rule": "explicit:KashierEvent=platform"
+    },
+    "src/shared/models/Lead.js": {
+      "modelName": "Lead",
+      "plane": "platform",
+      "rule": "explicit:Lead=platform"
+    },
+    "src/shared/models/OrgAddOn.js": {
+      "modelName": "OrgAddOn",
+      "plane": "tenant",
+      "rule": "explicit:OrgAddOn=tenant"
+    },
+    "src/shared/models/Organization.js": {
+      "modelName": "Organization",
+      "plane": "platform",
+      "rule": "explicit:Organization=platform"
+    },
+    "src/shared/models/PasswordResetToken.js": {
+      "modelName": "PasswordResetToken",
+      "plane": "platform",
+      "rule": "explicit:PasswordResetToken=platform"
+    },
+    "src/shared/models/Patient.js": {
+      "modelName": "Patient",
+      "plane": "tenant",
+      "rule": "explicit:Patient=tenant (name derived)"
+    },
+    "src/shared/models/PermissionChangeLog.js": {
+      "modelName": "PermissionChangeLog",
+      "plane": "platform",
+      "rule": "explicit:PermissionChangeLog=platform"
+    },
+    "src/shared/models/Plan.model.js": {
+      "modelName": "Plan",
+      "plane": "platform",
+      "rule": "explicit:Plan=platform (name derived)"
+    },
+    "src/shared/models/RefreshToken.js": {
+      "modelName": "RefreshToken",
+      "plane": "platform",
+      "rule": "explicit:RefreshToken=platform"
+    },
+    "src/shared/models/RefundExecutionRecord.js": {
+      "modelName": "RefundExecutionRecord",
+      "plane": "platform",
+      "rule": "explicit:RefundExecutionRecord=platform"
+    },
+    "src/shared/models/Region.model.js": {
+      "modelName": "Region",
+      "plane": "platform",
+      "rule": "explicit:Region=platform (name derived)"
+    },
+    "src/shared/models/Role.js": {
+      "modelName": "Role",
+      "plane": "platform",
+      "rule": "path:src/shared (most shared models are platform)"
+    },
+    "src/shared/models/Session.model.js": {
+      "modelName": "Session",
+      "plane": "platform",
+      "rule": "explicit:Session=platform"
+    },
+    "src/shared/models/SiteContent.js": {
+      "modelName": "SiteContent",
+      "plane": "platform",
+      "rule": "explicit:SiteContent=platform"
+    },
+    "src/shared/models/StorageUsage.js": {
+      "modelName": "StorageUsage",
+      "plane": "platform",
+      "rule": "path:src/shared (most shared models are platform) (name derived)"
+    },
+    "src/shared/models/StripeEvent.js": {
+      "modelName": "StripeEvent",
+      "plane": "platform",
+      "rule": "explicit:StripeEvent=platform"
+    },
+    "src/shared/models/SubscriptionMutationRecord.js": {
+      "modelName": "SubscriptionMutationRecord",
+      "plane": "platform",
+      "rule": "explicit:SubscriptionMutationRecord=platform (name derived)"
+    },
+    "src/shared/models/Ticket.js": {
+      "modelName": "Ticket",
+      "plane": "platform",
+      "rule": "explicit:Ticket=platform"
+    },
+    "src/shared/models/User.js": {
+      "modelName": "User",
+      "plane": "tenant",
+      "rule": "explicit:User=tenant"
+    },
+    "src/shared/models/VerificationToken.model.js": {
+      "modelName": "VerificationToken",
+      "plane": "platform",
+      "rule": "explicit:VerificationToken=platform"
+    }
+  }
+}

@@ -164,7 +164,7 @@ const platformInvoiceSchema = new mongoose.Schema(
         // ── Provider Reference ────────────────────────────────────────────────
         paymentProvider: {
             type: String,
-            enum: ["stripe", "paymob", "paypal", "manual"],
+            enum: ["stripe", "paymob", "paypal", "manual", "kashier"],
             default: null
         },
         providerPaymentId: { type: String, default: null },  // Provider payment intent / charge ID

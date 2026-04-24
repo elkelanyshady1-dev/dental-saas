@@ -17,35 +17,45 @@
 
 "use strict";
 
+const getPlatformModel = require("@core/db/getPlatformModel");
 const mongoose = require("mongoose");
-const Organization = require("@shared/models/Organization").default;
-const OrgContract = require("../models/OrgContract.model").default;
-const PlanVersion = require("../models/PlanVersion.model").default;
-const OrganizationEntitlement = require("../models/OrganizationEntitlement.model").default;
-const BillingAuditLog = require("../models/BillingAuditLog.model").default;
+const OrganizationDef = require("@shared/models/Organization");
+const Organization = getPlatformModel(OrganizationDef);
+const OrgContractDef = require("../models/OrgContract.model");
+const OrgContract = getPlatformModel(OrgContractDef);
+const PlanVersionDef = require("../models/PlanVersion.model");
+const PlanVersion = getPlatformModel(PlanVersionDef);
+const OrganizationEntitlementDef = require("../models/OrganizationEntitlement.model");
+const OrganizationEntitlement = getPlatformModel(OrganizationEntitlementDef);
+const BillingAuditLogDef = require("../models/BillingAuditLog.model");
+const BillingAuditLog = getPlatformModel(BillingAuditLogDef);
 const logger = require("@utils/logger");
-
 const {
-    resolveOrganizationEntitlements,
-    invalidateEntitlementCache
+  resolveOrganizationEntitlements,
+  invalidateEntitlementCache
 } = require("../services/entitlementResolver.service");
-
-const { invalidateUnifiedCapabilityCache } = require("../services/unifiedCapabilityResolver.service");
+const {
+  invalidateUnifiedCapabilityCache
+} = require("../services/unifiedCapabilityResolver.service");
 
 // ─── Helper: load planVersion for an org ──────────────────────────────────────
 async function loadPlanVersionForOrg(orgId) {
-    const org = await Organization.findById(orgId).lean();
-    if (!org) return { org: null, planVersion: null };
-
-    let planVersion = null;
-    if (org.currentContractId) {
-        const contract = await OrgContract.findById(org.currentContractId).lean();
-        if (contract?.planVersionId) {
-            planVersion = await PlanVersion.findById(contract.planVersionId).lean();
-        }
+  const org = await Organization.findById(orgId).lean();
+  if (!org) return {
+    org: null,
+    planVersion: null
+  };
+  let planVersion = null;
+  if (org.currentContractId) {
+    const contract = await OrgContract.findById(org.currentContractId).lean();
+    if (contract?.planVersionId) {
+      planVersion = await PlanVersion.findById(contract.planVersionId).lean();
     }
-
-    return { org, planVersion };
+  }
+  return {
+    org,
+    planVersion
+  };
 }
 
 // ─── GET /api/platform/org-entitlements/:orgId ────────────────────────────────
@@ -95,41 +105,53 @@ async function loadPlanVersionForOrg(orgId) {
  *         description: Organization not found
  */
 async function getOrgEntitlement(req, res) {
-    try {
-        const { orgId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(orgId)) {
-            return res.status(400).json({ success: false, error: "Invalid orgId" });
-        }
-
-        const { org, planVersion } = await loadPlanVersionForOrg(orgId);
-
-        if (!org) {
-            return res.status(404).json({ success: false, error: "Organization not found" });
-        }
-
-        if (!planVersion) {
-            // Org has no active contract yet — return empty entitlement
-            return res.status(200).json({
-                success: true,
-                data: {
-                    modules: {},
-                    limits: {},
-                    addons: [],
-                    capabilities: {}
-                },
-                _notice: "No active contract — plan defaults unavailable"
-            });
-        }
-
-        const entitlements = await resolveOrganizationEntitlements(orgId, planVersion);
-
-        return res.status(200).json({ success: true, data: entitlements });
-
-    } catch (err) {
-        logger.error({ err }, "[OrgEntitlementCtrl] getOrgEntitlement error");
-        return res.status(500).json({ success: false, error: "Internal server error" });
+  try {
+    const {
+      orgId
+    } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(orgId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid orgId"
+      });
     }
+    const {
+      org,
+      planVersion
+    } = await loadPlanVersionForOrg(orgId);
+    if (!org) {
+      return res.status(404).json({
+        success: false,
+        error: "Organization not found"
+      });
+    }
+    if (!planVersion) {
+      // Org has no active contract yet — return empty entitlement
+      return res.status(200).json({
+        success: true,
+        data: {
+          modules: {},
+          limits: {},
+          addons: [],
+          capabilities: {}
+        },
+        _notice: "No active contract — plan defaults unavailable"
+      });
+    }
+    const entitlements = await resolveOrganizationEntitlements(orgId, planVersion);
+    return res.status(200).json({
+      success: true,
+      data: entitlements
+    });
+  } catch (err) {
+    logger.error({
+      err
+    }, "[OrgEntitlementCtrl] getOrgEntitlement error");
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
 }
 
 // ─── POST /api/platform/org-entitlements/:orgId/override ─────────────────────
@@ -195,125 +217,139 @@ async function getOrgEntitlement(req, res) {
  *         description: Organization or entitlement not found
  */
 async function applyEntitlementOverride(req, res) {
-    try {
-        const { orgId } = req.params;
-        const { modules: modulesOverride, limits: limitsOverride, addons: addonsOverride } = req.body || {};
-
-        if (!mongoose.Types.ObjectId.isValid(orgId)) {
-            return res.status(400).json({ success: false, error: "Invalid orgId" });
-        }
-
-        // ── Load existing entitlement ──────────────────────────────────────────
-        const current = await OrganizationEntitlement.findOne({
-            organizationId: orgId,
-            effectiveUntil: null
-        });
-
-        if (!current) {
-            return res.status(404).json({
-                success: false,
-                error: "No active entitlement found for this organization. " +
-                    "Ensure the organization has an active contract and an entitlement has been provisioned."
-            });
-        }
-
-        // ── Build merged update ────────────────────────────────────────────────
-        const updatedModules = {
-            ...(current.modules?.toObject?.() ?? current.modules ?? {}),
-            ...(modulesOverride ?? {})
-        };
-        const updatedLimits = {
-            ...(current.limits?.toObject?.() ?? current.limits ?? {}),
-            ...(limitsOverride ?? {})
-        };
-        // addons: if provided, REPLACE; if omitted, keep existing
-        const updatedAddons = addonsOverride ?? current.addons ?? [];
-
-        // ── Snapshot previous state for audit ─────────────────────────────────
-        const previousState = {
-            modules: current.modules,
-            limits: current.limits,
-            addons: current.addons,
-            source: current.source
-        };
-
-        // ── Apply update ───────────────────────────────────────────────────────
-        const updated = await OrganizationEntitlement.findOneAndUpdate(
-            { organizationId: orgId, effectiveUntil: null },
-            {
-                $set: {
-                    modules: updatedModules,
-                    limits: updatedLimits,
-                    addons: updatedAddons,
-                    source: "override",
-                    createdBy: req.user?._id ?? null
-                }
-            },
-            { new: true }
-        );
-
-        // ── Invalidate resolver caches ────────────────────────────────────────────
-        // Sprint 2: entitlement cache (merges plan + override)
-        invalidateEntitlementCache(orgId);
-        // Sprint 3: unified capability cache (merges entitlements + feature flags)
-        invalidateUnifiedCapabilityCache(orgId);
-
-        // ── Audit log — fire and forget ────────────────────────────────────────
-        setImmediate(async () => {
-            try {
-                await BillingAuditLog.create({
-                    organizationId: orgId,
-                    contractId: current.contractId,
-                    eventType: "ENTITLEMENT_OVERRIDE_APPLIED",
-                    previousState,
-                    newState: {
-                        modules: updatedModules,
-                        limits: updatedLimits,
-                        addons: updatedAddons,
-                        source: "override"
-                    },
-                    performedBy: String(req.user?._id ?? "system"),
-                    metadata: {
-                        fieldsChanged: {
-                            modules: !!modulesOverride,
-                            limits: !!limitsOverride,
-                            addons: !!addonsOverride
-                        }
-                    }
-                });
-
-                // Sprint 3: CAPABILITY_STATE_CHANGED — for unified capability observability
-                await BillingAuditLog.create({
-                    organizationId: orgId,
-                    contractId: current.contractId,
-                    eventType: "CAPABILITY_STATE_CHANGED",
-                    performedBy: String(req.user?._id ?? "system"),
-                    metadata: {
-                        trigger: "entitlement_override",
-                        modules: updatedModules,
-                        limits: updatedLimits,
-                        addons: updatedAddons
-                    }
-                });
-            } catch (auditErr) {
-                logger.error({ err: auditErr, orgId }, "[OrgEntitlementCtrl] Audit log failed (non-fatal)");
-            }
-        });
-
-        logger.info(
-            { orgId, updatedBy: req.user?._id },
-            "[OrgEntitlementCtrl] Entitlement override applied"
-        );
-
-        return res.status(200).json({ success: true, data: updated });
-
-    } catch (err) {
-        logger.error({ err }, "[OrgEntitlementCtrl] applyEntitlementOverride error");
-        return res.status(500).json({ success: false, error: "Internal server error" });
+  try {
+    const {
+      orgId
+    } = req.params;
+    const {
+      modules: modulesOverride,
+      limits: limitsOverride,
+      addons: addonsOverride
+    } = req.body || {};
+    if (!mongoose.Types.ObjectId.isValid(orgId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid orgId"
+      });
     }
-}
 
+    // ── Load existing entitlement ──────────────────────────────────────────
+    const current = await OrganizationEntitlement.findOne({
+      organizationId: orgId,
+      effectiveUntil: null
+    });
+    if (!current) {
+      return res.status(404).json({
+        success: false,
+        error: "No active entitlement found for this organization. " + "Ensure the organization has an active contract and an entitlement has been provisioned."
+      });
+    }
+
+    // ── Build merged update ────────────────────────────────────────────────
+    const updatedModules = {
+      ...(current.modules?.toObject?.() ?? current.modules ?? {}),
+      ...(modulesOverride ?? {})
+    };
+    const updatedLimits = {
+      ...(current.limits?.toObject?.() ?? current.limits ?? {}),
+      ...(limitsOverride ?? {})
+    };
+    // addons: if provided, REPLACE; if omitted, keep existing
+    const updatedAddons = addonsOverride ?? current.addons ?? [];
+
+    // ── Snapshot previous state for audit ─────────────────────────────────
+    const previousState = {
+      modules: current.modules,
+      limits: current.limits,
+      addons: current.addons,
+      source: current.source
+    };
+
+    // ── Apply update ───────────────────────────────────────────────────────
+    const updated = await OrganizationEntitlement.findOneAndUpdate({
+      organizationId: orgId,
+      effectiveUntil: null
+    }, {
+      $set: {
+        modules: updatedModules,
+        limits: updatedLimits,
+        addons: updatedAddons,
+        source: "override",
+        createdBy: req.user?._id ?? null
+      }
+    }, {
+      new: true
+    });
+
+    // ── Invalidate resolver caches ────────────────────────────────────────────
+    // Sprint 2: entitlement cache (merges plan + override)
+    invalidateEntitlementCache(orgId);
+    // Sprint 3: unified capability cache (merges entitlements + feature flags)
+    invalidateUnifiedCapabilityCache(orgId);
+
+    // ── Audit log — fire and forget ────────────────────────────────────────
+    setImmediate(async () => {
+      try {
+        await BillingAuditLog.create({
+          organizationId: orgId,
+          contractId: current.contractId,
+          eventType: "ENTITLEMENT_OVERRIDE_APPLIED",
+          previousState,
+          newState: {
+            modules: updatedModules,
+            limits: updatedLimits,
+            addons: updatedAddons,
+            source: "override"
+          },
+          performedBy: String(req.user?._id ?? "system"),
+          metadata: {
+            fieldsChanged: {
+              modules: !!modulesOverride,
+              limits: !!limitsOverride,
+              addons: !!addonsOverride
+            }
+          }
+        });
+
+        // Sprint 3: CAPABILITY_STATE_CHANGED — for unified capability observability
+        await BillingAuditLog.create({
+          organizationId: orgId,
+          contractId: current.contractId,
+          eventType: "CAPABILITY_STATE_CHANGED",
+          performedBy: String(req.user?._id ?? "system"),
+          metadata: {
+            trigger: "entitlement_override",
+            modules: updatedModules,
+            limits: updatedLimits,
+            addons: updatedAddons
+          }
+        });
+      } catch (auditErr) {
+        logger.error({
+          err: auditErr,
+          orgId
+        }, "[OrgEntitlementCtrl] Audit log failed (non-fatal)");
+      }
+    });
+    logger.info({
+      orgId,
+      updatedBy: req.user?._id
+    }, "[OrgEntitlementCtrl] Entitlement override applied");
+    return res.status(200).json({
+      success: true,
+      data: updated
+    });
+  } catch (err) {
+    logger.error({
+      err
+    }, "[OrgEntitlementCtrl] applyEntitlementOverride error");
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+}
 module.exports = {
-    getOrgEntitlement,
-    applyEntitlementOverride
+  getOrgEntitlement,
+  applyEntitlementOverride
 };

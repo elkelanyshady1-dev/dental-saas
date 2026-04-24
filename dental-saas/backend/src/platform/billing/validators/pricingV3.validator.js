@@ -203,7 +203,47 @@ function validatePriceTier(tier, context) {
     }
 }
 
+/**
+ * validatePricingShape
+ * Phase 1 — Pricing Decoupling guard.
+ *
+ * Ensures a plan document carries at least one recognised pricing shape:
+ *   - `pricing.global`          → new canonical USD shape (preferred)
+ *   - `pricing.regions[]`       → legacy region-keyed shape
+ *   - `pricing.pricingV3`       → legacy v3 structure
+ *
+ * Throws INVALID_PRICING_CONFIG when none of the above are present so that
+ * we never persist a plan with an unresolvable price.
+ *
+ * NOT wired into the controller yet — call explicitly from plan-authoring
+ * paths once `pricing.global` is populated everywhere (see Phase 4 cleanup).
+ *
+ * @param {object} pricing - The `pricing` subdocument from a PlanTemplate or PlanVersion.
+ * @throws {Error} with code INVALID_PRICING_CONFIG if no shape is present.
+ */
+function validatePricingShape(pricing) {
+    if (!pricing || typeof pricing !== "object") {
+        const err = new Error("INVALID_PRICING_CONFIG: pricing is required.");
+        err.code = "INVALID_PRICING_CONFIG";
+        throw err;
+    }
+
+    const hasGlobal = !!pricing.global && typeof pricing.global.amountMonthly === "number";
+    const hasRegions = Array.isArray(pricing.regions) && pricing.regions.length > 0;
+    const hasV3 = !!pricing.pricingV3?.default;
+
+    if (!hasGlobal && !hasRegions && !hasV3) {
+        const err = new Error(
+            "INVALID_PRICING_CONFIG: pricing must include at least one of " +
+            "`global`, `regions[]`, or `pricingV3`."
+        );
+        err.code = "INVALID_PRICING_CONFIG";
+        throw err;
+    }
+}
+
 module.exports = {
     validatePricingV3,
+    validatePricingShape,
     VALID_CURRENCIES,
 };

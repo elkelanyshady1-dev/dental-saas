@@ -335,10 +335,13 @@ const orgContractSchema = new mongoose.Schema(
         },
 
         // ── Payment Provider Reference ────────────────────────────────────────
-        // Set when contract is activated via a provider subscription
+        // Phase 5: now ALSO set at checkout time to the `effectiveProvider`
+        // returned by checkoutPolicy.resolveEffectiveProvider. Historically
+        // populated at activation; unified checkout writes it earlier so
+        // contract → provider consistency is deterministic from creation.
         paymentProvider: {
             type: String,
-            enum: ["stripe", "paymob", "paypal", "manual"],
+            enum: ["stripe", "paymob", "paypal", "manual", "kashier"],
             default: null
         },
         providerSubscriptionId: {
@@ -354,6 +357,18 @@ const orgContractSchema = new mongoose.Schema(
 
             default: null
         },
+
+        // ── Activation audit (Pre-Phase-8 hardening) ──────────────────────────
+        // When the payment-success dispatcher flipped contractStatus to
+        // "active". Separate from effectiveFrom (scheduled activation time)
+        // so finance can distinguish "scheduled to begin" from "actually
+        // started paying".
+        activatedAt: { type: Date, default: null },
+
+        // Last successful provider payment applied to this contract. Used as
+        // a double-payment idempotency guard in paymentSuccessHandler — if
+        // the same external payment id arrives twice, we short-circuit.
+        lastPaymentId: { type: String, default: null },
 
         // ── Supersession Chain ────────────────────────────────────────────────
         // When a contract is upgraded/downgraded, the old contract is superseded

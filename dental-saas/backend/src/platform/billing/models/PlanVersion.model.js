@@ -32,6 +32,32 @@
 
 const mongoose = require("mongoose");
 
+// ─── Global Pricing Snapshot (Phase 1 — pricing decoupling) ──────────────────
+// New canonical pricing shape. Single USD price list; EG is routed to Kashier
+// at resolve-time, not stored per-region.
+// Mirrors PlanTemplate.pricing.global; frozen once version is "active"
+// via the immutability guard below (pricing is already in the frozen list).
+const versionGlobalPricingSchema = new mongoose.Schema({
+    currency: {
+        type: String,
+        required: true,
+        uppercase: true,
+        default: "USD"
+    },
+    amountMonthly: { type: Number, required: true, min: 0 },
+    amountYearly: { type: Number, required: true, min: 0 },
+    providerPriceIds: {
+        stripe: {
+            monthly: { type: String, default: "" },
+            yearly: { type: String, default: "" }
+        },
+        kashier: {
+            monthly: { type: String, default: "" },
+            yearly: { type: String, default: "" }
+        }
+    }
+}, { _id: false });
+
 // ─── Immutable Pricing Snapshot (v2 — Legacy, kept for backward compat) ───────
 // Copied from PlanTemplate at version creation — NEVER updated after "active".
 const versionPricingRegionSchema = new mongoose.Schema({
@@ -205,12 +231,19 @@ const planVersionSchema = new mongoose.Schema(
         },
         pricing: {
             baseCurrency: { type: String, default: "USD", uppercase: true },
+            // Phase 1 — new canonical pricing (USD + Kashier routing at resolve-time).
+            // Optional during migration; populated by scripts/migratePricingToGlobal.js
+            // or by the plan-builder form when authoring new templates.
+            global: { type: versionGlobalPricingSchema, default: null },
+            // @deprecated — Phase 10. Read-only from this version forward.
+            // Scheduled for removal in Phase 11 once auditLegacyPricing.js
+            // reports zero unmigrated documents.
             regions: [versionPricingRegionSchema]
         },
         // ── Pricing v3 (Region-Based with Overrides) ──────────────────────────
-        // When populated, the pricing engine (with PRICING_ENGINE=v3) uses this
-        // structure instead of pricing.regions[].countries[] (v2).
-        // When null/undefined, the system falls back to v2 seamlessly.
+        // @deprecated — Phase 10. resolvePrice no longer reads this field.
+        // Kept on the schema only so existing PlanVersion documents continue
+        // to load without validation errors. Scheduled for removal in Phase 11.
         pricingV3: {
             type: pricingV3Schema,
             default: null
