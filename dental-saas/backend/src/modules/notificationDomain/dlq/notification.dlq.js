@@ -16,6 +16,7 @@
 
 const mongoose = require("mongoose");
 const logger = require("@utils/logger");
+const getSharedModel = require("@core/db/getSharedModel");
 
 // ── DLQ Schema ─────────────────────────────────────────────────────────────
 const NotificationDLQSchema = new mongoose.Schema({
@@ -57,7 +58,14 @@ NotificationDLQSchema.index({
   resolution: 1
 });
 const MODEL_NAME = "NotificationDLQ";
-const NotificationDLQ = mongoose.models[MODEL_NAME] || mongoose.model(MODEL_NAME, NotificationDLQSchema);
+const NotificationDLQDef = { modelName: MODEL_NAME, schema: NotificationDLQSchema };
+
+// Lazy-bind: compile on first use so shared connection is ready at call time.
+let _cached = null;
+function _model() {
+  if (!_cached) _cached = getSharedModel(NotificationDLQDef);
+  return _cached;
+}
 
 // ── DLQ Write ──────────────────────────────────────────────────────────────
 
@@ -75,7 +83,7 @@ async function write({
 }) {
   try {
     const payload = job?.data || {};
-    await NotificationDLQ.create({
+    await _model().create({
       jobId: job?.id || "unknown",
       payload,
       error: err?.message || String(err),
@@ -98,7 +106,7 @@ async function write({
  * markResolved() — Mark a DLQ entry as resolved.
  */
 async function markResolved(dlqId, resolution = "dismissed") {
-  return NotificationDLQ.findByIdAndUpdate(dlqId, {
+  return _model().findByIdAndUpdate(dlqId, {
     resolvedAt: new Date(),
     resolution
   }, {
@@ -116,7 +124,7 @@ async function listUnresolved({
   const query = {
     resolvedAt: null
   };
-  return NotificationDLQ.find(query).sort({
+  return _model().find(query).sort({
     createdAt: -1
   }).limit(limit).lean();
 }
@@ -124,5 +132,5 @@ module.exports = {
   write,
   markResolved,
   listUnresolved,
-  NotificationDLQ
+  NotificationDLQDef
 };

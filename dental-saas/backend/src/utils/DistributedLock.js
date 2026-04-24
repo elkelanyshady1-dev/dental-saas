@@ -46,6 +46,7 @@
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const logger = require("./logger");
+const getPlatformModel = require("@core/db/getPlatformModel");
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 // Inlined because they're implementation detail of this utility — no other
@@ -67,9 +68,14 @@ const lockSchema = new mongoose.Schema(
 // because acquire() already reclaims stale locks via the filter below).
 lockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-const DistributedLockModel =
-    mongoose.models.DistributedLock ||
-    mongoose.model("DistributedLock", lockSchema);
+const DistributedLockDef = { modelName: "DistributedLock", schema: lockSchema };
+// Lazy-bind: defer getPlatformModel() until first call, so platformConnection
+// is already initialized when a request handler reaches acquire()/release().
+let _lockModel = null;
+function DistributedLockModel() {
+    if (!_lockModel) _lockModel = getPlatformModel(DistributedLockDef);
+    return _lockModel;
+}
 
 const eventSchema = new mongoose.Schema(
     {
@@ -89,9 +95,12 @@ const eventSchema = new mongoose.Schema(
 eventSchema.index({ channel: 1, createdAt: 1 });
 eventSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-const DistributedEventModel =
-    mongoose.models.DistributedEvent ||
-    mongoose.model("DistributedEvent", eventSchema);
+const DistributedEventDef = { modelName: "DistributedEvent", schema: eventSchema };
+let _eventModel = null;
+function DistributedEventModel() {
+    if (!_eventModel) _eventModel = getPlatformModel(DistributedEventDef);
+    return _eventModel;
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -182,7 +191,7 @@ function _getChangeStream() {
         // filters out every non-insert change Mongo would otherwise send
         // (deletes from TTL, any future updates). Cuts event volume to
         // exactly one change per publish().
-        const stream = DistributedEventModel.watch(
+        const stream = DistributedEventModel().watch(
             [{ $match: { operationType: "insert" } }],
             // fullDocument default is "default" which for inserts is the
             // inserted doc itself — no need for "updateLookup" (that costs
@@ -252,7 +261,7 @@ async function acquire(key, ttlMs = 15000) {
     const expiresAt = new Date(now.getTime() + ttlMs);
 
     try {
-        const lock = await DistributedLockModel.findOneAndUpdate(
+        const lock = await DistributedLockModel().findOneAndUpdate(
             {
                 key,
                 $or: [
@@ -316,7 +325,7 @@ async function release(key, token) {
     if (!token) return false;
 
     try {
-        const result = await DistributedLockModel.deleteOne({ key, token });
+        const result = await DistributedLockModel().deleteOne({ key, token });
         const released = result.deletedCount === 1;
         if (released) {
             logger.debug(
@@ -353,7 +362,7 @@ async function release(key, token) {
  */
 async function publish(channel, payload) {
     try {
-        await DistributedEventModel.create({
+        await DistributedEventModel().create({
             channel,
             payload,
             createdAt: new Date(),
@@ -489,7 +498,7 @@ async function _fallbackPolling(channel, timeoutMs) {
 
     while (Date.now() < deadline) {
         try {
-            const event = await DistributedEventModel
+            const event = await DistributedEventModel()
                 .findOne({
                     channel,
                     createdAt: { $gte: startTime },

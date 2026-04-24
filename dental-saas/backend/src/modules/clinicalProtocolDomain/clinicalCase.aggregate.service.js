@@ -10,9 +10,8 @@
 "use strict";
 
 const dbManager = require("../../core/db/dbManager");
-const {
-  ClinicalCase
-} = require("./models/SCPEModels");
+const getModel = require("../../core/db/getModel");
+const { ClinicalCaseDef } = require("./models/SCPEModels");
 const eventBus = require("../../core/eventBus");
 const {
   CLINICAL_CASE_CREATED
@@ -33,6 +32,7 @@ class ClinicalCaseAggregateService {
     dbConnection
   }) {
     const conn = dbConnection || dbManager.getConnection(organizationId);
+    const ClinicalCase = getModel(conn, ClinicalCaseDef);
     const session = await conn.startSession();
     let clinicalCase;
     try {

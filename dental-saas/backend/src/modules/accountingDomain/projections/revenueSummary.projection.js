@@ -52,7 +52,9 @@ const RevenueSummarySchema = new mongoose.Schema({
 
 RevenueSummarySchema.index({ date: 1, branchId: 1 }, { unique: true });
 
-const RevenueSummaryDef = mongoose.model("RevenueSummary", RevenueSummarySchema);
+// Projection model def — bound per-call to the org connection in the
+// functions below; never module-scoped via a global mongoose.model().
+const RevenueSummaryDef = { modelName: "RevenueSummary", schema: RevenueSummarySchema };
 
 // ─── Projection Update ───────────────────────────────────────────────────────
 
@@ -68,7 +70,8 @@ const RevenueSummaryDef = mongoose.model("RevenueSummary", RevenueSummarySchema)
  * @param {Object} params.invoice — Invoice data from event payload
  */
 async function updateRevenueSummary({ organizationId, dbConnection, invoice }) {
-    const Model = dbConnection.model("RevenueSummary", RevenueSummarySchema);
+    const getModel = require("@core/db/getModel");
+    const Model = getModel(dbConnection, RevenueSummaryDef);
 
     const date = invoice.issuedAt
         ? new Date(invoice.issuedAt).toISOString().slice(0, 10)

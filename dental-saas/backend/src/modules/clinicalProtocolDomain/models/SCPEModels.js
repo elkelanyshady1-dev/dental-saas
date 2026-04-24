@@ -114,11 +114,14 @@ clinicalCaseSchema.index({
 });
 const protocolDefinitionModelName = "ProtocolDefinition";
 const clinicalCaseModelName = "ClinicalCase";
+
+// Plural models file — each entry is a model def. Consumers bind via
+// getModel(req.dbConnection, *Def) for tenant access.
 module.exports = {
   protocolDefinitionModelName,
   protocolDefinitionSchema,
   clinicalCaseModelName,
   clinicalCaseSchema,
-  ProtocolDefinition: mongoose.models[protocolDefinitionModelName] || mongoose.model(protocolDefinitionModelName, protocolDefinitionSchema),
-  ClinicalCase: mongoose.models[clinicalCaseModelName] || mongoose.model(clinicalCaseModelName, clinicalCaseSchema)
+  ProtocolDefinitionDef: { modelName: protocolDefinitionModelName, schema: protocolDefinitionSchema },
+  ClinicalCaseDef: { modelName: clinicalCaseModelName, schema: clinicalCaseSchema }
 };

@@ -48,8 +48,11 @@ const cephStudySchema = new mongoose.Schema({
   }
 });
 const cephStudyModelName = "CephStudy";
+
+// Plural models file — each entry is a model def. Consumers bind via
+// getModel(req.dbConnection, CephStudyDef) for tenant access.
 module.exports = {
   cephStudyModelName,
   cephStudySchema,
-  CephStudy: mongoose.models[cephStudyModelName] || mongoose.model(cephStudyModelName, cephStudySchema)
+  CephStudyDef: { modelName: cephStudyModelName, schema: cephStudySchema }
 };

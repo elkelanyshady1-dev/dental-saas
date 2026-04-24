@@ -70,8 +70,7 @@ const driftAlertModelName = "DriftAlert";
 // Canonical model definition for getModel compatibility
 const DriftAlertDef = {
   modelName: driftAlertModelName,
-  schema: driftAlertSchema,
-  default: mongoose.models[driftAlertModelName] || mongoose.model(driftAlertModelName, driftAlertSchema)
+  schema: driftAlertSchema
 };
 const getModel = require("@core/db/getModel");
 
@@ -153,7 +152,6 @@ async function processReconciliationReport(report) {
  * Deduplicates: won't create another open alert for the same org+type+account.
  */
 async function createAlert({
-  organizationId,
   severity,
   type,
   account,

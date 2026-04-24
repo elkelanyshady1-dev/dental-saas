@@ -9,11 +9,20 @@
  * Phase F.3 — Runtime assertions as defense-in-depth.
  */
 
-const { ClinicalCase, ProtocolDefinition } = require("../models/SCPEModels");
+const { ClinicalCaseDef, ProtocolDefinitionDef } = require("../models/SCPEModels");
 const { assertClinicalRLS } = require("../../../core/guards/tenantAssertions");
+const getModel = require("../../../core/db/getModel");
 
-// ─── Connection-Aware Model Resolvers ─────────────────────────────────────────────────────
-const Protocol = ProtocolDefinition;
+function _getModels(req) {
+    const conn = req.dbConnection;
+    if (!conn) {
+        throw new Error("[ClinicalReadService] req.dbConnection is REQUIRED (per-org mode)");
+    }
+    return {
+        ClinicalCase: getModel(conn, ClinicalCaseDef),
+        Protocol: getModel(conn, ProtocolDefinitionDef),
+    };
+}
 
 class ClinicalReadService {
     /**
@@ -22,6 +31,7 @@ class ClinicalReadService {
      */
     async getClinicalCase(req, caseId, session = null) {
         assertClinicalRLS(req, "ClinicalReadService.getClinicalCase");
+        const { ClinicalCase } = _getModels(req);
         return await ClinicalCase.findOne({ _id: caseId })
             .session(session)
             .lean();
@@ -33,6 +43,7 @@ class ClinicalReadService {
      */
     async getProtocolDefinition(req, protocolId, session = null) {
         assertClinicalRLS(req, "ClinicalReadService.getProtocolDefinition");
+        const { Protocol } = _getModels(req);
         return await Protocol.findOne({ _id: protocolId })
             .session(session)
             .lean();
@@ -45,6 +56,7 @@ class ClinicalReadService {
      */
     async aggregateCases(req, pipeline, session = null) {
         assertClinicalRLS(req, "ClinicalReadService.aggregateCases");
+        const { ClinicalCase } = _getModels(req);
         const result = ClinicalCase.aggregate(pipeline);
         if (session) return await result.session(session);
         return await result;
