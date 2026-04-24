@@ -243,11 +243,14 @@ module.exports = [
       "src/core/db/platformConnection.js",
       "src/core/db/sharedConnection.js",
       "src/core/db/clusterConnections.js",
-      // EXEMPT (Step 5e-A temporary): files that still use the legacy
-      // `mongoose.models[X] || mongoose.model(X, schema)` fallback
-      // for backward-compat with callers that do `require(...).default`.
-      // Step 5b migrates these to pure `{ modelName, schema }` exports.
-      // Exemptions lift in Phase 5e-B after that migration.
+      // EXEMPT (model-file self-export layer — Step 5f work):
+      //
+      // Step 5e-B (complete) migrated every .default CALL SITE to
+      // getPlatformModel / getSharedModel / tenant TODO. The next half —
+      // removing `default: mongoose.models[X] || mongoose.model(X, schema)`
+      // from the model files themselves — is Step 5f. Until 5f lands, these
+      // file patterns still contain a mongoose.model() fallback and must
+      // stay exempt from Rule 1. Exemptions lift in Step 5f.
       "src/**/*.model.js",        // singular
       "src/**/*.models.js",       // plural variants (e.g., ortho.models.js)
       "src/**/models/**/*.js",
@@ -261,8 +264,6 @@ module.exports = [
       "src/**/migrations/**",
       "src/**/__tests__/**",
       "src/**/tests/**",
-      // seedModuleFeatures is a CLI seed; manages its own connection lifecycle.
-      "src/orgRuntime/seedModuleFeatures.js",
     ],
     rules: {
       "no-restricted-syntax": [
